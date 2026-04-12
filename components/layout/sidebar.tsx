@@ -8,9 +8,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { TaskPool } from "@/components/todoist/task-pool";
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const searchQuery = useTodoistStore((s) => s.searchQuery);
+  const setSearchQuery = useTodoistStore((s) => s.setSearchQuery);
 
   return (
     <>
@@ -66,34 +70,18 @@ export function Sidebar() {
             <input
               type="text"
               placeholder="Search tasks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
           </div>
         </div>
 
-        {/* Task sections (placeholder for Session 2) */}
+        {/* Task pool */}
         <div className="flex-1 overflow-y-auto px-3 py-1">
-          <TaskSection title="Today" count={0} />
-          <TaskSection title="Overdue" count={0} />
-          <TaskSection title="Projects" count={0} />
+          <TaskPool />
         </div>
       </aside>
     </>
-  );
-}
-
-function TaskSection({ title, count }: { title: string; count: number }) {
-  return (
-    <div className="mb-3">
-      <button className="flex w-full items-center justify-between py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors">
-        <span>{title}</span>
-        <span className="tabular-nums">{count}</span>
-      </button>
-      <div className="space-y-1">
-        <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground/60">
-          No tasks
-        </div>
-      </div>
-    </div>
   );
 }
