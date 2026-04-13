@@ -1,4 +1,4 @@
-import { eq, and, notInArray, isNotNull, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -194,25 +194,6 @@ export function upsertTasks(taskList: Task[]): void {
   runTx();
 }
 
-export function deleteStaleTasksNotIn(ids: string[]): void {
-  if (ids.length === 0) return;
-  const db = getDb();
-
-  // Collect task IDs still referenced by flows or completed flows — these must be preserved
-  const flowRefs = db.select({ taskId: flowTasks.taskId }).from(flowTasks).all();
-  const completedRefs = db.select({ taskId: completedFlowTasks.taskId }).from(completedFlowTasks).all();
-  const referencedIds = new Set([
-    ...ids,
-    ...flowRefs.map((r) => r.taskId),
-    ...completedRefs.map((r) => r.taskId),
-  ]);
-
-  // Only delete Todoist-synced tasks that are NOT in the API AND not referenced by any flow
-  const safeIds = Array.from(referencedIds);
-  db.delete(tasks)
-    .where(and(notInArray(tasks.id, safeIds), isNotNull(tasks.todoistId)))
-    .run();
-}
 
 // ---- Flow tasks ----
 

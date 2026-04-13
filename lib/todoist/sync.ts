@@ -1,4 +1,4 @@
-import { getSetting, setSetting, upsertTasks, deleteStaleTasksNotIn } from "@/lib/db/queries";
+import { getSetting, setSetting, upsertTasks } from "@/lib/db/queries";
 import { fetchTodoistTasks, fetchTodoistProjects } from "./api";
 import { todoistColorToHex } from "./colors";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -56,7 +56,6 @@ export async function syncTodoistToDb(): Promise<{ taskCount: number; error?: st
 
   // Persist
   upsertTasks(transformedTasks);
-  deleteStaleTasksNotIn(transformedTasks.map((t) => t.id));
   setSetting("last_sync_at", new Date().toISOString());
 
   return { taskCount: transformedTasks.length };
