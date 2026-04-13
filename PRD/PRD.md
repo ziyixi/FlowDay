@@ -48,7 +48,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Deleted tasks are browsable via a calendar-based trash dialog (trash icon in sidebar header), grouped by deletion date, with search and restore functionality
 - Todoist sync never resurrects soft-deleted tasks
 - Estimated duration is locally editable (click the estimate on any task card to change it; persisted to SQLite)
-- Task description synced from Todoist; shown as tooltip on hover in sidebar
+- Task description synced from Todoist; rendered as Markdown tooltip on hover in sidebar (via `react-markdown`)
 - "Refresh" button (sidebar header) + auto-sync every 60 seconds
 - Search/filter within the sidebar
 - Only fetches tasks due today or overdue (via `GET /api/v1/tasks/filter?query=today | overdue`)
@@ -62,16 +62,18 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Tasks persisted in SQLite `tasks` table — survive page refresh
 - `estimated_mins` editable locally via `PATCH /api/tasks` — Todoist sync preserves local edits only when Todoist has no duration set
 - Zustand store (`todoist-store`) acts as reactive cache, hydrated from SQLite on load
-- Color mapping: Todoist color names (e.g., `berry_red`) → hex values
+- Color mapping: Todoist color names (e.g., `berry_red`) → hex values (20 colors supported)
+- Task labels shown in hover tooltip alongside description
 
 ### 4.2 — Day Flow (Main Canvas) ✅ Implemented
 
 **What it does:** An ordered, drag-reorderable list of tasks for the day.
 
 - Drag to reorder tasks within the flow
-- Each task card shows: title, estimated duration (click-to-edit), actual time (when timer runs), priority indicator
+- Each task card shows: title, project name, labels, estimated duration (click-to-edit via `EstimateEditor` popover), actual time (when timer runs), priority color dot
 - Each card has action buttons: play/pause (timer), manual time entry (clock icon), complete (check), skip (move to bottom), remove (return to pool)
 - The top card is visually highlighted as "Next" with a primary-color left border and badge
+- Drag-sortable within the flow using unique sortable IDs (`date::taskId::sortableKey`) for dnd-kit stability
 - Visual progress bar at the bottom: tasks completed vs. total, total estimated time vs. actual logged time
 - Completed tasks shown in a dimmed section with undo button, showing both estimated and actual logged time
 
@@ -84,6 +86,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Flow assignments (task order per date) persisted in SQLite `flow_tasks` table
 - Completed task assignments persisted in SQLite `completed_flow_tasks` table
 - Write-through: Zustand updates optimistically, then fire-and-forget API call to persist
+- `sortableGen` counter + `sortableKeys` map in flow store prevent stale dnd-kit state on re-add
 
 ### 4.3 — Time Tracking ✅ Implemented
 
@@ -112,6 +115,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - `setInterval` at 1Hz, module-level `intervalId` (not in Zustand — not serializable)
 - Time entries stored in SQLite `time_entries` table via `/api/entries` routes
 - `{ cache: "no-store" }` on all fetch calls to avoid Next.js response caching
+- `entryRevision` counter in timer store bumped on segment saves, triggers UI refresh of time entry lists
 
 ### 4.4 — Day View / Multi-Day View ✅ Implemented
 
@@ -154,6 +158,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Export:** CSV/JSON export of time entries
 - **Roll-over:** Bulk-move unfinished tasks to tomorrow
 - **Todoist write-back:** Optionally mark tasks complete in Todoist when completed in FlowDay (not in MVP — requires careful safeguards)
+- **Estimate presets:** The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
 
 ---
 
@@ -178,6 +183,9 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 | **State Management** | **Zustand v5** | Reactive cache layer; SQLite is source of truth |
 | **Icons** | **Lucide React** | Clean, consistent icon set |
 | **Date/Time** | **date-fns v4** | Tree-shakeable, functional API |
+| **Markdown** | **react-markdown v10** | Renders task descriptions in tooltips |
+| **Animations** | **tw-animate-css** | Tailwind animation utilities |
+| **Variants** | **class-variance-authority** | Component variant utility (cva) |
 
 ### Backend & Data
 
@@ -206,6 +214,7 @@ flowday/
 ├── app/
 │   ├── layout.tsx                 # Root layout, providers, theme
 │   ├── page.tsx                   # Main app (single-page)
+│   ├── globals.css                # Tailwind CSS v4 theme + global styles
 │   └── api/
 │       ├── entries/
 │       │   ├── route.ts           # POST create, GET query time entries
@@ -221,8 +230,8 @@ flowday/
 │   │   ├── top-bar.tsx            # Date nav, view toggle, timer, settings
 │   │   └── sidebar.tsx            # Collapsible sidebar with timer + search + task pool
 │   ├── todoist/
-│   │   ├── task-pool.tsx          # Task sections (Today, Overdue, by Project)
-│   │   ├── task-card.tsx          # Draggable sidebar task card (with delete)
+│   │   ├── task-pool.tsx          # Task sections (Arranged, Completed, Overdue, Today)
+│   │   ├── task-card.tsx          # Draggable sidebar task card (with delete + tooltip)
 │   │   ├── task-card-overlay.tsx  # Drag overlay appearance
 │   │   └── deleted-tasks-dialog.tsx # Calendar-based trash browser
 │   ├── flow/
@@ -234,8 +243,10 @@ flowday/
 │   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
 │   ├── settings/
 │   │   └── settings-dialog.tsx    # API key + sync settings dialog
+│   ├── shared/
+│   │   └── estimate-editor.tsx    # Reusable estimate popover (presets + custom)
 │   ├── theme-provider.tsx
-│   └── ui/                        # shadcn/ui components (base-ui/react)
+│   └── ui/                        # shadcn/ui components (base-ui/react, base-nova style)
 │       ├── button.tsx
 │       ├── dialog.tsx
 │       ├── input.tsx
@@ -271,9 +282,15 @@ flowday/
 ├── db/
 │   └── flowday.db                 # SQLite database (gitignored)
 ├── .gitignore                     # Includes /db/, *.db, *.db-journal, *.db-wal
+├── AGENTS.md                      # Agent rules for Next.js 16 breaking changes
+├── CLAUDE.md                      # Claude AI coding instructions
+├── README.md
 ├── next.config.ts
-├── package.json
-└── CLAUDE.md
+├── tsconfig.json
+├── eslint.config.mjs
+├── postcss.config.mjs
+├── components.json                # shadcn/ui v4 config (base-nova style)
+└── package.json
 ```
 
 ---
@@ -498,5 +515,5 @@ CREATE TABLE time_entries (
 
 ---
 
-*Last updated: April 12, 2026*
-*Version: 0.4 — Post-Session 7 (soft-delete, task retention, calendar trash browser)*
+*Last updated: April 13, 2026*
+*Version: 0.5 — Post-Session 7 (comprehensive audit, structure & tech stack corrections)*
