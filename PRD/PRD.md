@@ -200,27 +200,25 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - `onMouseDown stopPropagation` on textarea prevents dnd-kit drag interference
 - Read-only views show truncated note text with StickyNote icon indicator
 
-### 4.9 — Analytics & Weekly Review Dashboard 🔮 Future
+### 4.9 — Analytics & Weekly Review Dashboard ✅ Implemented
 
-**Daily Review Panel (end of day):**
-- Planned vs. actual time per task (bar chart comparison)
-- Tasks completed vs. skipped vs. rolled over
-- Total productive time
+**Daily Review Panel (accessible via BarChart3 icon in top bar):**
+- Summary cards: Tasks Done (completed/planned), Productive Time, Estimated Time, Estimation Accuracy %
+- Capacity usage bar: logged time vs. day capacity with amber warning when exceeded
+- Per-task breakdown: horizontal bar chart comparing estimated vs. actual time per task
+- Completed tasks shown with line-through styling
 
-**Weekly Review (GTD-style reflection):**
-- Accessible via a new tab/toggle in the top bar (e.g., a chart icon)
-- Completion summary: tasks completed this week by project (grouped bar chart or list)
-- Stuck work: tasks that appeared in flows on multiple days but weren't completed (rolled over repeatedly) — highlights planning vs. execution gaps
-- Estimation accuracy: scatter plot or table of estimated vs. actual time per task, with overall accuracy percentage
-- Time distribution: total tracked hours this week, broken down by Todoist project (donut chart)
-- Week-over-week comparison of total productive hours and tasks completed
-
-**Monthly Reports:**
-- Estimation accuracy trend
-- Productivity heatmap
-- Average tasks completed per day
+**Weekly Review (tab toggle in analytics dialog):**
+- Summary cards: Total Tasks Done, Total Hours, Avg Tasks/Day, Overall Estimation Accuracy %
+- Daily trend: vertical bar chart showing logged minutes per day of the week (Mon–Sun)
+- Time by project: horizontal bars with project colors, showing logged time + task count per project
+- Stuck work: tasks that appeared in flows on 2+ different dates during the week but were never completed
+- Estimation accuracy table: per-task estimated vs. actual with color-coded accuracy (green ≥80%, amber ≥50%, red <50%)
 
 - Data sourced from existing `time_entries`, `flow_tasks`, and `completed_flow_tasks` tables — no new data collection needed
+- API route: `GET /api/analytics?type=daily&date=YYYY-MM-DD` and `GET /api/analytics?type=weekly&date=YYYY-MM-DD`
+- Pure CSS/Tailwind visualizations (no charting library dependency)
+- New analytics query helpers: `getEntriesInDateRange`, `getFlowTaskIdsInDateRange`, `getCompletedTaskIdsInDateRange`, `getTasksByIds`
 
 ### 4.10 — Additional Features (Planned)
 
@@ -290,6 +288,7 @@ flowday/
 │       │   └── [id]/route.ts      # PUT update, DELETE time entry
 │       ├── flows/route.ts         # GET all flows, PUT flow mutations
 │       ├── notes/route.ts         # GET/PUT task notes (per task+date)
+│       ├── analytics/route.ts     # GET daily/weekly analytics aggregation
 │       ├── settings/route.ts      # GET/PUT Todoist API key
 │       ├── sync/route.ts          # POST trigger Todoist sync
 │       ├── tasks/route.ts         # GET all tasks, PATCH estimate, DELETE soft-delete
@@ -297,7 +296,7 @@ flowday/
 ├── components/
 │   ├── layout/
 │   │   ├── app-shell.tsx          # DragDropProvider + sidebar + canvas
-│   │   ├── top-bar.tsx            # Date nav, view toggle, timer, settings
+│   │   ├── top-bar.tsx            # Date nav, view toggle, timer, analytics, settings
 │   │   └── sidebar.tsx            # Collapsible sidebar with timer + search + task pool
 │   ├── todoist/
 │   │   ├── task-pool.tsx          # Task sections (Arranged, Completed, Overdue, Today)
@@ -315,6 +314,8 @@ flowday/
 │   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
 │   ├── settings/
 │   │   └── settings-dialog.tsx    # API key + capacity + sync settings dialog
+│   ├── analytics/
+│   │   └── analytics-dashboard.tsx # Daily + weekly review analytics dialog
 │   ├── shared/
 │   │   └── estimate-editor.tsx    # Reusable estimate popover (presets + custom)
 │   ├── theme-provider.tsx
@@ -562,13 +563,18 @@ CREATE TABLE time_entries (
 - `ReadOnlyTaskRow` / `ReadOnlyCompletedRow`: fetch note, show truncated text + StickyNote icon indicator
 - `onMouseDown stopPropagation` on textarea prevents dnd-kit drag interference
 
-### Session 11 — Analytics & Weekly Review Dashboard 🔮 Future
-- Daily review panel with planned vs. actual time
-- Tasks completed vs. skipped vs. rolled over
-- Weekly review: completion by project, stuck work detection, estimation accuracy
-- Time distribution by project (donut chart)
-- Week-over-week trends
-- Productivity heatmap, monthly reports
+### Session 11 — Analytics & Weekly Review Dashboard ✅ Implemented
+- BarChart3 icon in top bar opens analytics dialog
+- **Date/week navigation**: prev/next arrows and click-to-today within daily and weekly views (local state, doesn't affect main app date)
+- Daily Review tab: summary cards (tasks, logged, estimated, accuracy), capacity usage bar, **hourly activity bar chart** (hours 6–23), per-task estimated vs. actual horizontal bars, **estimation vs actual table** with diff column (green/red coloring)
+- Weekly Review tab: summary cards (done, hours, avg/day, accuracy), daily trend bar chart (Mon–Sun), **work time heatmap** (7×17 grid: Mon–Sun × hours 6–22, intensity-colored cells), time by project with colored bars, stuck work detection (2+ days, not completed), estimation accuracy table with color-coded percentages
+- API route: `GET /api/analytics?type=daily|weekly&date=YYYY-MM-DD` — daily returns `hourlyMins` (24-element array), weekly returns `heatmap` (7×24 matrix, 0=Mon)
+- New query helpers: `getEntriesInDateRange`, `getFlowTaskIdsInDateRange`, `getCompletedTaskIdsInDateRange`, `getTasksByIds` (using `gte`, `lte`, `inArray` from Drizzle)
+- Pure CSS/Tailwind charts — no external charting library
+- Week boundaries: Monday–Sunday (ISO week via `date-fns` `startOfWeek`/`endOfWeek`)
+- Stuck task detection: tasks in flow_tasks on 2+ dates but never in completed_flow_tasks during the week
+- Estimation accuracy: `min(est, actual) / max(est, actual)` ratio per task, averaged for overall
+- **StatCard overflow fix**: `overflow-hidden` + `truncate` on card container and text to prevent text escape
 
 ---
 
@@ -621,4 +627,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 1.0 — Post-Session 10 (task notes with per-task-per-day scoping, debounced auto-save, read-only display in completed + multi-day views)*
+*Version: 1.2 — Post-Session 11 enhancements (date navigation, hourly activity chart, work time heatmap, estimation vs actual table, stat card overflow fix)*

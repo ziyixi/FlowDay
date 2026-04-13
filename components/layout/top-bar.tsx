@@ -9,6 +9,7 @@ import {
   Sun,
   Monitor,
   Settings,
+  BarChart3,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
 import {
@@ -20,6 +21,7 @@ import { useTheme } from "@/components/theme-provider";
 import { useFlowStore, type ViewMode } from "@/lib/stores/flow-store";
 import { TimerDisplay } from "@/components/timer/timer-display";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
+import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 
 function IconButton({
   onClick,
@@ -47,6 +49,7 @@ function IconButton({
 
 export function TopBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [analyticsOpen, setAnalyticsOpen] = useState(false);
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const setCurrentDate = useFlowStore((s) => s.setCurrentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
@@ -138,6 +141,10 @@ export function TopBar() {
       <div className="flex items-center gap-2">
         <TimerDisplay />
 
+        <IconButton onClick={() => setAnalyticsOpen(true)} tooltip="Analytics">
+          <BarChart3 className="h-4 w-4" />
+        </IconButton>
+
         <IconButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>
           {themeIcon}
         </IconButton>
@@ -146,6 +153,7 @@ export function TopBar() {
           <Settings className="h-4 w-4" />
         </IconButton>
 
+        <AnalyticsDashboard open={analyticsOpen} onOpenChange={setAnalyticsOpen} />
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     </header>

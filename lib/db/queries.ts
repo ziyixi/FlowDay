@@ -1,4 +1,4 @@
-import { eq, and, sql, isNull, isNotNull } from "drizzle-orm";
+import { eq, and, sql, isNull, isNotNull, gte, lte, inArray } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -333,4 +333,56 @@ export function upsertNote(taskId: string, flowDate: string, content: string): F
     })
     .run();
   return getNote(taskId, flowDate)!;
+}
+
+// ---- Analytics queries ----
+
+export function getEntriesInDateRange(startDate: string, endDate: string): TimeEntryRow[] {
+  const db = getDb();
+  return db
+    .select()
+    .from(timeEntries)
+    .where(and(gte(timeEntries.flowDate, startDate), lte(timeEntries.flowDate, endDate)))
+    .all() as TimeEntryRow[];
+}
+
+export function getFlowTaskIdsInDateRange(
+  startDate: string,
+  endDate: string
+): { flowDate: string; taskId: string }[] {
+  const db = getDb();
+  return db
+    .select({ flowDate: flowTasks.flowDate, taskId: flowTasks.taskId })
+    .from(flowTasks)
+    .where(and(gte(flowTasks.flowDate, startDate), lte(flowTasks.flowDate, endDate)))
+    .all();
+}
+
+export function getCompletedTaskIdsInDateRange(
+  startDate: string,
+  endDate: string
+): { flowDate: string; taskId: string }[] {
+  const db = getDb();
+  return db
+    .select({ flowDate: completedFlowTasks.flowDate, taskId: completedFlowTasks.taskId })
+    .from(completedFlowTasks)
+    .where(
+      and(
+        gte(completedFlowTasks.flowDate, startDate),
+        lte(completedFlowTasks.flowDate, endDate)
+      )
+    )
+    .all();
+}
+
+export function getTasksByIds(ids: string[]): Task[] {
+  if (ids.length === 0) return [];
+  const db = getDb();
+  const rows = db.select().from(tasks).where(inArray(tasks.id, ids)).all();
+  return rows.map(rowToTask);
+}
+
+export function getAllTimeEntries(): TimeEntryRow[] {
+  const db = getDb();
+  return db.select().from(timeEntries).all() as TimeEntryRow[];
 }
