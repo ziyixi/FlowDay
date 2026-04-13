@@ -13,7 +13,7 @@ export function TaskCardOverlay({ task }: TaskCardOverlayProps) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
   return (
-    <div className="flex items-start gap-2.5 rounded-md border border-border bg-card px-2.5 py-2 shadow-lg ring-2 ring-primary/20 w-[252px]">
+    <div className="flex items-start gap-2.5 rounded-md border border-border bg-card px-2.5 py-2 shadow-xl ring-2 ring-primary/30 w-[252px] rotate-[2deg] scale-105 opacity-95">
       <span
         className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", priorityColor)}
       />

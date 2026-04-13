@@ -2,6 +2,7 @@ import { create } from "zustand";
 import { format, isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
 import { MOCK_TASKS } from "@/lib/data/mock-tasks";
+import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds } from "./flow-store";
 
 interface TodoistState {
   tasks: Task[];
@@ -29,13 +30,17 @@ interface TaskSections {
 export function useTaskSections(): TaskSections {
   const tasks = useTodoistStore((s) => s.tasks);
   const searchQuery = useTodoistStore((s) => s.searchQuery);
+  const flowTaskIds = useCurrentFlowTaskIds();
+  const completedTaskIds = useCurrentCompletedTaskIds();
 
   const todayStr = format(new Date(), "yyyy-MM-dd");
   const todayStart = startOfDay(new Date());
   const query = searchQuery.toLowerCase().trim();
+  const inFlow = new Set([...flowTaskIds, ...completedTaskIds]);
 
   const filtered = tasks.filter((t) => {
     if (t.isCompleted) return false;
+    if (inFlow.has(t.id)) return false;
     if (!query) return true;
     return (
       t.title.toLowerCase().includes(query) ||
@@ -60,4 +65,8 @@ export function useTaskSections(): TaskSections {
   }
 
   return { today, overdue, projects: projectMap };
+}
+
+export function useTaskById(id: string): Task | undefined {
+  return useTodoistStore((s) => s.tasks.find((t) => t.id === id));
 }

@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 export function TaskCard({ task }: { task: Task }) {
   const { ref, isDragSource } = useDraggable({
     id: task.id,
+    type: "task-pool-card",
     data: { task },
   });
 

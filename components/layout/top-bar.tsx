@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import {
   ChevronLeft,
   ChevronRight,
@@ -16,9 +16,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useTheme } from "@/components/theme-provider";
-import { useState } from "react";
-
-type ViewMode = 1 | 3 | 5;
+import { useFlowStore, type ViewMode } from "@/lib/stores/flow-store";
+import { TimerDisplay } from "@/components/timer/timer-display";
 
 function IconButton({
   onClick,
@@ -45,19 +44,18 @@ function IconButton({
 }
 
 export function TopBar() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [viewMode, setViewMode] = useState<ViewMode>(1);
+  const currentDateStr = useFlowStore((s) => s.currentDate);
+  const setCurrentDate = useFlowStore((s) => s.setCurrentDate);
+  const viewMode = useFlowStore((s) => s.viewMode);
+  const setViewMode = useFlowStore((s) => s.setViewMode);
+  const currentDate = new Date(currentDateStr + "T00:00:00");
   const { theme, setTheme } = useTheme();
 
   const navigateDate = (direction: -1 | 1) => {
-    setCurrentDate((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + direction);
-      return next;
-    });
+    setCurrentDate(format(addDays(currentDate, direction), "yyyy-MM-dd"));
   };
 
-  const goToToday = () => setCurrentDate(new Date());
+  const goToToday = () => setCurrentDate(format(new Date(), "yyyy-MM-dd"));
 
   const cycleTheme = () => {
     const order: Array<"light" | "dark" | "system"> = [
@@ -98,7 +96,7 @@ export function TopBar() {
           onClick={goToToday}
           className="min-w-[140px] text-center text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
         >
-          {isToday ? "Today" : format(currentDate, "EEE, MMM d")}
+          {format(currentDate, "EEE, MMM d")}
           {!isToday && (
             <span className="ml-1.5 text-xs text-muted-foreground">
               {format(currentDate, "yyyy")}
@@ -109,6 +107,15 @@ export function TopBar() {
         <IconButton onClick={() => navigateDate(1)} tooltip="Next day">
           <ChevronRight className="h-4 w-4" />
         </IconButton>
+
+        {!isToday && (
+          <button
+            onClick={goToToday}
+            className="ml-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          >
+            Today
+          </button>
+        )}
 
         <div className="ml-3 flex items-center rounded-md border border-border bg-muted/50 p-0.5">
           {([1, 3, 5] as ViewMode[]).map((mode) => (
@@ -124,8 +131,10 @@ export function TopBar() {
         </div>
       </div>
 
-      {/* Right: Theme toggle + Settings */}
-      <div className="flex items-center gap-1">
+      {/* Right: Timer + Theme toggle + Settings */}
+      <div className="flex items-center gap-2">
+        <TimerDisplay />
+
         <IconButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>
           {themeIcon}
         </IconButton>
