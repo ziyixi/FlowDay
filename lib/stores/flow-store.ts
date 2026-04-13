@@ -23,6 +23,9 @@ interface FlowState {
   uncompleteTask: (taskId: string, date: string) => void;
   removeCompletedTask: (taskId: string, date: string) => void;
   skipTask: (taskId: string, date: string) => void;
+  rolloverTasks: (fromDate: string, toDate: string) => Promise<void>;
+  dayCapacityMins: number;
+  setDayCapacityMins: (mins: number) => void;
   hydrate: () => Promise<void>;
 }
 
@@ -70,9 +73,11 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
   completedTasks: {},
   sortableGen: 0,
   sortableKeys: {},
+  dayCapacityMins: 360,
 
   setCurrentDate: (date) => set({ currentDate: date }),
   setViewMode: (mode) => set({ viewMode: mode }),
+  setDayCapacityMins: (mins) => set({ dayCapacityMins: mins }),
 
   addTask: (taskId, date, index) =>
     set((state) => {
@@ -158,15 +163,42 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
       return { flows: { ...state.flows, [date]: ids } };
     }),
 
+  rolloverTasks: async (fromDate, toDate) => {
+    // Call API to do the rollover in DB
+    await fetch("/api/flows", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rollover", date: fromDate, fromDate, toDate }),
+    });
+    // Re-hydrate to get the updated state from DB
+    const res = await fetch("/api/flows", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      set({
+        flows: data.flows ?? {},
+        completedTasks: data.completedTasks ?? {},
+      });
+    }
+  },
+
   hydrate: async () => {
     try {
-      const res = await fetch("/api/flows", { cache: "no-store" });
-      if (res.ok) {
-        const data = await res.json();
+      const [flowRes, settingsRes] = await Promise.all([
+        fetch("/api/flows", { cache: "no-store" }),
+        fetch("/api/settings", { cache: "no-store" }),
+      ]);
+      if (flowRes.ok) {
+        const data = await flowRes.json();
         set({
           flows: data.flows ?? {},
           completedTasks: data.completedTasks ?? {},
         });
+      }
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json();
+        if (settings.day_capacity_mins != null) {
+          set({ dayCapacityMins: settings.day_capacity_mins });
+        }
       }
     } catch {
       // Silently fail — use empty state

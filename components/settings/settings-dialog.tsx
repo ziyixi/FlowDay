@@ -11,6 +11,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useFlowStore } from "@/lib/stores/flow-store";
 import { cn } from "@/lib/utils";
 
 interface SettingsDialogProps {
@@ -22,11 +23,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [hasExistingKey, setHasExistingKey] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [capacityHours, setCapacityHours] = useState("6");
+  const [savingCapacity, setSavingCapacity] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   const isSyncing = useTodoistStore((s) => s.isSyncing);
   const lastSyncAt = useTodoistStore((s) => s.lastSyncAt);
   const sync = useTodoistStore((s) => s.sync);
+  const setDayCapacityMins = useFlowStore((s) => s.setDayCapacityMins);
 
   useEffect(() => {
     if (open) {
@@ -36,6 +40,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         .then((r) => r.json())
         .then((data) => {
           setHasExistingKey(data.has_api_key);
+          if (data.day_capacity_mins != null) {
+            setCapacityHours(String(data.day_capacity_mins / 60));
+          }
         })
         .catch(() => {});
     }
@@ -139,6 +146,61 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <p className="text-xs text-muted-foreground/60">
               Tasks sync automatically every minute when an API key is set.
             </p>
+          </div>
+
+          {/* Day Capacity */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Daily Work Capacity
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Set your daily focused work budget. You&apos;ll see a warning when your planned tasks exceed this.
+            </p>
+            <div className="flex items-center gap-2">
+              <Input
+                type="number"
+                min="0"
+                step="0.5"
+                value={capacityHours}
+                onChange={(e) => setCapacityHours(e.target.value)}
+                className="w-24"
+              />
+              <span className="text-sm text-muted-foreground">hours</span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={savingCapacity}
+                onClick={async () => {
+                  const hrs = parseFloat(capacityHours);
+                  if (isNaN(hrs) || hrs < 0) {
+                    setMessage({ type: "error", text: "Invalid capacity value" });
+                    return;
+                  }
+                  setSavingCapacity(true);
+                  setMessage(null);
+                  try {
+                    const capMins = Math.round(hrs * 60);
+                    const res = await fetch("/api/settings", {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ day_capacity_mins: capMins }),
+                    });
+                    if (res.ok) {
+                      setDayCapacityMins(capMins);
+                      setMessage({ type: "success", text: "Capacity saved" });
+                    } else {
+                      setMessage({ type: "error", text: "Failed to save capacity" });
+                    }
+                  } catch {
+                    setMessage({ type: "error", text: "Failed to save capacity" });
+                  } finally {
+                    setSavingCapacity(false);
+                  }
+                }}
+              >
+                Save
+              </Button>
+            </div>
           </div>
 
           {/* Message */}

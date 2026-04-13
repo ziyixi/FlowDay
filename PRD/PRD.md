@@ -137,19 +137,29 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - "Sync Now" button with spinning indicator
 - Last sync timestamp display
 - Guidance text: where to find the API key, read-only assurance
+- Daily work capacity setting (hours input, default 6h, stored as `day_capacity_mins` in SQLite settings)
 
-### 4.6 — Roll-over & Day Capacity 🔮 Future
+### 4.6 — Roll-over & Day Capacity ✅ Implemented
 
 **Roll-over:**
-- End-of-day action: "Roll over incomplete tasks to tomorrow" — one click moves all unfinished flow tasks to tomorrow's flow, preserving order
-- On opening FlowDay for a new day, show a prompt if yesterday has incomplete tasks: "You have N unfinished tasks from yesterday — roll over or dismiss?"
-- Rolled-over tasks appear at the top of tomorrow's flow with a subtle visual indicator (e.g., a small arrow icon or muted "from yesterday" label)
+- On opening FlowDay for a new day, a prompt appears if yesterday has incomplete tasks: "You have N unfinished tasks from yesterday — roll over or dismiss?"
+- "Roll over to today" button moves all incomplete tasks from yesterday to the top of today's flow (preserving order, deduped)
+- Rolled-over tasks are removed from yesterday's flow
+- Prompt is dismissable and doesn't re-appear once dismissed
+- Roll-over prompt shown in both empty and non-empty day flow states
 
 **Day Capacity Warning:**
 - Configurable daily work-hours budget in Settings (default: 6h of focused work)
-- Progress bar / top bar shows total estimated time for today's flow vs. capacity
-- When total estimates exceed capacity, show a warning indicator: "You've planned 8.5h for a 6h day"
+- Progress bar shows total estimated time vs. capacity (e.g., `~3h est / 6h cap`)
+- When total estimates exceed capacity, amber warning: "You've planned ~8h 30m for a 6h day"
+- Capacity stored reactively in flow store (`dayCapacityMins`) — updates instantly when saved in Settings
 - Non-blocking — just an awareness nudge, not a hard limit
+
+**Implementation notes:**
+- `day_capacity_mins` stored in SQLite `settings` table, fetched during flow store hydration
+- `PUT /api/flows` supports `rollover` action: moves incomplete tasks from `fromDate` to top of `toDate` flow
+- `PUT /api/settings` accepts `day_capacity_mins` alongside `todoist_api_key`
+- Flow store `dayCapacityMins` field + `setDayCapacityMins` action for reactive UI updates
 
 ### 4.7 — Daily Planning Ritual ("Start My Day") 🔮 Future
 
@@ -280,12 +290,13 @@ flowday/
 │   ├── flow/
 │   │   ├── day-flow.tsx           # Editable + read-only day flow views
 │   │   ├── flow-task-card.tsx     # Full task card with timer + actions
-│   │   └── progress-bar.tsx       # Day progress indicator
+│   │   ├── progress-bar.tsx       # Day progress + capacity warning
+│   │   └── rollover-prompt.tsx    # Yesterday's incomplete tasks prompt
 │   ├── timer/
 │   │   ├── timer-display.tsx      # Top bar timer component
 │   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
 │   ├── settings/
-│   │   └── settings-dialog.tsx    # API key + sync settings dialog
+│   │   └── settings-dialog.tsx    # API key + capacity + sync settings dialog
 │   ├── shared/
 │   │   └── estimate-editor.tsx    # Reusable estimate popover (presets + custom)
 │   ├── theme-provider.tsx
@@ -502,11 +513,15 @@ CREATE TABLE time_entries (
 - Database migration: added `deleted_at` column to tasks table
 - New API endpoints: `DELETE /api/tasks` (soft-delete), `GET /api/tasks/deleted` (list), `POST /api/tasks/deleted` (restore)
 
-### Session 8 — Roll-over & Day Capacity 🔮 Future
-- Roll-over incomplete tasks to tomorrow (one-click or prompted on new day)
-- Rolled-over tasks appear at top of next day's flow with visual indicator
-- Configurable daily work-hours capacity in Settings
-- Overcommitment warning when planned estimates exceed capacity
+### Session 8 — Roll-over & Day Capacity ✅
+- Roll-over prompt: shown when yesterday has incomplete tasks, with "Roll over to today" and "Dismiss" buttons
+- Roll-over moves incomplete tasks from yesterday to top of today's flow (deduped), removes from source
+- `PUT /api/flows` `rollover` action handles server-side logic
+- Day capacity: configurable hours in Settings dialog (default 6h), stored as `day_capacity_mins`
+- Progress bar shows capacity (`/ 6h cap`) and amber warning when overcommitted
+- Capacity stored reactively in flow store `dayCapacityMins` — updates instantly on save without page refresh
+- `PUT /api/settings` extended to accept `day_capacity_mins` alongside API key
+- New component: `rollover-prompt.tsx`
 
 ### Session 9 — Daily Planning Ritual 🔮 Future
 - "Start My Day" guided flow: roll-over candidates → add tasks → reorder → capacity check → confirm
@@ -578,4 +593,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 0.7 — Post-Session 7 (added Sessions 8–12 roadmap: roll-over, daily planning, task notes, weekly review, analytics)*
+*Version: 0.8 — Post-Session 8 (roll-over prompt, day capacity warning, reactive settings)*

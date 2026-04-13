@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { AlertTriangle } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { getEntryRevision } from "@/lib/stores/timer-store";
@@ -10,6 +11,7 @@ export function ProgressBar({ date }: { date: string }) {
   const completedTasks = useCompletedTasksForDate(date);
   const completedCount = completedTasks.length;
   const totalCount = flowTasks.length + completedCount;
+  const capacityMins = useFlowStore((s) => s.dayCapacityMins);
 
   const estimatedTotalMins = [...flowTasks, ...completedTasks].reduce(
     (sum, t) => sum + (t.estimatedMins ?? 0),
@@ -38,9 +40,19 @@ export function ProgressBar({ date }: { date: string }) {
   if (totalCount === 0) return null;
 
   const fraction = totalCount > 0 ? completedCount / totalCount : 0;
+  const overCapacity = capacityMins > 0 && estimatedTotalMins > capacityMins;
 
   return (
     <div className="border-t border-border bg-background/80 px-4 py-2.5 backdrop-blur-sm">
+      {overCapacity && (
+        <div className="mb-1.5 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+          <span>
+            You&apos;ve planned ~{formatDuration(estimatedTotalMins)} for a{" "}
+            {formatDuration(capacityMins)} day
+          </span>
+        </div>
+      )}
       <div className="flex items-center justify-between text-xs text-muted-foreground">
         <span>
           {completedCount}/{totalCount} tasks
@@ -53,6 +65,11 @@ export function ProgressBar({ date }: { date: string }) {
           )}
           {estimatedTotalMins > 0 && (
             <span className="tabular-nums">~{formatDuration(estimatedTotalMins)} est</span>
+          )}
+          {capacityMins > 0 && (
+            <span className="tabular-nums text-muted-foreground/60">
+              / {formatDuration(capacityMins)} cap
+            </span>
           )}
           {remainingMins > 0 && (
             <span className="tabular-nums">~{formatDuration(remainingMins)} left</span>
