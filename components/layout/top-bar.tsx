@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { format, addDays } from "date-fns";
 import {
   ChevronLeft,
@@ -18,6 +19,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { useFlowStore, type ViewMode } from "@/lib/stores/flow-store";
 import { TimerDisplay } from "@/components/timer/timer-display";
+import { SettingsDialog } from "@/components/settings/settings-dialog";
 
 function IconButton({
   onClick,
@@ -44,6 +46,7 @@ function IconButton({
 }
 
 export function TopBar() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const setCurrentDate = useFlowStore((s) => s.setCurrentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
@@ -139,9 +142,11 @@ export function TopBar() {
           {themeIcon}
         </IconButton>
 
-        <IconButton tooltip="Settings">
+        <IconButton onClick={() => setSettingsOpen(true)} tooltip="Settings">
           <Settings className="h-4 w-4" />
         </IconButton>
+
+        <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
       </div>
     </header>
   );

@@ -11,3 +11,37 @@ export const timeEntries = sqliteTable("time_entries", {
   source: text("source").notNull().default("timer"),
   createdAt: text("created_at").default(sql`(datetime('now'))`),
 });
+
+export const tasks = sqliteTable("tasks", {
+  id: text("id").primaryKey(),
+  todoistId: text("todoist_id"),
+  title: text("title").notNull(),
+  projectName: text("project_name"),
+  projectColor: text("project_color"),
+  priority: integer("priority").notNull().default(1),
+  labels: text("labels").default("[]"),
+  estimatedMins: integer("estimated_mins"),
+  isCompleted: integer("is_completed").notNull().default(0),
+  completedAt: text("completed_at"),
+  dueDate: text("due_date"),
+  createdAt: text("created_at"),
+  syncedAt: text("synced_at"),
+});
+
+export const settings = sqliteTable("settings", {
+  key: text("key").primaryKey(),
+  value: text("value"),
+});
+
+export const flowTasks = sqliteTable("flow_tasks", {
+  id: text("id").primaryKey(),
+  flowDate: text("flow_date").notNull(),
+  taskId: text("task_id").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+});
+
+export const completedFlowTasks = sqliteTable("completed_flow_tasks", {
+  id: text("id").primaryKey(),
+  flowDate: text("flow_date").notNull(),
+  taskId: text("task_id").notNull(),
+});

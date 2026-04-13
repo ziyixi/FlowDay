@@ -31,6 +31,42 @@ export function getDb() {
       source TEXT NOT NULL DEFAULT 'timer',
       created_at TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS tasks (
+      id TEXT PRIMARY KEY,
+      todoist_id TEXT,
+      title TEXT NOT NULL,
+      project_name TEXT,
+      project_color TEXT,
+      priority INTEGER NOT NULL DEFAULT 1,
+      labels TEXT DEFAULT '[]',
+      estimated_mins INTEGER,
+      is_completed INTEGER NOT NULL DEFAULT 0,
+      completed_at TEXT,
+      due_date TEXT,
+      created_at TEXT,
+      synced_at TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    );
+
+    CREATE TABLE IF NOT EXISTS flow_tasks (
+      id TEXT PRIMARY KEY,
+      flow_date TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      sort_order INTEGER NOT NULL,
+      UNIQUE(flow_date, task_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS completed_flow_tasks (
+      id TEXT PRIMARY KEY,
+      flow_date TEXT NOT NULL,
+      task_id TEXT NOT NULL,
+      UNIQUE(flow_date, task_id)
+    );
   `);
 
   const db = drizzle(sqlite, { schema });

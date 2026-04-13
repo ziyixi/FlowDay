@@ -9,9 +9,14 @@ import { Sidebar } from "./sidebar";
 import { DayFlow } from "@/components/flow/day-flow";
 import { TaskCardOverlay } from "@/components/todoist/task-card-overlay";
 import { useFlowStore } from "@/lib/stores/flow-store";
+import { useHydration } from "@/lib/hooks/use-hydration";
+import { useAutoSync } from "@/lib/hooks/use-auto-sync";
 import type { Task } from "@/lib/types/task";
 
 export function AppShell() {
+  useHydration();
+  useAutoSync();
+
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
 

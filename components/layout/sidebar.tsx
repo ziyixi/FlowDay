@@ -63,6 +63,8 @@ export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const searchQuery = useTodoistStore((s) => s.searchQuery);
   const setSearchQuery = useTodoistStore((s) => s.setSearchQuery);
+  const isSyncing = useTodoistStore((s) => s.isSyncing);
+  const sync = useTodoistStore((s) => s.sync);
 
   return (
     <>
@@ -94,8 +96,11 @@ export function Sidebar() {
           </span>
           <div className="flex items-center gap-0.5">
             <Tooltip>
-              <TooltipTrigger className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
-                <RefreshCw className="h-3 w-3" />
+              <TooltipTrigger
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                onClick={() => sync()}
+              >
+                <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
               </TooltipTrigger>
               <TooltipContent>Sync tasks</TooltipContent>
             </Tooltip>

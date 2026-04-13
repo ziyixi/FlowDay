@@ -1,24 +1,71 @@
 import { create } from "zustand";
 import { format, isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
-import { MOCK_TASKS } from "@/lib/data/mock-tasks";
 import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds } from "./flow-store";
 
 interface TodoistState {
   tasks: Task[];
+  isLoading: boolean;
+  isSyncing: boolean;
+  lastSyncAt: string | null;
   searchQuery: string;
   setSearchQuery: (query: string) => void;
   setTasks: (tasks: Task[]) => void;
   removeTask: (taskId: string) => void;
+  hydrate: () => Promise<void>;
+  sync: () => Promise<void>;
 }
 
-export const useTodoistStore = create<TodoistState>()((set) => ({
-  tasks: MOCK_TASKS,
+export const useTodoistStore = create<TodoistState>()((set, get) => ({
+  tasks: [],
+  isLoading: false,
+  isSyncing: false,
+  lastSyncAt: null,
   searchQuery: "",
+
   setSearchQuery: (query) => set({ searchQuery: query }),
   setTasks: (tasks) => set({ tasks }),
   removeTask: (taskId) =>
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
+
+  hydrate: async () => {
+    set({ isLoading: true });
+    try {
+      const res = await fetch("/api/tasks", { cache: "no-store" });
+      if (res.ok) {
+        const tasks: Task[] = await res.json();
+        set({ tasks });
+      }
+      // Also load last sync time
+      const settingsRes = await fetch("/api/settings", { cache: "no-store" });
+      if (settingsRes.ok) {
+        const settings = await settingsRes.json();
+        set({ lastSyncAt: settings.last_sync_at });
+      }
+    } catch {
+      // Silently fail — tasks stay empty until sync
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+
+  sync: async () => {
+    if (get().isSyncing) return;
+    set({ isSyncing: true });
+    try {
+      const res = await fetch("/api/sync", { method: "POST", cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        set({ lastSyncAt: data.lastSyncAt });
+      }
+      // Reload tasks from DB
+      await get().hydrate();
+    } catch {
+      // Silently fail
+    } finally {
+      set({ isSyncing: false });
+    }
+  },
 }));
 
 interface TaskSections {

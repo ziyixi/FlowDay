@@ -22,6 +22,7 @@ interface FlowState {
   completeTask: (taskId: string, date: string) => void;
   uncompleteTask: (taskId: string, date: string) => void;
   skipTask: (taskId: string, date: string) => void;
+  hydrate: () => Promise<void>;
 }
 
 function todayStr() {
@@ -36,7 +37,32 @@ function completedForDate(state: FlowState, date: string): string[] {
   return state.completedTasks[date] ?? [];
 }
 
-export const useFlowStore = create<FlowState>()((set) => ({
+// Fire-and-forget persistence helpers
+function persistFlow(date: string, taskIds: string[]) {
+  fetch("/api/flows", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "setFlow", date, taskIds }),
+  }).catch(() => {});
+}
+
+function persistAddCompleted(date: string, taskId: string) {
+  fetch("/api/flows", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "addCompleted", date, taskId }),
+  }).catch(() => {});
+}
+
+function persistRemoveCompleted(date: string, taskId: string) {
+  fetch("/api/flows", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "removeCompleted", date, taskId }),
+  }).catch(() => {});
+}
+
+export const useFlowStore = create<FlowState>()((set, get) => ({
   currentDate: todayStr(),
   viewMode: 1,
   flows: {},
@@ -58,6 +84,7 @@ export const useFlowStore = create<FlowState>()((set) => ({
         ids.push(taskId);
       }
       const nextGen = state.sortableGen + 1;
+      persistFlow(date, ids);
       return {
         flows: { ...state.flows, [date]: ids },
         sortableGen: nextGen,
@@ -66,51 +93,73 @@ export const useFlowStore = create<FlowState>()((set) => ({
     }),
 
   removeTask: (taskId, date) =>
-    set((state) => ({
-      flows: {
-        ...state.flows,
-        [date]: flowForDate(state, date).filter((id) => id !== taskId),
-      },
-    })),
+    set((state) => {
+      const ids = flowForDate(state, date).filter((id) => id !== taskId);
+      persistFlow(date, ids);
+      return {
+        flows: { ...state.flows, [date]: ids },
+      };
+    }),
 
   reorderTasks: (fromIndex, toIndex, date) =>
     set((state) => {
       const ids = [...flowForDate(state, date)];
       const [removed] = ids.splice(fromIndex, 1);
       ids.splice(toIndex, 0, removed);
+      persistFlow(date, ids);
       return { flows: { ...state.flows, [date]: ids } };
     }),
 
   completeTask: (taskId, date) =>
-    set((state) => ({
-      flows: {
-        ...state.flows,
-        [date]: flowForDate(state, date).filter((id) => id !== taskId),
-      },
-      completedTasks: {
-        ...state.completedTasks,
-        [date]: [...completedForDate(state, date), taskId],
-      },
-    })),
+    set((state) => {
+      const flowIds = flowForDate(state, date).filter((id) => id !== taskId);
+      persistFlow(date, flowIds);
+      persistAddCompleted(date, taskId);
+      return {
+        flows: { ...state.flows, [date]: flowIds },
+        completedTasks: {
+          ...state.completedTasks,
+          [date]: [...completedForDate(state, date), taskId],
+        },
+      };
+    }),
 
   uncompleteTask: (taskId, date) =>
-    set((state) => ({
-      flows: {
-        ...state.flows,
-        [date]: [...flowForDate(state, date), taskId],
-      },
-      completedTasks: {
-        ...state.completedTasks,
-        [date]: completedForDate(state, date).filter((id) => id !== taskId),
-      },
-    })),
+    set((state) => {
+      const flowIds = [...flowForDate(state, date), taskId];
+      persistFlow(date, flowIds);
+      persistRemoveCompleted(date, taskId);
+      return {
+        flows: { ...state.flows, [date]: flowIds },
+        completedTasks: {
+          ...state.completedTasks,
+          [date]: completedForDate(state, date).filter((id) => id !== taskId),
+        },
+      };
+    }),
 
   skipTask: (taskId, date) =>
     set((state) => {
       const ids = flowForDate(state, date).filter((id) => id !== taskId);
       ids.push(taskId);
+      persistFlow(date, ids);
       return { flows: { ...state.flows, [date]: ids } };
     }),
+
+  hydrate: async () => {
+    try {
+      const res = await fetch("/api/flows", { cache: "no-store" });
+      if (res.ok) {
+        const data = await res.json();
+        set({
+          flows: data.flows ?? {},
+          completedTasks: data.completedTasks ?? {},
+        });
+      }
+    } catch {
+      // Silently fail — use empty state
+    }
+  },
 }));
 
 // --- Hooks for current date (used by sidebar filtering) ---
