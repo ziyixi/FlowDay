@@ -161,17 +161,29 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - `PUT /api/settings` accepts `day_capacity_mins` alongside `todoist_api_key`
 - Flow store `dayCapacityMins` field + `setDayCapacityMins` action for reactive UI updates
 
-### 4.7 — Daily Planning Ritual ("Start My Day") 🔮 Future
+### 4.7 — Daily Planning Ritual ("Start My Day") ✅ Implemented
 
-**What it does:** A guided flow when opening FlowDay each morning to set up the day's plan.
+**What it does:** A guided multi-step wizard when opening FlowDay each morning to set up the day's plan.
 
-- Triggered automatically when today's flow is empty (or via a "Plan My Day" button in the empty state)
-- Step 1: Show yesterday's incomplete tasks as roll-over candidates (checkboxes to select which to carry forward)
-- Step 2: Show today's Todoist tasks, drag to add to flow
-- Step 3: Reorder the flow, set/adjust estimates
-- Step 4: Show capacity summary ("You've planned 5.5h for a 6h day — looks good") and confirm
-- Dismissable at any step — just a guided overlay, not a hard gate
-- Stores a `planning_completed` flag per date so it doesn't re-trigger after dismissal
+- Triggered automatically when today's flow is empty and planning not yet completed (waits for store hydration)
+- Also available via "Plan My Day" button in the empty day-flow state (always visible for today)
+- Dynamic step count based on whether yesterday has incomplete tasks:
+  - Step 1 (conditional): Select roll-over candidates with checkboxes (all checked by default), "Roll Over N Tasks" or "Skip"
+  - Step 2: Add tasks from Todoist pool — shows overdue + today tasks with "+" buttons, live task count in footer
+  - Step 3: Review plan — numbered task list with inline estimate editors and remove buttons
+  - Step 4: Confirm — capacity summary with progress bar, over-capacity warning, "Start My Day" button
+- Dismissable at any step via "×" button — sets planning as completed to prevent re-triggering
+- Roll-over in wizard is selective (per-task checkboxes) vs. the standalone rollover prompt which is all-or-nothing
+- Rollover prompt is suppressed when planning is completed for the date
+- Stores `planning_completed:<date>` flag in SQLite settings table, loaded during hydration
+
+**Implementation notes:**
+- New component: `planning-wizard.tsx` — 4 sub-components (StepRollover, StepAddTasks, StepReview, StepConfirm)
+- `PUT /api/flows` supports `rolloverSelected` action: moves only specified task IDs from source to target
+- `GET /api/settings` returns `planning_completed_today: boolean`
+- `PUT /api/settings` accepts `planning_completed_date` to persist the flag
+- Flow store additions: `hydrated: boolean`, `planningCompletedDates: Record<string, boolean>`, `setPlanningCompleted(date)`, `rolloverSelectedTasks(from, to, ids)`
+- Auto-trigger uses `useRef` guard to evaluate once after hydration, preventing premature trigger on empty pre-hydration state
 
 ### 4.8 — Task Notes / Session Log 🔮 Future
 
@@ -291,7 +303,8 @@ flowday/
 │   │   ├── day-flow.tsx           # Editable + read-only day flow views
 │   │   ├── flow-task-card.tsx     # Full task card with timer + actions
 │   │   ├── progress-bar.tsx       # Day progress + capacity warning
-│   │   └── rollover-prompt.tsx    # Yesterday's incomplete tasks prompt
+│   │   ├── rollover-prompt.tsx    # Yesterday's incomplete tasks prompt
+│   │   └── planning-wizard.tsx    # Daily planning ritual wizard
 │   ├── timer/
 │   │   ├── timer-display.tsx      # Top bar timer component
 │   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
@@ -523,10 +536,15 @@ CREATE TABLE time_entries (
 - `PUT /api/settings` extended to accept `day_capacity_mins` alongside API key
 - New component: `rollover-prompt.tsx`
 
-### Session 9 — Daily Planning Ritual 🔮 Future
-- "Start My Day" guided flow: roll-over candidates → add tasks → reorder → capacity check → confirm
-- Triggered when today's flow is empty, dismissable at any step
-- Per-date `planning_completed` flag to prevent re-triggering
+### Session 9 — Daily Planning Ritual ✅
+- "Start My Day" multi-step wizard: selective roll-over → add tasks → review estimates → capacity check → confirm
+- Auto-triggered when today's flow is empty and planning not completed; also available via "Plan My Day" button
+- Dynamic step count: 3 steps (no rollover needed) or 4 steps (rollover candidates present)
+- Per-date `planning_completed:<date>` flag stored in SQLite settings table
+- `PUT /api/flows` `rolloverSelected` action for selective task rollover
+- Flow store `hydrated` flag ensures wizard doesn't trigger before data loads
+- Rollover prompt suppressed when planning completed for the date
+- New component: `planning-wizard.tsx`
 
 ### Session 10 — Task Notes & Session Log 🔮 Future
 - Per-task-per-day text notes on flow cards
@@ -593,4 +611,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 0.8 — Post-Session 8 (roll-over prompt, day capacity warning, reactive settings)*
+*Version: 0.9 — Post-Session 9 (daily planning wizard, selective rollover, hydration guard)*

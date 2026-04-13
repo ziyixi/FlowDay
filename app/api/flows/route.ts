@@ -74,6 +74,38 @@ export async function PUT(request: Request) {
       break;
     }
 
+    case "rolloverSelected": {
+      const { fromDate, toDate, taskIds: selectedIds } = body as {
+        fromDate?: string;
+        toDate?: string;
+        taskIds?: string[];
+      };
+      if (!fromDate || !toDate || !Array.isArray(selectedIds)) {
+        return NextResponse.json(
+          { error: "fromDate, toDate, and taskIds required" },
+          { status: 400 }
+        );
+      }
+      const selectedSet = new Set(selectedIds);
+      const allFlowsS = getAllFlows();
+      const sourceTasksS = allFlowsS[fromDate] ?? [];
+
+      const toMoveS = sourceTasksS.filter((id) => selectedSet.has(id));
+      if (toMoveS.length === 0) break;
+
+      // Prepend selected tasks to target (dedup)
+      const existingS = allFlowsS[toDate] ?? [];
+      const existingSetS = new Set(existingS);
+      const toAddS = toMoveS.filter((id) => !existingSetS.has(id));
+      if (toAddS.length > 0) {
+        setFlowTaskIds(toDate, [...toAddS, ...existingS]);
+      }
+      // Remove moved tasks from source
+      const remainingS = sourceTasksS.filter((id) => !selectedSet.has(id));
+      setFlowTaskIds(fromDate, remainingS);
+      break;
+    }
+
     default:
       return NextResponse.json({ error: "Unknown action" }, { status: 400 });
   }

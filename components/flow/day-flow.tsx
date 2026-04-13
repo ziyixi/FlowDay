@@ -1,14 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/react";
-import { RotateCcw } from "lucide-react";
+import { RotateCcw, Sunrise } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { FlowTaskCard } from "./flow-task-card";
 import { ProgressBar } from "./progress-bar";
 import { RolloverPrompt } from "./rollover-prompt";
+import { PlanningWizard } from "./planning-wizard";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 
@@ -115,11 +117,37 @@ function EditableDayFlow({
   date: string;
   isEmpty: boolean;
 }) {
+  const planningCompleted = useFlowStore((s) => s.planningCompletedDates[date]);
+  const hydrated = useFlowStore((s) => s.hydrated);
+  const [showWizard, setShowWizard] = useState(false);
+  const autoTriggered = useRef(false);
+
+  // Auto-show wizard for today when empty and planning not completed
+  const isToday = date === new Date().toISOString().slice(0, 10);
+  useEffect(() => {
+    if (!hydrated || autoTriggered.current) return;
+    autoTriggered.current = true;
+    const flowEmpty = flowTasks.length === 0 && completedTasks.length === 0;
+    if (flowEmpty && isToday && !planningCompleted) {
+      setShowWizard(true);
+    }
+  }, [hydrated, flowTasks.length, completedTasks.length, isToday, planningCompleted]);
+
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `day-flow-${date}`,
     accept: "task-pool-card",
     data: { date },
   });
+
+  if (showWizard) {
+    return (
+      <PlanningWizard
+        date={date}
+        onDismiss={() => setShowWizard(false)}
+        onComplete={() => setShowWizard(false)}
+      />
+    );
+  }
 
   if (isEmpty) {
     return (
@@ -142,6 +170,16 @@ function EditableDayFlow({
               <p className="mt-1 text-sm text-muted-foreground">
                 Drag tasks from the sidebar to start planning your day
               </p>
+              {isToday && (
+                <Button
+                  variant="outline"
+                  className="mt-4"
+                  onClick={() => setShowWizard(true)}
+                >
+                  <Sunrise className="mr-2 h-4 w-4" />
+                  Plan My Day
+                </Button>
+              )}
             </div>
           </div>
         </div>

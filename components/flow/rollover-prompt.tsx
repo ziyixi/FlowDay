@@ -16,6 +16,7 @@ export function RolloverPrompt({ date }: RolloverPromptProps) {
   const flows = useFlowStore((s) => s.flows);
   const completedTasks = useFlowStore((s) => s.completedTasks);
   const rolloverTasks = useFlowStore((s) => s.rolloverTasks);
+  const planningCompleted = useFlowStore((s) => s.planningCompletedDates[date]);
   const tasks = useTodoistStore((s) => s.tasks);
 
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -32,8 +33,8 @@ export function RolloverPrompt({ date }: RolloverPromptProps) {
     .map((id) => tasks.find((t) => t.id === id))
     .filter((t): t is Task => t != null);
 
-  // Don't show if dismissed, no incomplete tasks, or already rolled over
-  if (dismissed.has(yesterday) || incompleteTaskObjects.length === 0) {
+  // Don't show if planning completed, dismissed, no incomplete tasks, or already rolled over
+  if (planningCompleted || dismissed.has(yesterday) || incompleteTaskObjects.length === 0) {
     return null;
   }
 

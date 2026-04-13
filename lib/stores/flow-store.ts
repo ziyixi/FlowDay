@@ -24,8 +24,12 @@ interface FlowState {
   removeCompletedTask: (taskId: string, date: string) => void;
   skipTask: (taskId: string, date: string) => void;
   rolloverTasks: (fromDate: string, toDate: string) => Promise<void>;
+  rolloverSelectedTasks: (fromDate: string, toDate: string, taskIds: string[]) => Promise<void>;
   dayCapacityMins: number;
   setDayCapacityMins: (mins: number) => void;
+  hydrated: boolean;
+  planningCompletedDates: Record<string, boolean>;
+  setPlanningCompleted: (date: string) => void;
   hydrate: () => Promise<void>;
 }
 
@@ -74,10 +78,23 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
   sortableGen: 0,
   sortableKeys: {},
   dayCapacityMins: 360,
+  hydrated: false,
+  planningCompletedDates: {},
 
   setCurrentDate: (date) => set({ currentDate: date }),
   setViewMode: (mode) => set({ viewMode: mode }),
   setDayCapacityMins: (mins) => set({ dayCapacityMins: mins }),
+
+  setPlanningCompleted: (date) => {
+    set((state) => ({
+      planningCompletedDates: { ...state.planningCompletedDates, [date]: true },
+    }));
+    fetch("/api/settings", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ planning_completed_date: date }),
+    }).catch(() => {});
+  },
 
   addTask: (taskId, date, index) =>
     set((state) => {
@@ -181,6 +198,22 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
     }
   },
 
+  rolloverSelectedTasks: async (fromDate, toDate, taskIds) => {
+    await fetch("/api/flows", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "rolloverSelected", date: fromDate, fromDate, toDate, taskIds }),
+    });
+    const res = await fetch("/api/flows", { cache: "no-store" });
+    if (res.ok) {
+      const data = await res.json();
+      set({
+        flows: data.flows ?? {},
+        completedTasks: data.completedTasks ?? {},
+      });
+    }
+  },
+
   hydrate: async () => {
     try {
       const [flowRes, settingsRes] = await Promise.all([
@@ -199,10 +232,17 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
         if (settings.day_capacity_mins != null) {
           set({ dayCapacityMins: settings.day_capacity_mins });
         }
+        if (settings.planning_completed_today) {
+          const today = format(new Date(), "yyyy-MM-dd");
+          set((state) => ({
+            planningCompletedDates: { ...state.planningCompletedDates, [today]: true },
+          }));
+        }
       }
     } catch {
       // Silently fail — use empty state
     }
+    set({ hydrated: true });
   },
 }));
 
