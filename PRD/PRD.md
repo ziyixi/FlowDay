@@ -138,26 +138,69 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Last sync timestamp display
 - Guidance text: where to find the API key, read-only assurance
 
-### 4.6 — Analytics Dashboard 🔮 Future
+### 4.6 — Roll-over & Day Capacity 🔮 Future
+
+**Roll-over:**
+- End-of-day action: "Roll over incomplete tasks to tomorrow" — one click moves all unfinished flow tasks to tomorrow's flow, preserving order
+- On opening FlowDay for a new day, show a prompt if yesterday has incomplete tasks: "You have N unfinished tasks from yesterday — roll over or dismiss?"
+- Rolled-over tasks appear at the top of tomorrow's flow with a subtle visual indicator (e.g., a small arrow icon or muted "from yesterday" label)
+
+**Day Capacity Warning:**
+- Configurable daily work-hours budget in Settings (default: 6h of focused work)
+- Progress bar / top bar shows total estimated time for today's flow vs. capacity
+- When total estimates exceed capacity, show a warning indicator: "You've planned 8.5h for a 6h day"
+- Non-blocking — just an awareness nudge, not a hard limit
+
+### 4.7 — Daily Planning Ritual ("Start My Day") 🔮 Future
+
+**What it does:** A guided flow when opening FlowDay each morning to set up the day's plan.
+
+- Triggered automatically when today's flow is empty (or via a "Plan My Day" button in the empty state)
+- Step 1: Show yesterday's incomplete tasks as roll-over candidates (checkboxes to select which to carry forward)
+- Step 2: Show today's Todoist tasks, drag to add to flow
+- Step 3: Reorder the flow, set/adjust estimates
+- Step 4: Show capacity summary ("You've planned 5.5h for a 6h day — looks good") and confirm
+- Dismissable at any step — just a guided overlay, not a hard gate
+- Stores a `planning_completed` flag per date so it doesn't re-trigger after dismissal
+
+### 4.8 — Task Notes / Session Log 🔮 Future
+
+**What it does:** Per-task-per-day text notes for capturing context while working.
+
+- Small expandable text area on each flow task card (pencil/note icon to toggle)
+- Jot notes during execution: "blocked on API response," "need to follow up with X," "found a related bug in auth module"
+- Notes are scoped to `(task_id, flow_date)` — same task on different days gets separate notes
+- Notes visible in the completed tasks section and in multi-day read-only view
+- New DB table: `flow_task_notes (id, task_id, flow_date, content, updated_at)`
+- Useful for daily review / weekly review: "what did I actually do and learn?"
+
+### 4.9 — Analytics & Weekly Review Dashboard 🔮 Future
 
 **Daily Review Panel (end of day):**
 - Planned vs. actual time per task (bar chart comparison)
 - Tasks completed vs. skipped vs. rolled over
 - Total productive time
 
-**Weekly/Monthly Reports:**
-- Time distribution by Todoist project (donut chart)
+**Weekly Review (GTD-style reflection):**
+- Accessible via a new tab/toggle in the top bar (e.g., a chart icon)
+- Completion summary: tasks completed this week by project (grouped bar chart or list)
+- Stuck work: tasks that appeared in flows on multiple days but weren't completed (rolled over repeatedly) — highlights planning vs. execution gaps
+- Estimation accuracy: scatter plot or table of estimated vs. actual time per task, with overall accuracy percentage
+- Time distribution: total tracked hours this week, broken down by Todoist project (donut chart)
+- Week-over-week comparison of total productive hours and tasks completed
+
+**Monthly Reports:**
 - Estimation accuracy trend
 - Productivity heatmap
 - Average tasks completed per day
 
-### 4.7 — Additional Features (Planned)
+- Data sourced from existing `time_entries`, `flow_tasks`, and `completed_flow_tasks` tables — no new data collection needed
+
+### 4.10 — Additional Features (Planned)
 
 - **Quick Add:** Local tasks that don't come from Todoist
-- **Keyboard Navigation:** Space to start/stop, Enter to complete, arrow keys to navigate
-- **Export:** CSV/JSON export of time entries
-- **Roll-over:** Bulk-move unfinished tasks to tomorrow
-- **Todoist write-back:** Optionally mark tasks complete in Todoist when completed in FlowDay (not in MVP — requires careful safeguards)
+- **Export:** CSV/JSON export of time entries and flow history (planned vs. actual per day)
+- **Todoist write-back:** Optionally mark tasks complete in Todoist when completed in FlowDay (requires careful safeguards)
 - **Estimate presets:** The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
 
 ---
@@ -459,11 +502,30 @@ CREATE TABLE time_entries (
 - Database migration: added `deleted_at` column to tasks table
 - New API endpoints: `DELETE /api/tasks` (soft-delete), `GET /api/tasks/deleted` (list), `POST /api/tasks/deleted` (restore)
 
-### Session 8 — Analytics 🔮 Future
-- Daily review panel
-- Time-by-project breakdown
-- Estimation accuracy trend
-- Productivity heatmap
+### Session 8 — Roll-over & Day Capacity 🔮 Future
+- Roll-over incomplete tasks to tomorrow (one-click or prompted on new day)
+- Rolled-over tasks appear at top of next day's flow with visual indicator
+- Configurable daily work-hours capacity in Settings
+- Overcommitment warning when planned estimates exceed capacity
+
+### Session 9 — Daily Planning Ritual 🔮 Future
+- "Start My Day" guided flow: roll-over candidates → add tasks → reorder → capacity check → confirm
+- Triggered when today's flow is empty, dismissable at any step
+- Per-date `planning_completed` flag to prevent re-triggering
+
+### Session 10 — Task Notes & Session Log 🔮 Future
+- Per-task-per-day text notes on flow cards
+- Expandable text area with pencil icon toggle
+- Notes visible in completed section and multi-day view
+- New `flow_task_notes` table
+
+### Session 11 — Analytics & Weekly Review Dashboard 🔮 Future
+- Daily review panel with planned vs. actual time
+- Tasks completed vs. skipped vs. rolled over
+- Weekly review: completion by project, stuck work detection, estimation accuracy
+- Time distribution by project (donut chart)
+- Week-over-week trends
+- Productivity heatmap, monthly reports
 
 ---
 
@@ -516,4 +578,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 0.5 — Post-Session 7 (comprehensive audit, structure & tech stack corrections)*
+*Version: 0.7 — Post-Session 7 (added Sessions 8–12 roadmap: roll-over, daily planning, task notes, weekly review, analytics)*
