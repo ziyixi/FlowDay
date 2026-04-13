@@ -1,4 +1,4 @@
-import { eq, and, notInArray, isNotNull } from "drizzle-orm";
+import { eq, and, notInArray, isNotNull, sql } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -177,7 +177,11 @@ export function upsertTasks(taskList: Task[]): void {
             projectColor: t.projectColor,
             priority: t.priority,
             labels: JSON.stringify(t.labels),
-            estimatedMins: t.estimatedMins,
+            // Preserve local estimate when Todoist has no duration;
+            // if Todoist provides one, it takes precedence
+            estimatedMins: t.estimatedMins != null
+              ? t.estimatedMins
+              : sql`${tasks.estimatedMins}`,
             isCompleted: t.isCompleted ? 1 : 0,
             completedAt: t.completedAt,
             dueDate: t.dueDate,
