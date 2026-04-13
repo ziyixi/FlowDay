@@ -7,7 +7,7 @@ import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { useFlowStore } from "@/lib/stores/flow-store";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTimerStore, getEntryRevision } from "@/lib/stores/timer-store";
 import { ManualEntry } from "@/components/timer/manual-entry";
 import { cn } from "@/lib/utils";
 
@@ -58,13 +58,15 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const isRunning = isActive && timerStatus === "running";
   const isPaused = isActive && timerStatus === "paused";
 
-  // Revision counter: bumped when entries are created/edited/deleted
-  const [entryRevision, setEntryRevision] = useState(0);
+  // Revision counter: bumped when entries are created/edited/deleted (manual or timer)
+  const [localRevision, setLocalRevision] = useState(0);
   const onEntriesChanged = useCallback(() => {
-    setEntryRevision((r) => r + 1);
+    setLocalRevision((r) => r + 1);
   }, []);
+  // Combine local revision with global timer revision so badge refreshes after timer saves
+  const combinedRevision = localRevision + getEntryRevision();
 
-  const loggedSeconds = useTaskLoggedSeconds(task.id, entryRevision);
+  const loggedSeconds = useTaskLoggedSeconds(task.id, combinedRevision);
   const shownSeconds = isActive ? displaySeconds : loggedSeconds;
 
   // Use sortableKey in the id to prevent stale dnd-kit state when task is removed and re-added

@@ -178,9 +178,20 @@ export function upsertTasks(taskList: Task[]): void {
 export function deleteStaleTasksNotIn(ids: string[]): void {
   if (ids.length === 0) return;
   const db = getDb();
-  // Only delete Todoist-synced tasks (todoist_id not null) that are no longer in the API
+
+  // Collect task IDs still referenced by flows or completed flows — these must be preserved
+  const flowRefs = db.select({ taskId: flowTasks.taskId }).from(flowTasks).all();
+  const completedRefs = db.select({ taskId: completedFlowTasks.taskId }).from(completedFlowTasks).all();
+  const referencedIds = new Set([
+    ...ids,
+    ...flowRefs.map((r) => r.taskId),
+    ...completedRefs.map((r) => r.taskId),
+  ]);
+
+  // Only delete Todoist-synced tasks that are NOT in the API AND not referenced by any flow
+  const safeIds = Array.from(referencedIds);
   db.delete(tasks)
-    .where(and(notInArray(tasks.id, ids), isNotNull(tasks.todoistId)))
+    .where(and(notInArray(tasks.id, safeIds), isNotNull(tasks.todoistId)))
     .run();
 }
 

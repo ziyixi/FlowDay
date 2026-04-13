@@ -24,7 +24,11 @@ export async function syncTodoistToDb(): Promise<{ taskCount: number; error?: st
     const project = projectMap.get(t.project_id);
     let estimatedMins: number | null = null;
     if (t.duration) {
-      estimatedMins = t.duration.unit === "minute" ? t.duration.amount : null;
+      if (t.duration.unit === "minute") {
+        estimatedMins = t.duration.amount;
+      } else if (t.duration.unit === "day") {
+        estimatedMins = t.duration.amount * 480; // 8-hour workday
+      }
     }
 
     // Extract just the date portion from due.date (could be "YYYY-MM-DD" or "YYYY-MM-DDTHH:MM:SS")

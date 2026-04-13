@@ -17,7 +17,7 @@ interface TimerState {
   // Display value updated every tick
   displaySeconds: number;
 
-  startTimer: (taskId: string, flowDate: string) => void;
+  startTimer: (taskId: string, flowDate: string) => Promise<void>;
   pauseTimer: () => void;
   resumeTimer: () => void;
   stopAndSave: () => Promise<void>;
@@ -108,6 +108,12 @@ function resetState(): Partial<TimerState> {
   };
 }
 
+// Monotonic counter bumped every time a segment is saved, so UI can react
+let entryRevision = 0;
+export function getEntryRevision() {
+  return entryRevision;
+}
+
 export const useTimerStore = create<TimerState>()((set, get) => ({
   activeTaskId: null,
   activeFlowDate: null,
@@ -118,32 +124,35 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   priorSeconds: 0,
   displaySeconds: 0,
 
-  startTimer: (taskId, flowDate) => {
+  startTimer: async (taskId, flowDate) => {
     const state = get();
 
-    // If another task is active, stop and save it first
+    // If another task is active, stop and save it first — AWAIT to prevent data loss
     if (state.activeTaskId && state.activeTaskId !== taskId && state.status !== "idle") {
       clearTickInterval();
-      saveSegment(state);
+      await saveSegment(state);
+      entryRevision++;
     }
 
-    // Fetch prior seconds asynchronously, then update
-    fetchPriorSeconds(taskId).then((prior) => {
-      // Only update if this task is still active (user might have switched)
-      if (get().activeTaskId === taskId) {
-        set({ priorSeconds: prior, displaySeconds: prior });
-      }
-    });
+    // Fetch prior seconds BEFORE setting state to avoid flash-to-zero
+    const prior = await fetchPriorSeconds(taskId);
 
+    // Guard: user might have clicked something else during the await
+    const current = get();
+    if (current.activeTaskId && current.activeTaskId !== taskId && current.status === "running") {
+      return; // Another timer was started while we were fetching — bail
+    }
+
+    const now = Date.now();
     set({
       activeTaskId: taskId,
       activeFlowDate: flowDate,
       status: "running",
-      segmentWallStart: new Date().toISOString(),
-      segmentStartedAt: Date.now(),
+      segmentWallStart: new Date(now).toISOString(),
+      segmentStartedAt: now,
       sessionSavedSeconds: 0,
-      priorSeconds: 0,
-      displaySeconds: 0,
+      priorSeconds: prior,
+      displaySeconds: prior,
     });
 
     startTickInterval(() => get().tick());
@@ -158,6 +167,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
 
     // Save this segment as an entry
     await saveSegment(state);
+    entryRevision++;
 
     set({
       status: "paused",
@@ -189,6 +199,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
     // Save current segment if running
     if (state.status === "running") {
       await saveSegment(state);
+      entryRevision++;
     }
 
     set(resetState());
