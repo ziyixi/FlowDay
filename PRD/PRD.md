@@ -616,6 +616,15 @@ CREATE TABLE time_entries (
 - `output: "standalone"` in next.config.ts for minimal Docker images
 - `.dockerignore` excludes tests, docs, DB files, and `.git`
 
+### Session 13 — UI Visual Polish 🔮 Future
+- **Card elevation**: Add subtle box shadows (`0 1px 2px oklch(0 0 0 / 0.04)`) to flow task cards and sidebar task cards for layered depth, keeping existing borders
+- **Active task glow**: Strengthen running-timer visual — thicker left border (4px) with brighter accent color, replacing the current faint `ring-1 ring-primary/30`
+- **Progress bar refinement**: Increase bar height to `h-2`, add gradient (`from-primary to-primary/70`), and a subtle glow (`shadow-[0_0_8px_-2px_var(--primary)]`) when progress > 0
+- **Sidebar spatial separation**: Replace flat `border-r` with a soft drop shadow (`1px 0 4px -2px oklch(0 0 0 / 0.08)`) for better depth hierarchy between sidebar and main content
+- **Completed tasks treatment**: Replace `opacity-60` with normal opacity using `text-muted-foreground`, add green checkmark icon replacing priority dot, add `bg-muted/30` group background
+- **"Next" badge softening**: Switch from `bg-primary text-primary-foreground font-semibold` to `bg-primary/10 text-primary font-medium` for a subtler inline badge style
+- **Top bar backdrop**: Increase blur to `backdrop-blur-md`, lighten border to `border-border/50` for a more premium frosted-glass effect when content scrolls behind it
+
 ---
 
 ## 11. Key Design Principles
@@ -667,4 +676,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 1.3 — Post-Session 12 (added testing suite, Docker deployment, GitHub Actions CI/CD)*
+*Version: 1.4 — Added Session 13 (UI visual polish roadmap)*

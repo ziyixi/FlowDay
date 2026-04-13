@@ -86,7 +86,7 @@ export function TopBar() {
     format(currentDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-sm">
+    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/50 bg-background/80 px-4 backdrop-blur-md">
       {/* Left: Brand */}
       <div className="flex items-center gap-3">
         <h1 className="text-base font-semibold tracking-tight">FlowDay</h1>

@@ -50,7 +50,7 @@ export function TaskCard({ task }: { task: Task }) {
   );
 
   const cardClassName = cn(
-    "group flex items-start gap-2.5 rounded-md border border-border bg-card px-2.5 py-2 transition-colors hover:bg-accent cursor-grab active:cursor-grabbing",
+    "group flex items-start gap-2.5 rounded-md border border-border bg-card px-2.5 py-2 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors hover:bg-accent cursor-grab active:cursor-grabbing",
     isDragSource && "opacity-50"
   );
 

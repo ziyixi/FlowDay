@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/react";
-import { RotateCcw, Sunrise, StickyNote } from "lucide-react";
+import { Check, RotateCcw, Sunrise, StickyNote } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
@@ -84,9 +84,9 @@ function ReadOnlyTaskRow({ task, isNext, date }: { task: Task; isNext: boolean; 
   return (
     <div
       className={cn(
-        "flex flex-col gap-1 rounded-md border bg-card px-2.5 py-1.5",
+        "flex flex-col gap-1 rounded-md border bg-card px-2.5 py-1.5 shadow-[0_1px_2px_oklch(0_0_0/0.04)]",
         isNext
-          ? "border-l-[3px] border-l-primary border-t-border border-r-border border-b-border"
+          ? "border-l-4 border-l-primary border-t-border border-r-border border-b-border"
           : "border-border"
       )}
     >
@@ -110,7 +110,6 @@ function ReadOnlyTaskRow({ task, isNext, date }: { task: Task; isNext: boolean; 
 }
 
 function ReadOnlyCompletedRow({ task, date }: { task: Task; date: string }) {
-  const priorityColor = PRIORITY_CONFIG[task.priority].color;
   const [noteText, setNoteText] = useState("");
 
   useEffect(() => {
@@ -123,10 +122,10 @@ function ReadOnlyCompletedRow({ task, date }: { task: Task; date: string }) {
   }, [task.id, date]);
 
   return (
-    <div className="rounded-md px-2.5 py-1 opacity-50">
+    <div className="rounded-md bg-muted/30 px-2.5 py-1">
       <div className="flex items-center gap-2">
-        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full opacity-50", priorityColor)} />
-        <p className="truncate text-[11px] text-muted-foreground line-through">{task.title}</p>
+        <Check className="h-2.5 w-2.5 shrink-0 text-green-500" />
+        <p className="truncate text-[11px] text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</p>
         {noteText && <StickyNote className="h-2.5 w-2.5 shrink-0 text-primary/40" />}
       </div>
       {noteText && (
@@ -273,7 +272,6 @@ function EditableDayFlow({
 
 function CompletedTaskRow({ task, date }: { task: Task; date: string }) {
   const uncompleteTask = useFlowStore((s) => s.uncompleteTask);
-  const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
   const [loggedSeconds, setLoggedSeconds] = useState(0);
   useEffect(() => {
@@ -300,10 +298,10 @@ function CompletedTaskRow({ task, date }: { task: Task; date: string }) {
   }, [task.id, date]);
 
   return (
-    <div className="group rounded-md border border-border/50 bg-card/50 px-4 py-2 opacity-60">
+    <div className="group rounded-md border border-border/50 bg-muted/30 px-4 py-2">
       <div className="flex items-center gap-2.5">
-        <span className={cn("h-2 w-2 shrink-0 rounded-full opacity-50", priorityColor)} />
-        <p className="flex-1 truncate text-sm text-muted-foreground line-through">
+        <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
+        <p className="flex-1 truncate text-sm text-muted-foreground line-through decoration-muted-foreground/40">
           {task.title}
         </p>
         <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums text-muted-foreground/60">

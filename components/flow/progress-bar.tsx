@@ -5,6 +5,7 @@ import { AlertTriangle } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { getEntryRevision } from "@/lib/stores/timer-store";
+import { cn } from "@/lib/utils";
 
 export function ProgressBar({ date }: { date: string }) {
   const flowTasks = useFlowTasksForDate(date);
@@ -76,9 +77,12 @@ export function ProgressBar({ date }: { date: string }) {
           )}
         </div>
       </div>
-      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-muted">
+      <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-muted">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-300"
+          className={cn(
+            "h-full rounded-full bg-gradient-to-r from-primary to-primary/70 transition-all duration-300",
+            fraction > 0 && "shadow-[0_0_8px_-2px_var(--color-primary)]"
+          )}
           style={{ width: `${Math.round(fraction * 100)}%` }}
         />
       </div>

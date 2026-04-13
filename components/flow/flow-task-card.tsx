@@ -173,11 +173,11 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
       />
       <div
         className={cn(
-          "rounded-lg border bg-card px-4 py-3 transition-colors",
+          "rounded-lg border bg-card px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-all",
           isNext
-            ? "border-l-[3px] border-l-primary border-t-border border-r-border border-b-border"
+            ? "border-l-4 border-l-primary border-t-border border-r-border border-b-border"
             : "border-border",
-          isActive && "ring-1 ring-primary/30",
+          isActive && "border-l-4 border-l-primary shadow-[0_0_12px_-3px_oklch(from_var(--color-primary)_l_c_h/0.35)]",
           isDropTarget && !isDragSource && "border-primary/40"
         )}
       >
@@ -189,7 +189,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {isNext && (
-              <span className="shrink-0 rounded bg-primary px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary-foreground">
+              <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
                 Next
               </span>
             )}

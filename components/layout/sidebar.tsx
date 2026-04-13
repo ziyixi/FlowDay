@@ -87,8 +87,8 @@ export function Sidebar() {
 
       <aside
         className={cn(
-          "relative flex h-full shrink-0 flex-col border-r border-border bg-sidebar transition-all duration-200 ease-in-out",
-          collapsed ? "w-0 overflow-hidden border-r-0" : "w-[280px]"
+          "relative flex h-full shrink-0 flex-col bg-sidebar transition-all duration-200 ease-in-out",
+          collapsed ? "w-0 overflow-hidden" : "w-[280px] shadow-[1px_0_4px_-2px_oklch(0_0_0/0.08)]"
         )}
       >
         {/* Sidebar header */}
