@@ -23,6 +23,7 @@ import {
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import type { Task } from "@/lib/types/task";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 interface DeletedTasksDialogProps {
@@ -286,23 +287,30 @@ function TaskRow({
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
   return (
-    <div className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
-      <span className={cn("h-2 w-2 shrink-0 rounded-full", priorityColor)} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-sm text-foreground">{task.title}</p>
-        {task.projectName && (
-          <p className="truncate text-xs text-muted-foreground">
-            {task.projectName}
-          </p>
-        )}
-      </div>
-      <button
-        onClick={() => onRestore(task.id)}
-        className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-all"
-        title="Restore task"
-      >
-        <RotateCcw className="h-3.5 w-3.5" />
-      </button>
-    </div>
+    <Tooltip>
+      <TooltipTrigger render={<div />} className="w-full">
+        <div className="group flex items-center gap-2 rounded-md px-2 py-1.5 hover:bg-accent transition-colors">
+          <span className={cn("h-2 w-2 shrink-0 rounded-full", priorityColor)} />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm text-foreground">{task.title}</p>
+            {task.projectName && (
+              <p className="truncate text-xs text-muted-foreground">
+                {task.projectName}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => onRestore(task.id)}
+            className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-all"
+            title="Restore task"
+          >
+            <RotateCcw className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent side="bottom" className="max-w-sm">
+        {task.title}
+      </TooltipContent>
+    </Tooltip>
   );
 }

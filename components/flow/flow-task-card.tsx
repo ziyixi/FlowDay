@@ -5,11 +5,12 @@ import { useSortable } from "@dnd-kit/react/sortable";
 import { Play, Pause, Check, ChevronsDown, X } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { formatElapsed } from "@/lib/utils/time";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTimerStore, getEntryRevision } from "@/lib/stores/timer-store";
 import { ManualEntry } from "@/components/timer/manual-entry";
+import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { cn } from "@/lib/utils";
 
 interface FlowTaskCardProps {
@@ -38,63 +39,6 @@ function useTaskLoggedSeconds(taskId: string, revision: number): number {
   }, [taskId, revision]);
 
   return seconds;
-}
-
-function FlowEstimateEditor({ task }: { task: Task }) {
-  const [editing, setEditing] = useState(false);
-  const [value, setValue] = useState(task.estimatedMins?.toString() ?? "");
-  const inputRef = useRef<HTMLInputElement>(null);
-  const updateEstimate = useTodoistStore((s) => s.updateEstimate);
-
-  useEffect(() => {
-    if (editing) {
-      setValue(task.estimatedMins?.toString() ?? "");
-      inputRef.current?.focus();
-      inputRef.current?.select();
-    }
-  }, [editing, task.estimatedMins]);
-
-  const commit = () => {
-    setEditing(false);
-    const trimmed = value.trim();
-    const mins = trimmed === "" ? null : parseInt(trimmed, 10);
-    if (mins !== null && (isNaN(mins) || mins < 0)) return;
-    if (mins !== task.estimatedMins) {
-      updateEstimate(task.id, mins);
-    }
-  };
-
-  if (!editing) {
-    return (
-      <button
-        onClick={(e) => { e.stopPropagation(); setEditing(true); }}
-        className="tabular-nums hover:text-foreground transition-colors cursor-text"
-        title="Click to edit estimate"
-      >
-        {task.estimatedMins != null && task.estimatedMins > 0
-          ? `${formatDuration(task.estimatedMins)} est`
-          : "— est"}
-      </button>
-    );
-  }
-
-  return (
-    <input
-      ref={inputRef}
-      type="number"
-      min="0"
-      value={value}
-      onChange={(e) => setValue(e.target.value)}
-      onBlur={commit}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") commit();
-        if (e.key === "Escape") setEditing(false);
-      }}
-      onClick={(e) => e.stopPropagation()}
-      className="w-12 rounded border border-border bg-background px-1 text-xs tabular-nums text-foreground outline-none focus:ring-1 focus:ring-primary"
-      placeholder="min"
-    />
-  );
 }
 
 export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
@@ -211,13 +155,25 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               {task.projectName}
             </p>
           )}
+          {task.labels.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {task.labels.map((label) => (
+                <span
+                  key={label}
+                  className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                >
+                  {label}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
       {/* Footer row: time info + action buttons */}
       <div className="mt-2.5 flex items-center justify-between">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
-          <FlowEstimateEditor task={task} />
+          <EstimateEditor task={task} variant="flow" />
           {shownSeconds > 0 ? (
             <span
               className={cn(

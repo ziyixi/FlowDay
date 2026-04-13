@@ -51,8 +51,11 @@ export function ProgressBar({ date }: { date: string }) {
               {formatElapsed(actualSeconds)} logged
             </span>
           )}
+          {estimatedTotalMins > 0 && (
+            <span className="tabular-nums">~{formatDuration(estimatedTotalMins)} est</span>
+          )}
           {remainingMins > 0 && (
-            <span>~{formatDuration(remainingMins)} left</span>
+            <span className="tabular-nums">~{formatDuration(remainingMins)} left</span>
           )}
         </div>
       </div>
