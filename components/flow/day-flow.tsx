@@ -1,10 +1,11 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useDroppable } from "@dnd-kit/react";
 import { RotateCcw } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { formatDuration } from "@/lib/utils/time";
+import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { FlowTaskCard } from "./flow-task-card";
 import { ProgressBar } from "./progress-bar";
 import { cn } from "@/lib/utils";
@@ -195,17 +196,34 @@ function CompletedTaskRow({ task, date }: { task: Task; date: string }) {
   const uncompleteTask = useFlowStore((s) => s.uncompleteTask);
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
+  const [loggedSeconds, setLoggedSeconds] = useState(0);
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/entries?taskId=${encodeURIComponent(task.id)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((entries: { durationS: number | null }[]) => {
+        if (!cancelled) {
+          setLoggedSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
+        }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [task.id]);
+
   return (
     <div className="group flex items-center gap-2.5 rounded-md border border-border/50 bg-card/50 px-4 py-2 opacity-60">
       <span className={cn("h-2 w-2 shrink-0 rounded-full opacity-50", priorityColor)} />
       <p className="flex-1 truncate text-sm text-muted-foreground line-through">
         {task.title}
       </p>
-      {task.estimatedMins != null && task.estimatedMins > 0 && (
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground/60">
-          {formatDuration(task.estimatedMins)}
-        </span>
-      )}
+      <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums text-muted-foreground/60">
+        {task.estimatedMins != null && task.estimatedMins > 0 && (
+          <span>{formatDuration(task.estimatedMins)} est</span>
+        )}
+        {loggedSeconds > 0 && (
+          <span className="text-foreground/50">{formatElapsed(loggedSeconds)}</span>
+        )}
+      </div>
       <button
         onClick={() => uncompleteTask(task.id, date)}
         className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"

@@ -4,6 +4,7 @@ export interface Task {
   id: string;
   todoistId: string | null;
   title: string;
+  description: string | null;
   projectName: string | null;
   projectColor: string | null;
   priority: TaskPriority;

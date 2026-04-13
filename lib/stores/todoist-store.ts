@@ -12,6 +12,7 @@ interface TodoistState {
   setSearchQuery: (query: string) => void;
   setTasks: (tasks: Task[]) => void;
   removeTask: (taskId: string) => void;
+  updateEstimate: (taskId: string, estimatedMins: number | null) => void;
   hydrate: () => Promise<void>;
   sync: () => Promise<void>;
 }
@@ -27,6 +28,19 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
   setTasks: (tasks) => set({ tasks }),
   removeTask: (taskId) =>
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
+
+  updateEstimate: (taskId, estimatedMins) => {
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === taskId ? { ...t, estimatedMins } : t
+      ),
+    }));
+    fetch("/api/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, estimatedMins }),
+    }).catch(() => {});
+  },
 
   hydrate: async () => {
     set({ isLoading: true });
@@ -71,7 +85,6 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
 interface TaskSections {
   today: Task[];
   overdue: Task[];
-  projects: Record<string, Task[]>;
 }
 
 export function useTaskSections(): TaskSections {
@@ -97,21 +110,18 @@ export function useTaskSections(): TaskSections {
 
   const today: Task[] = [];
   const overdue: Task[] = [];
-  const projectMap: Record<string, Task[]> = {};
 
   for (const task of filtered) {
-    if (task.dueDate === todayStr) {
-      today.push(task);
-    } else if (task.dueDate && isBefore(new Date(task.dueDate), todayStart)) {
+    if (task.dueDate && isBefore(new Date(task.dueDate + "T00:00:00"), todayStart)) {
       overdue.push(task);
     } else {
-      const key = task.projectName ?? "No Project";
-      if (!projectMap[key]) projectMap[key] = [];
-      projectMap[key].push(task);
+      // API filter guarantees all tasks are today-or-overdue;
+      // anything not strictly overdue belongs in today
+      today.push(task);
     }
   }
 
-  return { today, overdue, projects: projectMap };
+  return { today, overdue };
 }
 
 export function useTaskById(id: string): Task | undefined {

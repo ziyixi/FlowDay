@@ -98,6 +98,7 @@ function rowToTask(row: {
   id: string;
   todoistId: string | null;
   title: string;
+  description: string | null;
   projectName: string | null;
   projectColor: string | null;
   priority: number;
@@ -113,6 +114,7 @@ function rowToTask(row: {
     id: row.id,
     todoistId: row.todoistId,
     title: row.title,
+    description: row.description,
     projectName: row.projectName,
     projectColor: row.projectColor,
     priority: (row.priority as TaskPriority) || 1,
@@ -131,18 +133,29 @@ export function getAllTasks(): Task[] {
   return rows.map(rowToTask);
 }
 
+export function updateTaskEstimate(taskId: string, estimatedMins: number | null): boolean {
+  const db = getDb();
+  const result = db
+    .update(tasks)
+    .set({ estimatedMins })
+    .where(eq(tasks.id, taskId))
+    .run();
+  return result.changes > 0;
+}
+
 export function upsertTasks(taskList: Task[]): void {
   const db = getDb();
   const now = new Date().toISOString();
-  const rawDb = (db as unknown as { $client: { transaction: (fn: () => void) => void } }).$client;
+  const rawDb = (db as unknown as { $client: { transaction: (fn: () => void) => () => void } }).$client;
 
-  rawDb.transaction(() => {
+  const runTx = rawDb.transaction(() => {
     for (const t of taskList) {
       db.insert(tasks)
         .values({
           id: t.id,
           todoistId: t.todoistId,
           title: t.title,
+          description: t.description,
           projectName: t.projectName,
           projectColor: t.projectColor,
           priority: t.priority,
@@ -159,6 +172,7 @@ export function upsertTasks(taskList: Task[]): void {
           set: {
             todoistId: t.todoistId,
             title: t.title,
+            description: t.description,
             projectName: t.projectName,
             projectColor: t.projectColor,
             priority: t.priority,
@@ -173,6 +187,7 @@ export function upsertTasks(taskList: Task[]): void {
         .run();
     }
   });
+  runTx();
 }
 
 export function deleteStaleTasksNotIn(ids: string[]): void {
@@ -210,9 +225,9 @@ export function getAllFlows(): Record<string, string[]> {
 
 export function setFlowTaskIds(flowDate: string, taskIds: string[]): void {
   const db = getDb();
-  const rawDb = (db as unknown as { $client: { transaction: (fn: () => void) => void } }).$client;
+  const rawDb = (db as unknown as { $client: { transaction: (fn: () => void) => () => void } }).$client;
 
-  rawDb.transaction(() => {
+  const runTx = rawDb.transaction(() => {
     db.delete(flowTasks).where(eq(flowTasks.flowDate, flowDate)).run();
     for (let i = 0; i < taskIds.length; i++) {
       db.insert(flowTasks)
@@ -225,6 +240,7 @@ export function setFlowTaskIds(flowDate: string, taskIds: string[]): void {
         .run();
     }
   });
+  runTx();
 }
 
 // ---- Completed flow tasks ----

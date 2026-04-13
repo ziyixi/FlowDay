@@ -41,6 +41,7 @@ export async function syncTodoistToDb(): Promise<{ taskCount: number; error?: st
       id: t.id,
       todoistId: t.id,
       title: t.content,
+      description: t.description || null,
       projectName: project?.name ?? null,
       projectColor: project?.color ?? null,
       priority: (t.priority as TaskPriority) || 1,

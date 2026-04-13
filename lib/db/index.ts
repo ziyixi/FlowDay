@@ -36,6 +36,7 @@ export function getDb() {
       id TEXT PRIMARY KEY,
       todoist_id TEXT,
       title TEXT NOT NULL,
+      description TEXT,
       project_name TEXT,
       project_color TEXT,
       priority INTEGER NOT NULL DEFAULT 1,
@@ -68,6 +69,13 @@ export function getDb() {
       UNIQUE(flow_date, task_id)
     );
   `);
+
+  // Lightweight migrations: add columns that may not exist yet
+  const cols = sqlite.pragma("table_info(tasks)") as { name: string }[];
+  const colNames = new Set(cols.map((c) => c.name));
+  if (!colNames.has("description")) {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN description TEXT");
+  }
 
   const db = drizzle(sqlite, { schema });
   globalForDb.__flowdayDb = db;

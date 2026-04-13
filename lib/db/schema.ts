@@ -16,6 +16,7 @@ export const tasks = sqliteTable("tasks", {
   id: text("id").primaryKey(),
   todoistId: text("todoist_id"),
   title: text("title").notNull(),
+  description: text("description"),
   projectName: text("project_name"),
   projectColor: text("project_color"),
   priority: integer("priority").notNull().default(1),
