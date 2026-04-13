@@ -51,6 +51,7 @@ export async function syncTodoistToDb(): Promise<{ taskCount: number; error?: st
       completedAt: t.completed_at,
       dueDate,
       createdAt: t.created_at,
+      deletedAt: null,
     };
   });
 

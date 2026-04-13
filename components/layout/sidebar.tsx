@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { PanelLeftClose, PanelLeft, Search, RefreshCw, Pause, Play } from "lucide-react";
+import { PanelLeftClose, PanelLeft, Search, RefreshCw, Pause, Play, Trash2 } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
@@ -13,6 +13,7 @@ import { useTaskById } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { formatElapsed } from "@/lib/utils/time";
 import { TaskPool } from "@/components/todoist/task-pool";
+import { DeletedTasksDialog } from "@/components/todoist/deleted-tasks-dialog";
 
 function SidebarTimer() {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
@@ -61,6 +62,7 @@ function SidebarTimer() {
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [trashOpen, setTrashOpen] = useState(false);
   const searchQuery = useTodoistStore((s) => s.searchQuery);
   const setSearchQuery = useTodoistStore((s) => s.setSearchQuery);
   const isSyncing = useTodoistStore((s) => s.isSyncing);
@@ -107,6 +109,15 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger
                 className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                onClick={() => setTrashOpen(true)}
+              >
+                <Trash2 className="h-3 w-3" />
+              </TooltipTrigger>
+              <TooltipContent>Deleted tasks</TooltipContent>
+            </Tooltip>
+            <Tooltip>
+              <TooltipTrigger
+                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
                 onClick={() => setCollapsed(true)}
               >
                 <PanelLeftClose className="h-3 w-3" />
@@ -138,6 +149,8 @@ export function Sidebar() {
           <TaskPool />
         </div>
       </aside>
+
+      <DeletedTasksDialog open={trashOpen} onOpenChange={setTrashOpen} />
     </>
   );
 }

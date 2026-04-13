@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useDraggable } from "@dnd-kit/react";
+import { Trash2 } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration } from "@/lib/utils/time";
@@ -72,6 +73,7 @@ export function TaskCard({ task }: { task: Task }) {
     type: "task-pool-card",
     data: { task },
   });
+  const deleteTask = useTodoistStore((s) => s.deleteTask);
 
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
   const hasDescription = task.description && task.description.trim().length > 0;
@@ -92,6 +94,13 @@ export function TaskCard({ task }: { task: Task }) {
         )}
       </div>
       <InlineEstimateEditor task={task} />
+      <button
+        onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
+        className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground/60 hover:text-red-500 transition-all"
+        title="Delete task"
+      >
+        <Trash2 className="h-3 w-3" />
+      </button>
     </>
   );
 

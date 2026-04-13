@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { format, isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
-import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds } from "./flow-store";
+import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds, useFlowStore } from "./flow-store";
+import { useTimerStore } from "./timer-store";
 
 interface TodoistState {
   tasks: Task[];
@@ -12,6 +13,7 @@ interface TodoistState {
   setSearchQuery: (query: string) => void;
   setTasks: (tasks: Task[]) => void;
   removeTask: (taskId: string) => void;
+  deleteTask: (taskId: string) => Promise<void>;
   updateEstimate: (taskId: string, estimatedMins: number | null) => void;
   hydrate: () => Promise<void>;
   sync: () => Promise<void>;
@@ -28,6 +30,37 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
   setTasks: (tasks) => set({ tasks }),
   removeTask: (taskId) =>
     set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) })),
+
+  deleteTask: async (taskId) => {
+    // Remove from client tasks
+    set((state) => ({ tasks: state.tasks.filter((t) => t.id !== taskId) }));
+
+    // Remove from all flows and completed flows
+    const flowState = useFlowStore.getState();
+    for (const [date, ids] of Object.entries(flowState.flows)) {
+      if (ids.includes(taskId)) {
+        flowState.removeTask(taskId, date);
+      }
+    }
+    for (const [date, ids] of Object.entries(flowState.completedTasks)) {
+      if (ids.includes(taskId)) {
+        flowState.removeCompletedTask(taskId, date);
+      }
+    }
+
+    // Stop timer if active for this task
+    const timerState = useTimerStore.getState();
+    if (timerState.activeTaskId === taskId) {
+      timerState.stopWithoutSaving();
+    }
+
+    // Persist to server
+    await fetch("/api/tasks", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId }),
+    }).catch(() => {});
+  },
 
   updateEstimate: (taskId, estimatedMins) => {
     set((state) => ({
@@ -99,6 +132,7 @@ export function useTaskSections(): TaskSections {
   const inFlow = new Set([...flowTaskIds, ...completedTaskIds]);
 
   const filtered = tasks.filter((t) => {
+    if (t.deletedAt) return false;
     if (t.isCompleted) return false;
     if (inFlow.has(t.id)) return false;
     if (!query) return true;

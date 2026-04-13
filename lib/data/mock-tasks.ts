@@ -21,6 +21,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: today,
     createdAt: "2026-04-10T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-2",
@@ -36,6 +37,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: today,
     createdAt: "2026-04-10T11:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-3",
@@ -51,6 +53,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: today,
     createdAt: "2026-04-10T12:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-4",
@@ -66,6 +69,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: today,
     createdAt: "2026-04-11T08:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-5",
@@ -81,6 +85,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: today,
     createdAt: "2026-04-11T09:00:00Z",
+    deletedAt: null,
   },
 
   // Overdue tasks
@@ -98,6 +103,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: yesterday,
     createdAt: "2026-04-08T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-7",
@@ -113,6 +119,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: threeDaysAgo,
     createdAt: "2026-04-06T14:00:00Z",
+    deletedAt: null,
   },
 
   // Project-only tasks (no due date)
@@ -130,6 +137,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: null,
     createdAt: "2026-04-05T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-9",
@@ -145,6 +153,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: null,
     createdAt: "2026-04-04T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-10",
@@ -160,6 +169,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: null,
     createdAt: "2026-04-03T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-11",
@@ -175,6 +185,7 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: null,
     createdAt: "2026-04-02T10:00:00Z",
+    deletedAt: null,
   },
   {
     id: "task-12",
@@ -190,5 +201,6 @@ export const MOCK_TASKS: Task[] = [
     completedAt: null,
     dueDate: null,
     createdAt: "2026-04-01T10:00:00Z",
+    deletedAt: null,
   },
 ];

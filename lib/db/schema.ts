@@ -27,6 +27,7 @@ export const tasks = sqliteTable("tasks", {
   dueDate: text("due_date"),
   createdAt: text("created_at"),
   syncedAt: text("synced_at"),
+  deletedAt: text("deleted_at"),
 });
 
 export const settings = sqliteTable("settings", {

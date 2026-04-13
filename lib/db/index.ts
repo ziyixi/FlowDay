@@ -76,6 +76,9 @@ export function getDb() {
   if (!colNames.has("description")) {
     sqlite.exec("ALTER TABLE tasks ADD COLUMN description TEXT");
   }
+  if (!colNames.has("deleted_at")) {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT");
+  }
 
   const db = drizzle(sqlite, { schema });
   globalForDb.__flowdayDb = db;

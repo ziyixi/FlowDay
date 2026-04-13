@@ -14,6 +14,7 @@ export interface Task {
   completedAt: string | null;
   dueDate: string | null;
   createdAt: string;
+  deletedAt: string | null;
 }
 
 // Todoist convention: 4 = urgent (red), 3 = high (orange), 2 = medium (yellow), 1 = normal (blue)

@@ -21,6 +21,7 @@ interface FlowState {
   reorderTasks: (fromIndex: number, toIndex: number, date: string) => void;
   completeTask: (taskId: string, date: string) => void;
   uncompleteTask: (taskId: string, date: string) => void;
+  removeCompletedTask: (taskId: string, date: string) => void;
   skipTask: (taskId: string, date: string) => void;
   hydrate: () => Promise<void>;
 }
@@ -131,6 +132,17 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
       persistRemoveCompleted(date, taskId);
       return {
         flows: { ...state.flows, [date]: flowIds },
+        completedTasks: {
+          ...state.completedTasks,
+          [date]: completedForDate(state, date).filter((id) => id !== taskId),
+        },
+      };
+    }),
+
+  removeCompletedTask: (taskId, date) =>
+    set((state) => {
+      persistRemoveCompleted(date, taskId);
+      return {
         completedTasks: {
           ...state.completedTasks,
           [date]: completedForDate(state, date).filter((id) => id !== taskId),

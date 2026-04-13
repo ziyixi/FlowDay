@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, isNull, isNotNull } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -109,6 +109,7 @@ function rowToTask(row: {
   dueDate: string | null;
   createdAt: string | null;
   syncedAt: string | null;
+  deletedAt: string | null;
 }): Task {
   return {
     id: row.id,
@@ -124,13 +125,46 @@ function rowToTask(row: {
     completedAt: row.completedAt,
     dueDate: row.dueDate,
     createdAt: row.createdAt || new Date().toISOString(),
+    deletedAt: row.deletedAt ?? null,
   };
 }
 
 export function getAllTasks(): Task[] {
   const db = getDb();
-  const rows = db.select().from(tasks).all();
+  const rows = db.select().from(tasks).where(isNull(tasks.deletedAt)).all();
   return rows.map(rowToTask);
+}
+
+export function getDeletedTasks(): Task[] {
+  const db = getDb();
+  const rows = db.select().from(tasks).where(isNotNull(tasks.deletedAt)).all();
+  return rows.map(rowToTask);
+}
+
+export function softDeleteTask(taskId: string): boolean {
+  const db = getDb();
+  const result = db
+    .update(tasks)
+    .set({ deletedAt: new Date().toISOString() })
+    .where(eq(tasks.id, taskId))
+    .run();
+  return result.changes > 0;
+}
+
+export function restoreTask(taskId: string): boolean {
+  const db = getDb();
+  const result = db
+    .update(tasks)
+    .set({ deletedAt: null })
+    .where(eq(tasks.id, taskId))
+    .run();
+  return result.changes > 0;
+}
+
+export function removeTaskFromFlows(taskId: string): void {
+  const db = getDb();
+  db.delete(flowTasks).where(eq(flowTasks.taskId, taskId)).run();
+  db.delete(completedFlowTasks).where(eq(completedFlowTasks.taskId, taskId)).run();
 }
 
 export function updateTaskEstimate(taskId: string, estimatedMins: number | null): boolean {
@@ -186,6 +220,8 @@ export function upsertTasks(taskList: Task[]): void {
             completedAt: t.completedAt,
             dueDate: t.dueDate,
             syncedAt: now,
+            // Preserve soft-delete status across syncs
+            deletedAt: sql`${tasks.deletedAt}`,
           },
         })
         .run();
