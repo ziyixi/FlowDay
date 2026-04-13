@@ -12,6 +12,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "FlowDay",
   description: "A visual daily task flow planner with Todoist integration",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "FlowDay",
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+  },
 };
 
 export default function RootLayout({
@@ -22,6 +30,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
+        <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -31,6 +42,11 @@ export default function RootLayout({
                   var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   if (dark) document.documentElement.classList.add('dark');
                 } catch(e) {}
+                if ('serviceWorker' in navigator) {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js');
+                  });
+                }
               })();
             `,
           }}
