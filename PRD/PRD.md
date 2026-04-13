@@ -263,6 +263,22 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 | **API Layer** | **Next.js Route Handlers** | `/app/api/*` routes for all CRUD |
 | **Auth (Todoist)** | **Personal API token** | Stored in SQLite settings table |
 
+### Testing
+
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| **Test Runner** | **Vitest 3.2** | Fast, ESM-native, shared Vite config |
+| **Test Structure** | Unit + Integration | `__tests__/unit/` and `__tests__/integration/` |
+| **DB Isolation** | Fresh SQLite per test | `beforeEach` closes connection + wipes DB file |
+
+### Deployment
+
+| Layer | Choice | Notes |
+|-------|--------|-------|
+| **Container** | **Docker (multi-stage)** | Node 20 Alpine, standalone Next.js output |
+| **Registry** | **GitHub Container Registry** | `ghcr.io`, pushed on main push and release |
+| **CI/CD** | **GitHub Actions** | Lint → Unit tests → Integration tests → Build → Docker push |
+
 ### Key Architecture Decisions
 
 - **SQLite as source of truth**: Tasks, flows, time entries, settings all in SQLite. Zustand stores are reactive cache only.
@@ -271,6 +287,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Segment-based timer**: Each pause saves a separate time entry for the actual running segment, ensuring accurate time tracking.
 - **Dev-mode fresh DB**: `predev` script wipes SQLite on `npm run dev`; production persists.
 - **`serverExternalPackages: ["better-sqlite3"]`** in next.config.ts for native addon support.
+- **Standalone output**: `output: "standalone"` in next.config.ts for minimal Docker images.
 
 ---
 
@@ -352,13 +369,28 @@ flowday/
 │   ├── utils/
 │   │   └── time.ts                # formatDuration, formatElapsed
 │   └── utils.ts                   # cn() utility
+├── __tests__/
+│   ├── setup.ts                   # Per-test DB isolation (close + wipe)
+│   ├── unit/
+│   │   ├── time.test.ts           # formatDuration, formatElapsed
+│   │   ├── queries-core.test.ts   # Settings, tasks, flows, completed flows
+│   │   └── queries-time-entries.test.ts # Time entry CRUD + range queries
+│   └── integration/
+│       ├── analytics-api.test.ts  # Analytics route handler (daily/weekly/stats)
+│       └── entries-api.test.ts    # Entries route handler (CRUD)
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # CI/CD: lint → test → build → Docker push
 ├── db/
 │   └── flowday.db                 # SQLite database (gitignored)
+├── .dockerignore                  # Excludes node_modules, .next, db, tests, docs
 ├── .gitignore                     # Includes /db/, *.db, *.db-journal, *.db-wal
+├── Dockerfile                     # Multi-stage: deps → build → standalone runner
+├── vitest.config.ts               # Vitest config with @ alias + serial execution
 ├── AGENTS.md                      # Agent rules for Next.js 16 breaking changes
 ├── CLAUDE.md                      # Claude AI coding instructions
 ├── README.md
-├── next.config.ts
+├── next.config.ts                 # output: "standalone" + serverExternalPackages
 ├── tsconfig.json
 ├── eslint.config.mjs
 ├── postcss.config.mjs
@@ -568,13 +600,21 @@ CREATE TABLE time_entries (
 - **Date/week navigation**: prev/next arrows and click-to-today within daily and weekly views (local state, doesn't affect main app date)
 - Daily Review tab: summary cards (tasks, logged, estimated, accuracy), capacity usage bar, **hourly activity bar chart** (hours 6–23), per-task estimated vs. actual horizontal bars, **estimation vs actual table** with diff column (green/red coloring)
 - Weekly Review tab: summary cards (done, hours, avg/day, accuracy), daily trend bar chart (Mon–Sun), **work time heatmap** (7×17 grid: Mon–Sun × hours 6–22, intensity-colored cells), time by project with colored bars, stuck work detection (2+ days, not completed), estimation accuracy table with color-coded percentages
-- API route: `GET /api/analytics?type=daily|weekly&date=YYYY-MM-DD` — daily returns `hourlyMins` (24-element array), weekly returns `heatmap` (7×24 matrix, 0=Mon)
-- New query helpers: `getEntriesInDateRange`, `getFlowTaskIdsInDateRange`, `getCompletedTaskIdsInDateRange`, `getTasksByIds` (using `gte`, `lte`, `inArray` from Drizzle)
+- Work Patterns tab: all-time heatmap (frequency/duration toggle), peak hours summary
+- API route: `GET /api/analytics?type=daily|weekly|stats&date=YYYY-MM-DD`
+- New query helpers: `getEntriesInDateRange`, `getFlowTaskIdsInDateRange`, `getCompletedTaskIdsInDateRange`, `getTasksByIds`, `getAllTimeEntries`
 - Pure CSS/Tailwind charts — no external charting library
-- Week boundaries: Monday–Sunday (ISO week via `date-fns` `startOfWeek`/`endOfWeek`)
-- Stuck task detection: tasks in flow_tasks on 2+ dates but never in completed_flow_tasks during the week
-- Estimation accuracy: `min(est, actual) / max(est, actual)` ratio per task, averaged for overall
-- **StatCard overflow fix**: `overflow-hidden` + `truncate` on card container and text to prevent text escape
+
+### Session 12 — Testing & Docker Deployment ✅ Implemented
+- **Vitest** test runner with `@` path alias and serial execution (`fileParallelism: false`)
+- Per-test DB isolation: `beforeEach` closes SQLite connection via `globalThis.__flowdaySqlite` and wipes DB files
+- **Unit tests** (3 files, 33 tests): `formatDuration`/`formatElapsed`, settings/task/flow CRUD queries, time entry CRUD + range queries
+- **Integration tests** (2 files, 25 tests): analytics route handler (daily/weekly/stats computations, error handling), entries route handler (POST/GET/PUT/DELETE via direct handler invocation)
+- **Docker**: multi-stage build (Node 20 Alpine) — deps → build → standalone runner, non-root `nextjs` user, `/app/db` directory with correct permissions
+- **GitHub Actions CI/CD**: lint + unit tests + integration tests + build (parallel), then Docker build & push to GHCR on main push or release
+- Docker metadata: tags by branch, semver, and SHA; GHA build cache for fast rebuilds
+- `output: "standalone"` in next.config.ts for minimal Docker images
+- `.dockerignore` excludes tests, docs, DB files, and `.git`
 
 ---
 
@@ -627,4 +667,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 1.2 — Post-Session 11 enhancements (date navigation, hourly activity chart, work time heatmap, estimation vs actual table, stat card overflow fix)*
+*Version: 1.3 — Post-Session 12 (added testing suite, Docker deployment, GitHub Actions CI/CD)*

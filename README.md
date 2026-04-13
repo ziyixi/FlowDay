@@ -1,36 +1,97 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FlowDay
 
-## Getting Started
+A visual daily task flow planner with Todoist integration. Spiritual successor to HourStack — pull tasks from Todoist, arrange them into a sequential day plan, execute with built-in time tracking, and review your productivity.
 
-First, run the development server:
+## Quick Start
+
+### Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000). The dev server wipes the SQLite database on each start for a clean slate.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Docker
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+docker build -t flowday .
+docker run -p 3000:3000 -v flowday-data:/app/db flowday
+```
 
-## Learn More
+Mount `/app/db` as a volume to persist your database across container restarts.
 
-To learn more about Next.js, take a look at the following resources:
+Pre-built images are available from GitHub Container Registry:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+docker pull ghcr.io/<owner>/flowday:main
+docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Setup
 
-## Deploy on Vercel
+1. Get a Todoist API token from [Settings > Integrations > Developer](https://todoist.com/app/settings/integrations/developer)
+2. Click the gear icon in FlowDay's top bar and paste your token
+3. Click "Sync Now" — your today + overdue tasks appear in the sidebar
+4. Drag tasks into the day flow to start planning
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Features
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Sequential day flow** — ordered task list, not a calendar grid. Decide what to do and in what order.
+- **Todoist sync** — read-only integration. FlowDay never modifies your Todoist data.
+- **Time tracking** — segment-based timer with pause/resume. Manual entries supported.
+- **Multi-day view** — 1, 3, or 5 day horizon for planning context.
+- **Daily planning ritual** — guided "Start My Day" wizard with task rollover from yesterday.
+- **Task notes** — per-task-per-day session log for capturing context while working.
+- **Day capacity** — configurable work-hours budget with overcommitment warnings.
+- **Analytics** — daily review, weekly review with heatmaps, estimation accuracy tracking.
+- **Soft-delete** — tasks are never hard-deleted. Calendar-based trash browser with restore.
+
+## Tech Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **SQLite** (better-sqlite3) — local-first, WAL mode
+- **Drizzle ORM** — type-safe schema and queries
+- **Zustand** — reactive cache layer (SQLite is source of truth)
+- **shadcn/ui v4** + **Tailwind CSS v4** — UI components
+- **@dnd-kit/react** — drag and drop
+- **Vitest** — unit and integration tests
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start dev server (wipes DB) |
+| `npm run build` | Production build |
+| `npm start` | Start production server |
+| `npm run lint` | ESLint |
+| `npm test` | Run all tests |
+| `npm run test:unit` | Unit tests only |
+| `npm run test:integration` | Integration tests only |
+| `npm run test:watch` | Watch mode |
+
+## Testing
+
+Tests use a fresh SQLite database per test case (no mocks for DB layer).
+
+- **Unit tests** (`__tests__/unit/`): utility functions, database query helpers
+- **Integration tests** (`__tests__/integration/`): API route handlers end-to-end
+
+```bash
+npm test
+```
+
+## CI/CD
+
+GitHub Actions runs on push to `main` and pull requests:
+1. **Lint** + **Unit Tests** + **Integration Tests** + **Build** (parallel)
+2. **Docker image** built and pushed to GitHub Container Registry (on main push or release)
+
+## Architecture
+
+```
+Todoist Cloud (read-only) → FlowDay API (Next.js routes) → SQLite → Zustand → React UI
+```
+
+See [PRD/PRD.md](PRD/PRD.md) for full architecture documentation.

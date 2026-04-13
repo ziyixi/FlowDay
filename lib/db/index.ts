@@ -8,6 +8,7 @@ const DB_PATH = path.join(process.cwd(), "db", "flowday.db");
 
 const globalForDb = globalThis as unknown as {
   __flowdayDb?: ReturnType<typeof drizzle<typeof schema>>;
+  __flowdaySqlite?: InstanceType<typeof Database>;
 };
 
 export function getDb() {
@@ -19,6 +20,7 @@ export function getDb() {
   const sqlite = new Database(DB_PATH);
   sqlite.pragma("journal_mode = WAL");
   sqlite.pragma("foreign_keys = ON");
+  globalForDb.__flowdaySqlite = sqlite;
 
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS time_entries (

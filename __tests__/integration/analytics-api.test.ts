@@ -1,0 +1,226 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import {
+  createTimeEntry,
+  upsertTasks,
+  setFlowTaskIds,
+  addCompletedFlowTask,
+  setSetting,
+} from "@/lib/db/queries";
+import type { Task } from "@/lib/types/task";
+
+/**
+ * Integration tests for the analytics computation logic.
+ * We import the route handler module and invoke it directly with mock Requests,
+ * testing the full pipeline: DB queries → analytics computation → JSON response.
+ */
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: overrides.id ?? "t1",
+    todoistId: null,
+    title: "Test Task",
+    description: null,
+    projectName: "Work",
+    projectColor: "#ff0000",
+    priority: 1,
+    labels: [],
+    estimatedMins: 30,
+    isCompleted: false,
+    completedAt: null,
+    dueDate: null,
+    createdAt: null,
+    syncedAt: null,
+    deletedAt: null,
+    ...overrides,
+  };
+}
+
+function seedDay(date: string) {
+  upsertTasks([
+    makeTask({ id: "t1", title: "Design", estimatedMins: 30 }),
+    makeTask({ id: "t2", title: "Code", estimatedMins: 60 }),
+  ]);
+  setFlowTaskIds(date, ["t1", "t2"]);
+  addCompletedFlowTask(date, "t1");
+  setSetting("day_capacity_mins", "360");
+
+  createTimeEntry({
+    id: "e1",
+    taskId: "t1",
+    flowDate: date,
+    startTime: `${date}T09:00:00.000Z`,
+    endTime: `${date}T09:25:00.000Z`,
+    durationS: 1500,
+    source: "timer",
+  });
+  createTimeEntry({
+    id: "e2",
+    taskId: "t2",
+    flowDate: date,
+    startTime: `${date}T10:00:00.000Z`,
+    endTime: `${date}T10:45:00.000Z`,
+    durationS: 2700,
+    source: "manual",
+  });
+}
+
+// We dynamically import the GET handler so each test gets the fresh DB from setup
+async function callAnalytics(params: string) {
+  const mod = await import("@/app/api/analytics/route");
+  const url = `http://localhost:3000/api/analytics?${params}`;
+  const request = new Request(url);
+  const response = await mod.GET(request);
+  return response.json();
+}
+
+describe("GET /api/analytics — daily", () => {
+  beforeEach(() => {
+    seedDay("2026-04-13");
+  });
+
+  it("returns correct task counts", async () => {
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    expect(data.tasksPlanned).toBe(2);
+    expect(data.tasksCompleted).toBe(1);
+  });
+
+  it("returns correct time totals", async () => {
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    // 1500s + 2700s = 4200s = 70min
+    expect(data.totalLoggedMins).toBe(70);
+    // est: 30 + 60 = 90
+    expect(data.totalEstimatedMins).toBe(90);
+  });
+
+  it("returns capacity", async () => {
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    expect(data.dayCapacityMins).toBe(360);
+  });
+
+  it("returns per-task breakdown", async () => {
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    expect(data.tasks).toHaveLength(2);
+    const design = data.tasks.find((t: { id: string }) => t.id === "t1");
+    expect(design.completed).toBe(true);
+    expect(design.loggedMins).toBe(25);
+  });
+
+  it("returns hourlyMins array", async () => {
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    expect(data.hourlyMins).toHaveLength(24);
+    // Analytics uses local time — compute expected local hours from UTC timestamps
+    const localHour9 = new Date("2026-04-13T09:00:00.000Z").getHours();
+    const localHour10 = new Date("2026-04-13T10:00:00.000Z").getHours();
+    expect(data.hourlyMins[localHour9]).toBeGreaterThan(0);
+    expect(data.hourlyMins[localHour10]).toBeGreaterThan(0);
+  });
+
+  it("returns empty for a date with no data", async () => {
+    const data = await callAnalytics("type=daily&date=2026-01-01");
+    expect(data.tasksPlanned).toBe(0);
+    expect(data.totalLoggedMins).toBe(0);
+    expect(data.tasks).toHaveLength(0);
+  });
+});
+
+describe("GET /api/analytics — weekly", () => {
+  beforeEach(() => {
+    // 2026-04-13 is a Monday
+    seedDay("2026-04-13");
+    // Add another day in the same week
+    upsertTasks([makeTask({ id: "t3", title: "Review", estimatedMins: 15 })]);
+    setFlowTaskIds("2026-04-14", ["t3"]);
+    addCompletedFlowTask("2026-04-14", "t3");
+    createTimeEntry({
+      id: "e3",
+      taskId: "t3",
+      flowDate: "2026-04-14",
+      startTime: "2026-04-14T14:00:00.000Z",
+      endTime: "2026-04-14T14:20:00.000Z",
+      durationS: 1200,
+      source: "timer",
+    });
+  });
+
+  it("returns 7 days", async () => {
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    expect(data.days).toHaveLength(7);
+    expect(data.days[0].dayOfWeek).toBe("Mon");
+    expect(data.days[6].dayOfWeek).toBe("Sun");
+  });
+
+  it("computes weekly totals", async () => {
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    // t1 + t3 completed (t2 not completed)
+    expect(data.totals.tasksCompleted).toBe(2);
+    // 1500 + 2700 + 1200 = 5400s = 90min
+    expect(data.totals.totalLoggedMins).toBe(90);
+  });
+
+  it("returns byProject breakdown", async () => {
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    expect(data.byProject.length).toBeGreaterThanOrEqual(1);
+    const work = data.byProject.find(
+      (p: { projectName: string }) => p.projectName === "Work"
+    );
+    expect(work).toBeDefined();
+    expect(work.loggedMins).toBe(90);
+  });
+
+  it("returns heatmap as 7x24 grid", async () => {
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    expect(data.heatmap).toHaveLength(7);
+    expect(data.heatmap[0]).toHaveLength(24); // Monday
+    // Analytics uses local time — compute expected local hour from UTC timestamp
+    const localHour9 = new Date("2026-04-13T09:00:00.000Z").getHours();
+    expect(data.heatmap[0][localHour9]).toBeGreaterThan(0);
+  });
+
+  it("detects estimation accuracy", async () => {
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    // t1 completed with est=30, actual=25. t3 completed with est=15, actual=20
+    expect(data.estimationAccuracy.length).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe("GET /api/analytics — stats", () => {
+  beforeEach(() => {
+    seedDay("2026-04-13");
+  });
+
+  it("returns weekCount and totalMins grids", async () => {
+    const data = await callAnalytics("type=stats");
+    expect(data.weekCount).toHaveLength(7);
+    expect(data.totalMins).toHaveLength(7);
+    expect(data.weekCount[0]).toHaveLength(24);
+    expect(data.totalWeeks).toBeGreaterThanOrEqual(1);
+  });
+
+  it("counts work in correct day/hour slots", async () => {
+    const data = await callAnalytics("type=stats");
+    // Analytics uses local time — compute expected local day/hour from UTC timestamps
+    const d = new Date("2026-04-13T09:00:00.000Z");
+    const localDay = (d.getDay() + 6) % 7; // convert Sun=0 to Mon=0 indexing
+    const localHour9 = d.getHours();
+    const localHour10 = new Date("2026-04-13T10:00:00.000Z").getHours();
+    expect(data.weekCount[localDay][localHour9]).toBe(1);
+    expect(data.weekCount[localDay][localHour10]).toBe(1);
+    expect(data.totalMins[localDay][localHour9]).toBeGreaterThan(0);
+  });
+});
+
+describe("GET /api/analytics — errors", () => {
+  it("returns 400 for missing params", async () => {
+    const mod = await import("@/app/api/analytics/route");
+    const response = await mod.GET(new Request("http://localhost:3000/api/analytics"));
+    expect(response.status).toBe(400);
+  });
+
+  it("returns 400 for invalid type", async () => {
+    const mod = await import("@/app/api/analytics/route");
+    const response = await mod.GET(
+      new Request("http://localhost:3000/api/analytics?type=invalid&date=2026-04-13")
+    );
+    expect(response.status).toBe(400);
+  });
+});
