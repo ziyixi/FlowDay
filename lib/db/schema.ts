@@ -47,3 +47,11 @@ export const completedFlowTasks = sqliteTable("completed_flow_tasks", {
   flowDate: text("flow_date").notNull(),
   taskId: text("task_id").notNull(),
 });
+
+export const flowTaskNotes = sqliteTable("flow_task_notes", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull(),
+  flowDate: text("flow_date").notNull(),
+  content: text("content").notNull().default(""),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});

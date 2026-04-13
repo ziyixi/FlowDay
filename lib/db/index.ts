@@ -68,6 +68,15 @@ export function getDb() {
       task_id TEXT NOT NULL,
       UNIQUE(flow_date, task_id)
     );
+
+    CREATE TABLE IF NOT EXISTS flow_task_notes (
+      id TEXT PRIMARY KEY,
+      task_id TEXT NOT NULL,
+      flow_date TEXT NOT NULL,
+      content TEXT NOT NULL DEFAULT '',
+      updated_at TEXT DEFAULT (datetime('now')),
+      UNIQUE(task_id, flow_date)
+    );
   `);
 
   // Lightweight migrations: add columns that may not exist yet

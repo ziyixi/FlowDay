@@ -185,16 +185,20 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Flow store additions: `hydrated: boolean`, `planningCompletedDates: Record<string, boolean>`, `setPlanningCompleted(date)`, `rolloverSelectedTasks(from, to, ids)`
 - Auto-trigger uses `useRef` guard to evaluate once after hydration, preventing premature trigger on empty pre-hydration state
 
-### 4.8 — Task Notes / Session Log 🔮 Future
+### 4.8 — Task Notes / Session Log ✅ Implemented
 
 **What it does:** Per-task-per-day text notes for capturing context while working.
 
-- Small expandable text area on each flow task card (pencil/note icon to toggle)
+- Small expandable text area on each flow task card (StickyNote icon to toggle)
 - Jot notes during execution: "blocked on API response," "need to follow up with X," "found a related bug in auth module"
 - Notes are scoped to `(task_id, flow_date)` — same task on different days gets separate notes
 - Notes visible in the completed tasks section and in multi-day read-only view
-- New DB table: `flow_task_notes (id, task_id, flow_date, content, updated_at)`
+- New DB table: `flow_task_notes (id, task_id, flow_date, content, updated_at)` with UNIQUE(task_id, flow_date)
 - Useful for daily review / weekly review: "what did I actually do and learn?"
+- Auto-saves via debounced (500ms) PUT to `/api/notes`
+- Notes auto-expand if content exists when card mounts
+- `onMouseDown stopPropagation` on textarea prevents dnd-kit drag interference
+- Read-only views show truncated note text with StickyNote icon indicator
 
 ### 4.9 — Analytics & Weekly Review Dashboard 🔮 Future
 
@@ -285,6 +289,7 @@ flowday/
 │       │   ├── route.ts           # POST create, GET query time entries
 │       │   └── [id]/route.ts      # PUT update, DELETE time entry
 │       ├── flows/route.ts         # GET all flows, PUT flow mutations
+│       ├── notes/route.ts         # GET/PUT task notes (per task+date)
 │       ├── settings/route.ts      # GET/PUT Todoist API key
 │       ├── sync/route.ts          # POST trigger Todoist sync
 │       ├── tasks/route.ts         # GET all tasks, PATCH estimate, DELETE soft-delete
@@ -329,7 +334,7 @@ flowday/
 │   │   ├── colors.ts              # Todoist color name → hex mapping
 │   │   └── sync.ts                # Sync orchestration: fetch → transform → upsert
 │   ├── db/
-│   │   ├── schema.ts              # Drizzle schema (5 tables)
+│   │   ├── schema.ts              # Drizzle schema (6 tables)
 │   │   ├── index.ts               # DB connection singleton
 │   │   └── queries.ts             # All CRUD query helpers
 │   ├── stores/
@@ -546,11 +551,16 @@ CREATE TABLE time_entries (
 - Rollover prompt suppressed when planning completed for the date
 - New component: `planning-wizard.tsx`
 
-### Session 10 — Task Notes & Session Log 🔮 Future
-- Per-task-per-day text notes on flow cards
-- Expandable text area with pencil icon toggle
-- Notes visible in completed section and multi-day view
-- New `flow_task_notes` table
+### Session 10 — Task Notes & Session Log ✅ Implemented
+- New `flow_task_notes` table (id, task_id, flow_date, content, updated_at) with UNIQUE(task_id, flow_date)
+- Drizzle schema: `flowTaskNotes` export in `lib/db/schema.ts`
+- CRUD queries: `getNote`, `getNotesByDate`, `upsertNote` (onConflictDoUpdate) in `lib/db/queries.ts`
+- API route: `/api/notes` — GET (single note or by date) + PUT (upsert)
+- `useTaskNote` hook in `flow-task-card.tsx`: fetch on mount, debounced 500ms auto-save, toggle visibility
+- StickyNote icon toggle in flow card action buttons; auto-opens if note has content
+- `CompletedTaskRow`: fetches note and shows read-only text (line-clamp-2) below row
+- `ReadOnlyTaskRow` / `ReadOnlyCompletedRow`: fetch note, show truncated text + StickyNote icon indicator
+- `onMouseDown stopPropagation` on textarea prevents dnd-kit drag interference
 
 ### Session 11 — Analytics & Weekly Review Dashboard 🔮 Future
 - Daily review panel with planned vs. actual time
@@ -611,4 +621,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 0.9 — Post-Session 9 (daily planning wizard, selective rollover, hydration guard)*
+*Version: 1.0 — Post-Session 10 (task notes with per-task-per-day scoping, debounced auto-save, read-only display in completed + multi-day views)*

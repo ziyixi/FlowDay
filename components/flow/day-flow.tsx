@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useDroppable } from "@dnd-kit/react";
-import { RotateCcw, Sunrise } from "lucide-react";
+import { RotateCcw, Sunrise, StickyNote } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
@@ -47,7 +47,7 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
       <div className="flex-1 overflow-y-auto px-2 py-2">
         <div className="space-y-1.5">
           {flowTasks.map((task, index) => (
-            <ReadOnlyTaskRow key={task.id} task={task} isNext={index === 0} />
+            <ReadOnlyTaskRow key={task.id} task={task} isNext={index === 0} date={date} />
           ))}
         </div>
         {completedTasks.length > 0 && (
@@ -57,7 +57,7 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
             </p>
             <div className="space-y-1">
               {completedTasks.map((task) => (
-                <ReadOnlyCompletedRow key={task.id} task={task} />
+                <ReadOnlyCompletedRow key={task.id} task={task} date={date} />
               ))}
             </div>
           </div>
@@ -68,38 +68,70 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
   );
 }
 
-function ReadOnlyTaskRow({ task, isNext }: { task: Task; isNext: boolean }) {
+function ReadOnlyTaskRow({ task, isNext, date }: { task: Task; isNext: boolean; date: string }) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
+  const [noteText, setNoteText] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [task.id, date]);
 
   return (
     <div
       className={cn(
-        "flex items-start gap-2 rounded-md border bg-card px-2.5 py-1.5",
+        "flex flex-col gap-1 rounded-md border bg-card px-2.5 py-1.5",
         isNext
           ? "border-l-[3px] border-l-primary border-t-border border-r-border border-b-border"
           : "border-border"
       )}
     >
-      <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", priorityColor)} />
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
-        {task.estimatedMins != null && task.estimatedMins > 0 && (
-          <p className="text-[10px] tabular-nums text-muted-foreground">
-            {formatDuration(task.estimatedMins)}
-          </p>
-        )}
+      <div className="flex items-start gap-2">
+        <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", priorityColor)} />
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
+          {task.estimatedMins != null && task.estimatedMins > 0 && (
+            <p className="text-[10px] tabular-nums text-muted-foreground">
+              {formatDuration(task.estimatedMins)}
+            </p>
+          )}
+        </div>
+        {noteText && <StickyNote className="mt-1 h-2.5 w-2.5 shrink-0 text-primary/50" />}
       </div>
+      {noteText && (
+        <p className="ml-4 truncate text-[10px] text-muted-foreground/70">{noteText}</p>
+      )}
     </div>
   );
 }
 
-function ReadOnlyCompletedRow({ task }: { task: Task }) {
+function ReadOnlyCompletedRow({ task, date }: { task: Task; date: string }) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
+  const [noteText, setNoteText] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [task.id, date]);
 
   return (
-    <div className="flex items-center gap-2 rounded-md px-2.5 py-1 opacity-50">
-      <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", priorityColor)} />
-      <p className="truncate text-[11px] text-muted-foreground line-through">{task.title}</p>
+    <div className="rounded-md px-2.5 py-1 opacity-50">
+      <div className="flex items-center gap-2">
+        <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full opacity-50", priorityColor)} />
+        <p className="truncate text-[11px] text-muted-foreground line-through">{task.title}</p>
+        {noteText && <StickyNote className="h-2.5 w-2.5 shrink-0 text-primary/40" />}
+      </div>
+      {noteText && (
+        <p className="ml-4 truncate text-[10px] text-muted-foreground/60">{noteText}</p>
+      )}
     </div>
   );
 }
@@ -257,26 +289,43 @@ function CompletedTaskRow({ task, date }: { task: Task; date: string }) {
     return () => { cancelled = true; };
   }, [task.id]);
 
+  const [noteText, setNoteText] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [task.id, date]);
+
   return (
-    <div className="group flex items-center gap-2.5 rounded-md border border-border/50 bg-card/50 px-4 py-2 opacity-60">
-      <span className={cn("h-2 w-2 shrink-0 rounded-full opacity-50", priorityColor)} />
-      <p className="flex-1 truncate text-sm text-muted-foreground line-through">
-        {task.title}
-      </p>
-      <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums text-muted-foreground/60">
-        {task.estimatedMins != null && task.estimatedMins > 0 && (
-          <span>{formatDuration(task.estimatedMins)} est</span>
-        )}
-        {loggedSeconds > 0 && (
-          <span className="text-foreground/50">{formatElapsed(loggedSeconds)}</span>
-        )}
+    <div className="group rounded-md border border-border/50 bg-card/50 px-4 py-2 opacity-60">
+      <div className="flex items-center gap-2.5">
+        <span className={cn("h-2 w-2 shrink-0 rounded-full opacity-50", priorityColor)} />
+        <p className="flex-1 truncate text-sm text-muted-foreground line-through">
+          {task.title}
+        </p>
+        <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums text-muted-foreground/60">
+          {task.estimatedMins != null && task.estimatedMins > 0 && (
+            <span>{formatDuration(task.estimatedMins)} est</span>
+          )}
+          {loggedSeconds > 0 && (
+            <span className="text-foreground/50">{formatElapsed(loggedSeconds)}</span>
+          )}
+        </div>
+        <button
+          onClick={() => uncompleteTask(task.id, date)}
+          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+        >
+          <RotateCcw className="h-3 w-3" />
+        </button>
       </div>
-      <button
-        onClick={() => uncompleteTask(task.id, date)}
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
-      >
-        <RotateCcw className="h-3 w-3" />
-      </button>
+      {noteText && (
+        <p className="mt-1 ml-[18px] text-xs text-muted-foreground/60 line-clamp-2">
+          {noteText}
+        </p>
+      )}
     </div>
   );
 }

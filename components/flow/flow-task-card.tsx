@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { Play, Pause, Check, ChevronsDown, X } from "lucide-react";
+import { Play, Pause, Check, ChevronsDown, X, StickyNote } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatElapsed } from "@/lib/utils/time";
@@ -41,6 +41,50 @@ function useTaskLoggedSeconds(taskId: string, revision: number): number {
   return seconds;
 }
 
+function useTaskNote(taskId: string, flowDate: string) {
+  const [note, setNote] = useState("");
+  const [showNote, setShowNote] = useState(false);
+  const [loaded, setLoaded] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Fetch existing note on mount
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/notes?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(flowDate)}`, {
+      cache: "no-store",
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!cancelled && data?.content) {
+          setNote(data.content);
+          setShowNote(true);
+        }
+        if (!cancelled) setLoaded(true);
+      })
+      .catch(() => { if (!cancelled) setLoaded(true); });
+    return () => { cancelled = true; };
+  }, [taskId, flowDate]);
+
+  const updateNote = useCallback(
+    (content: string) => {
+      setNote(content);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => {
+        fetch("/api/notes", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ taskId, flowDate, content }),
+        }).catch(() => {});
+      }, 500);
+    },
+    [taskId, flowDate]
+  );
+
+  const toggle = useCallback(() => setShowNote((v) => !v), []);
+
+  return { note, showNote, loaded, hasNote: loaded && note.length > 0, updateNote, toggle };
+}
+
 export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const completeTask = useFlowStore((s) => s.completeTask);
   const skipTask = useFlowStore((s) => s.skipTask);
@@ -70,6 +114,9 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
 
   const loggedSeconds = useTaskLoggedSeconds(task.id, combinedRevision);
   const shownSeconds = isActive ? displaySeconds : loggedSeconds;
+
+  // Notes
+  const { note, showNote, hasNote, updateNote, toggle: toggleNote } = useTaskNote(task.id, date);
 
   // Use sortableKey in the id to prevent stale dnd-kit state when task is removed and re-added
   const { ref, isDragSource, isDropTarget } = useSortable({
@@ -205,6 +252,18 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           </button>
           <ManualEntry taskId={task.id} flowDate={date} onEntriesChanged={onEntriesChanged} />
           <button
+            className={cn(
+              "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+              showNote || hasNote
+                ? "text-primary hover:bg-primary/10"
+                : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+            onClick={toggleNote}
+            title="Toggle notes"
+          >
+            <StickyNote className="h-3.5 w-3.5" />
+          </button>
+          <button
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-green-500/20 hover:text-green-600 transition-colors"
             onClick={handleComplete}
           >
@@ -225,6 +284,20 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           </button>
         </div>
       </div>
+
+      {/* Notes area */}
+      {showNote && (
+        <div className="mt-2 border-t border-border/50 pt-2">
+          <textarea
+            value={note}
+            onChange={(e) => updateNote(e.target.value)}
+            onMouseDown={(e) => e.stopPropagation()}
+            placeholder="Jot notes while working…"
+            className="w-full resize-none rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-primary/30"
+            rows={2}
+          />
+        </div>
+      )}
       </div>
     </div>
   );
