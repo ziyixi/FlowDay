@@ -54,6 +54,8 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Only fetches tasks due today or overdue (via `GET /api/v1/tasks/filter?query=today | overdue`)
 - **Arranged list:** Shows tasks added to the current day's flow (primary accent), non-draggable summary
 - **Completed list:** Shows tasks completed in the current day's flow with logged time + estimated time
+- **Quick add:** Inline input at top of sidebar to create local tasks (no Todoist required). Local tasks get `local-<uuid>` IDs, today's due date, and are editable inline
+- **Editable titles:** Local tasks (non-Todoist) show a pencil icon on hover to edit the title inline in both sidebar and flow cards
 
 **Implementation notes:**
 - Todoist API v1 (`/api/v1/tasks/filter`, `/api/v1/projects`) with cursor-based pagination
@@ -61,7 +63,8 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - API key stored in SQLite `settings` table, entered via Settings dialog in top bar
 - Tasks persisted in SQLite `tasks` table — survive page refresh
 - `estimated_mins` editable locally via `PATCH /api/tasks` — Todoist sync preserves local edits only when Todoist has no duration set
-- Zustand store (`todoist-store`) acts as reactive cache, hydrated from SQLite on load
+- `POST /api/tasks` creates local tasks; `PATCH /api/tasks` supports both `estimatedMins` and `title` updates
+- Zustand store (`todoist-store`) acts as reactive cache, hydrated from SQLite on load; `addLocalTask` and `updateTitle` actions for local task management
 - Color mapping: Todoist color names (e.g., `berry_red`) → hex values (20 colors supported)
 - Task labels shown in hover tooltip alongside description
 
@@ -130,7 +133,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 **Toggle:** 1/3/5 buttons in top bar center section. Date navigation with chevrons + "Today" button.
 
-### 4.5 — Settings ✅ Implemented
+### 4.5 — Settings & Data Export ✅ Implemented
 
 - Settings dialog accessible from gear icon in top bar
 - Todoist API key input (password field) with Save button
@@ -138,6 +141,8 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Last sync timestamp display
 - Guidance text: where to find the API key, read-only assurance
 - Daily work capacity setting (hours input, default 6h, stored as `day_capacity_mins` in SQLite settings)
+- **Data export:** Export button opens a sub-dialog to download time entries or flow history as CSV/JSON with configurable date range
+- Export API: `GET /api/export?type=entries|flows&format=csv|json&start=YYYY-MM-DD&end=YYYY-MM-DD`
 
 ### 4.6 — Roll-over & Day Capacity ✅ Implemented
 
@@ -180,10 +185,10 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 **Implementation notes:**
 - New component: `planning-wizard.tsx` — 4 sub-components (StepRollover, StepAddTasks, StepReview, StepConfirm)
 - `PUT /api/flows` supports `rolloverSelected` action: moves only specified task IDs from source to target
-- `GET /api/settings` returns `planning_completed_today: boolean`
+- `GET /api/settings?today=YYYY-MM-DD` returns `planning_completed_today: boolean` — client passes its local date to avoid server timezone mismatch
 - `PUT /api/settings` accepts `planning_completed_date` to persist the flag
 - Flow store additions: `hydrated: boolean`, `planningCompletedDates: Record<string, boolean>`, `setPlanningCompleted(date)`, `rolloverSelectedTasks(from, to, ids)`
-- Auto-trigger uses `useRef` guard to evaluate once after hydration, preventing premature trigger on empty pre-hydration state
+- Auto-trigger uses `useEffect` with hydration + date dependencies; all "today" comparisons use `date-fns format()` (local time), never `toISOString()` (UTC)
 
 ### 4.8 — Task Notes / Session Log ✅ Implemented
 
@@ -220,12 +225,13 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Pure CSS/Tailwind visualizations (no charting library dependency)
 - New analytics query helpers: `getEntriesInDateRange`, `getFlowTaskIdsInDateRange`, `getCompletedTaskIdsInDateRange`, `getTasksByIds`
 
-### 4.10 — Additional Features (Planned)
+### 4.10 — Additional Features
 
-- **Quick Add:** Local tasks that don't come from Todoist
-- **Export:** CSV/JSON export of time entries and flow history (planned vs. actual per day)
-- **Todoist write-back:** Optionally mark tasks complete in Todoist when completed in FlowDay (requires careful safeguards)
-- **Estimate presets:** The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
+- **Quick Add:** ✅ Local tasks created via inline input in sidebar. `POST /api/tasks` creates with `local-<uuid>` ID. Titles editable inline for local tasks only (pencil icon on hover).
+- **Export:** ✅ CSV/JSON export of time entries and flow history via `GET /api/export`. Export dialog in Settings with data type, date range, and format selectors.
+- **Todoist write-back:** (Planned) Optionally mark tasks complete in Todoist when completed in FlowDay (requires careful safeguards)
+- **Estimate presets:** ✅ The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
+- **PWA:** ✅ Installable progressive web app with service worker (`public/sw.js`), web manifest, app icons. Network-first for navigation and API calls, stale-while-revalidate for static assets. Service worker only registered in production (dev mode auto-unregisters stale workers).
 
 ---
 
@@ -288,6 +294,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Dev-mode fresh DB**: `predev` script wipes SQLite on `npm run dev`; production persists.
 - **`serverExternalPackages: ["better-sqlite3"]`** in next.config.ts for native addon support.
 - **Standalone output**: `output: "standalone"` in next.config.ts for minimal Docker images.
+- **Client-authoritative timezone**: All "what day is today?" logic runs in the browser or is passed from the browser via query params. Server never guesses the user's timezone — safe for VPS deployment in any timezone.
 
 ---
 
@@ -299,6 +306,7 @@ flowday/
 │   ├── layout.tsx                 # Root layout, providers, theme
 │   ├── page.tsx                   # Main app (single-page)
 │   ├── globals.css                # Tailwind CSS v4 theme + global styles
+│   ├── manifest.ts                # PWA web manifest (dynamic route)
 │   └── api/
 │       ├── entries/
 │       │   ├── route.ts           # POST create, GET query time entries
@@ -306,9 +314,10 @@ flowday/
 │       ├── flows/route.ts         # GET all flows, PUT flow mutations
 │       ├── notes/route.ts         # GET/PUT task notes (per task+date)
 │       ├── analytics/route.ts     # GET daily/weekly analytics aggregation
-│       ├── settings/route.ts      # GET/PUT Todoist API key
+│       ├── export/route.ts        # GET CSV/JSON export of entries or flows
+│       ├── settings/route.ts      # GET/PUT settings (accepts ?today= for timezone-safe planning check)
 │       ├── sync/route.ts          # POST trigger Todoist sync
-│       ├── tasks/route.ts         # GET all tasks, PATCH estimate, DELETE soft-delete
+│       ├── tasks/route.ts         # GET all, POST create local, PATCH estimate/title, DELETE soft-delete
 │       │   └── deleted/route.ts   # GET deleted tasks, POST restore
 ├── components/
 │   ├── layout/
@@ -319,6 +328,7 @@ flowday/
 │   │   ├── task-pool.tsx          # Task sections (Arranged, Completed, Overdue, Today)
 │   │   ├── task-card.tsx          # Draggable sidebar task card (with delete + tooltip)
 │   │   ├── task-card-overlay.tsx  # Drag overlay appearance
+│   │   ├── quick-add.tsx          # Inline quick-add input for local tasks
 │   │   └── deleted-tasks-dialog.tsx # Calendar-based trash browser
 │   ├── flow/
 │   │   ├── day-flow.tsx           # Editable + read-only day flow views
@@ -330,7 +340,8 @@ flowday/
 │   │   ├── timer-display.tsx      # Top bar timer component
 │   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
 │   ├── settings/
-│   │   └── settings-dialog.tsx    # API key + capacity + sync settings dialog
+│   │   ├── settings-dialog.tsx    # API key + capacity + sync + export settings dialog
+│   │   └── export-dialog.tsx      # Data export sub-dialog (type, date range, format)
 │   ├── analytics/
 │   │   └── analytics-dashboard.tsx # Daily + weekly review analytics dialog
 │   ├── shared/
@@ -377,10 +388,23 @@ flowday/
 │   │   └── queries-time-entries.test.ts # Time entry CRUD + range queries
 │   └── integration/
 │       ├── analytics-api.test.ts  # Analytics route handler (daily/weekly/stats)
-│       └── entries-api.test.ts    # Entries route handler (CRUD)
+│       ├── entries-api.test.ts    # Entries route handler (CRUD)
+│       ├── export-api.test.ts     # Export route handler (CSV/JSON)
+│       ├── flows-api.test.ts      # Flows route handler (CRUD + rollover)
+│       ├── notes-api.test.ts      # Notes route handler (GET/PUT)
+│       ├── settings-api.test.ts   # Settings route handler (GET/PUT)
+│       ├── tasks-api.test.ts      # Tasks route handler (GET/POST/PATCH/DELETE)
+│       └── tasks-deleted-api.test.ts # Deleted tasks route (GET/POST restore)
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                 # CI/CD: lint → test → build → Docker push
+├── public/
+│   ├── sw.js                      # Service worker (network-first nav, stale-while-revalidate assets)
+│   ├── icon.svg                   # App icon (SVG source)
+│   ├── icon-192x192.png           # PWA icon 192px
+│   ├── icon-512x512.png           # PWA icon 512px
+│   ├── icon-maskable-512x512.png  # Maskable PWA icon
+│   └── apple-touch-icon.png       # iOS home screen icon
 ├── db/
 │   └── flowday.db                 # SQLite database (gitignored)
 ├── .dockerignore                  # Excludes node_modules, .next, db, tests, docs
@@ -616,7 +640,17 @@ CREATE TABLE time_entries (
 - `output: "standalone"` in next.config.ts for minimal Docker images
 - `.dockerignore` excludes tests, docs, DB files, and `.git`
 
-### Session 13 — UI Visual Polish 🔮 Future
+### Session 13 — Quick Add, Export, Editable Titles & PWA ✅ Implemented
+- **Quick add:** Inline input in sidebar to create local tasks (`local-<uuid>` ID, today's due date, default priority). `POST /api/tasks` endpoint. `addLocalTask` action in todoist store.
+- **Editable titles:** Local (non-Todoist) tasks show pencil icon on hover. Inline input with Enter/Escape/blur commit. `updateTitle` action + `PATCH /api/tasks` with `title` field. Works in both sidebar `TaskCard` and flow `FlowTaskCard` via `EditableTitle` / `EditableFlowTitle` components.
+- **Data export:** Export dialog in settings — select data type (time entries / flow history), date range, format (CSV/JSON). `GET /api/export?type=entries|flows&format=csv|json&start=&end=`. Download via anchor element.
+- **PWA support:** Web manifest (`app/manifest.ts`), app icons (SVG + PNG at 192/512/maskable), service worker (`public/sw.js`), `apple-touch-icon`, theme-color meta tags. Service worker uses network-first for navigation and API calls, stale-while-revalidate for static assets.
+- **Service worker safety:** SW only registered in production. Development mode auto-unregisters stale service workers to prevent cached HTML from loading outdated JS bundles after dev server restarts.
+- **Timezone fix:** All "today" comparisons use `date-fns format()` (local time) instead of `toISOString().slice(0,10)` (UTC). Settings API accepts `?today=` param from client so VPS timezone doesn't affect `planning_completed_today` check.
+- **Integration tests:** 6 new test files (export, flows, notes, settings, tasks, deleted tasks) covering all API routes
+- **Refactors:** `useEffect`-based dialog initialization replaced with `onOpenChange` callbacks (analytics, manual entry, deleted tasks, estimate editor) for simpler lifecycle management. Progress bar `getEntryRevision()` extracted from dependency array.
+
+### Session 14 — UI Visual Polish 🔮 Future
 - **Card elevation**: Add subtle box shadows (`0 1px 2px oklch(0 0 0 / 0.04)`) to flow task cards and sidebar task cards for layered depth, keeping existing borders
 - **Active task glow**: Strengthen running-timer visual — thicker left border (4px) with brighter accent color, replacing the current faint `ring-1 ring-primary/30`
 - **Progress bar refinement**: Increase bar height to `h-2`, add gradient (`from-primary to-primary/70`), and a subtle glow (`shadow-[0_0_8px_-2px_var(--primary)]`) when progress > 0
@@ -676,4 +710,4 @@ CREATE TABLE time_entries (
 ---
 
 *Last updated: April 13, 2026*
-*Version: 1.4 — Added Session 13 (UI visual polish roadmap)*
+*Version: 1.5 — Post-Session 13 (quick add, export, editable titles, PWA, timezone fixes, expanded integration tests)*
