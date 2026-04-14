@@ -151,20 +151,23 @@ function EditableDayFlow({
 }) {
   const planningCompleted = useFlowStore((s) => s.planningCompletedDates[date]);
   const hydrated = useFlowStore((s) => s.hydrated);
-  const [showWizard, setShowWizard] = useState(false);
 
-  // Auto-show wizard for today when empty and planning not completed.
-  // Re-evaluates on hydration and date change.
   const isToday = date === format(new Date(), "yyyy-MM-dd");
-  useEffect(() => {
-    if (!hydrated) return;
-    const flowEmpty = flowTasks.length === 0 && completedTasks.length === 0;
-    if (flowEmpty && isToday && !planningCompleted) {
-      setShowWizard(true);
-    } else {
-      setShowWizard(false);
-    }
-  }, [hydrated, date, flowTasks.length, completedTasks.length, isToday, planningCompleted]);
+  const autoShowWizard = hydrated && isEmpty && isToday && !planningCompleted;
+
+  // Track user dismissals and manual opens separately from derived auto-show state.
+  // Reset when date changes using React's "adjust state from props" pattern.
+  const [dismissed, setDismissed] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
+  const [trackedDate, setTrackedDate] = useState(date);
+  if (trackedDate !== date) {
+    setTrackedDate(date);
+    setDismissed(false);
+    setManualOpen(false);
+  }
+
+  const showWizard = manualOpen || (autoShowWizard && !dismissed);
+  const dismissWizard = () => { setDismissed(true); setManualOpen(false); };
 
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `day-flow-${date}`,
@@ -176,8 +179,8 @@ function EditableDayFlow({
     return (
       <PlanningWizard
         date={date}
-        onDismiss={() => setShowWizard(false)}
-        onComplete={() => setShowWizard(false)}
+        onDismiss={dismissWizard}
+        onComplete={dismissWizard}
       />
     );
   }
@@ -207,7 +210,7 @@ function EditableDayFlow({
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => setShowWizard(true)}
+                  onClick={() => setManualOpen(true)}
                 >
                   <Sunrise className="mr-2 h-4 w-4" />
                   Plan My Day

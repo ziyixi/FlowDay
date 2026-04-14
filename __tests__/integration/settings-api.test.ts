@@ -6,9 +6,9 @@ import { describe, it, expect } from "vitest";
  * No seeding needed — settings has pure get/set behavior.
  */
 
-async function callSettings(method: "GET" | "PUT", body?: unknown) {
+async function callSettings(method: "GET" | "PUT", body?: unknown, query?: string) {
   const mod = await import("@/app/api/settings/route");
-  const url = "http://localhost:3000/api/settings";
+  const url = `http://localhost:3000/api/settings${query ?? ""}`;
   const request = new Request(url, {
     method,
     ...(body
@@ -16,7 +16,7 @@ async function callSettings(method: "GET" | "PUT", body?: unknown) {
       : {}),
   });
 
-  if (method === "GET") return mod.GET();
+  if (method === "GET") return mod.GET(request);
   return mod.PUT(request);
 }
 
@@ -88,7 +88,7 @@ describe("PUT /api/settings — planning_completed_date", () => {
     });
     expect(putRes.status).toBe(200);
 
-    const getRes = await callSettings("GET");
+    const getRes = await callSettings("GET", undefined, `?today=${today}`);
     const getData = await getRes.json();
     expect(getData.planning_completed_today).toBe(true);
   });
