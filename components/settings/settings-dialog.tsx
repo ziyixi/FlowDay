@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Download } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useFlowStore } from "@/lib/stores/flow-store";
+import { ExportDialog } from "./export-dialog";
 import { cn } from "@/lib/utils";
 
 interface SettingsDialogProps {
@@ -26,6 +27,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [capacityHours, setCapacityHours] = useState("6");
   const [savingCapacity, setSavingCapacity] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const isSyncing = useTodoistStore((s) => s.isSyncing);
   const lastSyncAt = useTodoistStore((s) => s.lastSyncAt);
@@ -202,6 +204,22 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </Button>
             </div>
           </div>
+
+          {/* Export Data */}
+          <div className="space-y-2">
+            <label className="text-sm font-medium text-foreground">
+              Export Data
+            </label>
+            <p className="text-xs text-muted-foreground">
+              Download your time entries or flow history as CSV or JSON.
+            </p>
+            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+              <Download className="mr-1.5 h-3.5 w-3.5" />
+              Export
+            </Button>
+          </div>
+
+          <ExportDialog open={exportOpen} onOpenChange={setExportOpen} />
 
           {/* Message */}
           {message && (

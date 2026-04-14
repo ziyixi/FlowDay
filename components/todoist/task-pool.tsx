@@ -122,7 +122,6 @@ function ArrangedRow({ task }: { task: Task }) {
 }
 
 function CompletedRow({ task }: { task: Task }) {
-  const priorityColor = PRIORITY_CONFIG[task.priority].color;
   const [loggedSeconds, setLoggedSeconds] = useState(0);
 
   useEffect(() => {

@@ -2,37 +2,12 @@ import { describe, it, expect, beforeEach } from "vitest";
 import {
   createTimeEntry,
   getEntriesByTask,
-  deleteTimeEntry,
-  updateTimeEntry,
-  upsertTasks,
 } from "@/lib/db/queries";
-import type { Task } from "@/lib/types/task";
 
 /**
  * Integration tests for entry API routes.
  * Tests the full pipeline: route handler → DB queries → response.
  */
-
-function makeTask(overrides: Partial<Task> = {}): Task {
-  return {
-    id: overrides.id ?? "t1",
-    todoistId: null,
-    title: "Test Task",
-    description: null,
-    projectName: null,
-    projectColor: null,
-    priority: 1,
-    labels: [],
-    estimatedMins: null,
-    isCompleted: false,
-    completedAt: null,
-    dueDate: null,
-    createdAt: null,
-    syncedAt: null,
-    deletedAt: null,
-    ...overrides,
-  };
-}
 
 async function callEntries(method: string, params?: string, body?: unknown) {
   const mod = await import("@/app/api/entries/route");

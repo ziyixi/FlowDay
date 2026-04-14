@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { format } from "date-fns";
-import { Clock, Pencil, Trash2, Plus, X } from "lucide-react";
+import { Clock, Pencil, Trash2, Plus } from "lucide-react";
 import {
   Popover,
   PopoverContent,
@@ -346,9 +346,10 @@ export function ManualEntry({
     }
   }, [taskId]);
 
-  useEffect(() => {
-    if (isOpen) fetchEntries();
-  }, [isOpen, fetchEntries]);
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) fetchEntries();
+    setIsOpen(nextOpen);
+  };
 
   const handleChanged = useCallback(() => {
     fetchEntries();
@@ -359,7 +360,7 @@ export function ManualEntry({
 
   return (
     <>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
           className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors relative"
           title="Time entries"

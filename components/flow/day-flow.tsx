@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useDroppable } from "@dnd-kit/react";
 import { Check, RotateCcw, Sunrise, StickyNote } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
@@ -151,18 +152,19 @@ function EditableDayFlow({
   const planningCompleted = useFlowStore((s) => s.planningCompletedDates[date]);
   const hydrated = useFlowStore((s) => s.hydrated);
   const [showWizard, setShowWizard] = useState(false);
-  const autoTriggered = useRef(false);
 
-  // Auto-show wizard for today when empty and planning not completed
-  const isToday = date === new Date().toISOString().slice(0, 10);
+  // Auto-show wizard for today when empty and planning not completed.
+  // Re-evaluates on hydration and date change.
+  const isToday = date === format(new Date(), "yyyy-MM-dd");
   useEffect(() => {
-    if (!hydrated || autoTriggered.current) return;
-    autoTriggered.current = true;
+    if (!hydrated) return;
     const flowEmpty = flowTasks.length === 0 && completedTasks.length === 0;
     if (flowEmpty && isToday && !planningCompleted) {
       setShowWizard(true);
+    } else {
+      setShowWizard(false);
     }
-  }, [hydrated, flowTasks.length, completedTasks.length, isToday, planningCompleted]);
+  }, [hydrated, date, flowTasks.length, completedTasks.length, isToday, planningCompleted]);
 
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `day-flow-${date}`,

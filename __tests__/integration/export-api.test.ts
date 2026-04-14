@@ -1,0 +1,109 @@
+import { describe, it, expect, beforeEach } from "vitest";
+import {
+  createTimeEntry,
+  upsertTasks,
+  setFlowTaskIds,
+  addCompletedFlowTask,
+} from "@/lib/db/queries";
+import type { Task } from "@/lib/types/task";
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    id: overrides.id ?? "t1",
+    todoistId: null,
+    title: "Test Task",
+    description: null,
+    projectName: "Work",
+    projectColor: "#ff0000",
+    priority: 1,
+    labels: [],
+    estimatedMins: 30,
+    isCompleted: false,
+    completedAt: null,
+    dueDate: null,
+    createdAt: null,
+    syncedAt: null,
+    deletedAt: null,
+    ...overrides,
+  } as Task;
+}
+
+async function callExport(params: string) {
+  const mod = await import("@/app/api/export/route");
+  const url = `http://localhost:3000/api/export?${params}`;
+  return mod.GET(new Request(url));
+}
+
+describe("GET /api/export", () => {
+  beforeEach(() => {
+    upsertTasks([makeTask({ id: "t1", title: "Design", estimatedMins: 30 })]);
+    setFlowTaskIds("2026-04-13", ["t1"]);
+    addCompletedFlowTask("2026-04-13", "t1");
+    createTimeEntry({
+      id: "e1",
+      taskId: "t1",
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T09:00:00Z",
+      endTime: "2026-04-13T09:30:00Z",
+      durationS: 1800,
+      source: "timer",
+    });
+  });
+
+  it("returns 400 without date params", async () => {
+    const res = await callExport("type=entries&format=csv");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid format", async () => {
+    const res = await callExport("type=entries&format=xml&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for invalid type", async () => {
+    const res = await callExport("type=invalid&format=csv&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(400);
+  });
+
+  it("exports entries as JSON", async () => {
+    const res = await callExport("type=entries&format=json&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].taskTitle).toBe("Design");
+    expect(data[0].durationMins).toBe(30);
+  });
+
+  it("exports entries as CSV", async () => {
+    const res = await callExport("type=entries&format=csv&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("date,taskId,taskTitle");
+    expect(text).toContain("Design");
+  });
+
+  it("exports flows as JSON", async () => {
+    const res = await callExport("type=flows&format=json&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].completed).toBe(true);
+    expect(data[0].loggedMins).toBe(30);
+    expect(data[0].estimatedMins).toBe(30);
+  });
+
+  it("exports flows as CSV", async () => {
+    const res = await callExport("type=flows&format=csv&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    expect(text).toContain("date,taskId,taskTitle");
+    expect(text).toContain("true");
+  });
+
+  it("returns empty array for date range with no data", async () => {
+    const res = await callExport("type=entries&format=json&start=2020-01-01&end=2020-01-31");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(0);
+  });
+});

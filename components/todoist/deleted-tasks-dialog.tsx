@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   format,
   startOfMonth,
@@ -54,13 +54,13 @@ export function DeletedTasksDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const hydrate = useTodoistStore((s) => s.hydrate);
 
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setSearchQuery("");
       fetch("/api/tasks/deleted", { cache: "no-store" })
         .then((r) => (r.ok ? r.json() : []))
         .then((tasks: Task[]) => {
           setAllDeleted(tasks);
-          // Auto-select most recent deletion date
           if (tasks.length > 0) {
             const sorted = [...tasks].sort((a, b) =>
               (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "")
@@ -73,9 +73,9 @@ export function DeletedTasksDialog({
           }
         })
         .catch(() => setAllDeleted([]));
-      setSearchQuery("");
     }
-  }, [open]);
+    onOpenChange(nextOpen);
+  };
 
   const query = searchQuery.toLowerCase().trim();
 
@@ -138,7 +138,7 @@ export function DeletedTasksDialog({
   }, [query, displayTasks]);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Deleted Tasks</DialogTitle>

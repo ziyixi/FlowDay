@@ -42,15 +42,35 @@ export default function RootLayout({
                   var dark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
                   if (dark) document.documentElement.classList.add('dark');
                 } catch(e) {}
+              })();
+            `,
+          }}
+        />
+        {process.env.NODE_ENV === "production" ? (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
                 if ('serviceWorker' in navigator) {
                   window.addEventListener('load', function() {
                     navigator.serviceWorker.register('/sw.js');
                   });
                 }
-              })();
-            `,
-          }}
-        />
+              `,
+            }}
+          />
+        ) : (
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then(function(regs) {
+                    regs.forEach(function(r) { r.unregister(); });
+                  });
+                }
+              `,
+            }}
+          />
+        )}
       </head>
       <body className="h-full font-sans">
         <ThemeProvider>

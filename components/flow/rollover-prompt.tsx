@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format, subDays } from "date-fns";
 import { ArrowRight, X } from "lucide-react";
 import { Button } from "@/components/ui/button";

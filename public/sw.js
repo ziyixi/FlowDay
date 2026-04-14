@@ -35,15 +35,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // API calls: network-first (never serve stale API data)
-  if (url.pathname.startsWith("/api/")) {
+  // API calls & navigation requests: network-first
+  // Navigation uses network-first because HTML references hashed JS bundles
+  // that change on every build — stale HTML would load missing chunks.
+  if (url.pathname.startsWith("/api/") || event.request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok && event.request.mode === "navigate") {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
     );
     return;
   }
 
-  // App shell & static assets: stale-while-revalidate
+  // Static assets (JS, CSS, images): stale-while-revalidate
   event.respondWith(
     caches.match(event.request).then((cached) => {
       const fetching = fetch(event.request)

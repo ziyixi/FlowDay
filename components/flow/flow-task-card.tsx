@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { Play, Pause, Check, ChevronsDown, X, StickyNote } from "lucide-react";
+import { Play, Pause, Check, ChevronsDown, X, StickyNote, Pencil } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatElapsed } from "@/lib/utils/time";
@@ -12,6 +12,67 @@ import { useTimerStore, getEntryRevision } from "@/lib/stores/timer-store";
 import { ManualEntry } from "@/components/timer/manual-entry";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { cn } from "@/lib/utils";
+
+function EditableFlowTitle({ task }: { task: Task }) {
+  const isLocal = !task.todoistId;
+  const updateTitle = useTodoistStore((s) => s.updateTitle);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(task.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-1 min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">
+          {task.title}
+        </p>
+        {isLocal && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setValue(task.title);
+              setEditing(true);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground transition-all"
+            title="Edit title"
+          >
+            <Pencil className="h-2.5 w-2.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const commit = () => {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== task.title) {
+      updateTitle(task.id, trimmed);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") setEditing(false);
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="w-full truncate text-sm font-medium text-foreground bg-transparent outline-none ring-1 ring-primary rounded px-0.5 -mx-0.5"
+    />
+  );
+}
 
 interface FlowTaskCardProps {
   task: Task;
@@ -173,7 +234,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
       />
       <div
         className={cn(
-          "rounded-lg border bg-card px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-all",
+          "group rounded-lg border bg-card px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-all",
           isNext
             ? "border-l-4 border-l-primary border-t-border border-r-border border-b-border"
             : "border-border",
@@ -193,9 +254,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                 Next
               </span>
             )}
-            <p className="truncate text-sm font-medium text-foreground">
-              {task.title}
-            </p>
+            <EditableFlowTitle task={task} />
           </div>
           {task.projectName && (
             <p className="mt-0.5 truncate text-xs text-muted-foreground">

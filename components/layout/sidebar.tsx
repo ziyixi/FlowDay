@@ -13,6 +13,7 @@ import { useTaskById } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { formatElapsed } from "@/lib/utils/time";
 import { TaskPool } from "@/components/todoist/task-pool";
+import { QuickAdd } from "@/components/todoist/quick-add";
 import { DeletedTasksDialog } from "@/components/todoist/deleted-tasks-dialog";
 
 function SidebarTimer() {
@@ -139,6 +140,11 @@ export function Sidebar() {
               className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
             />
           </div>
+        </div>
+
+        {/* Quick add */}
+        <div className="px-3 pb-2">
+          <QuickAdd />
         </div>
 
         {/* Active timer indicator */}

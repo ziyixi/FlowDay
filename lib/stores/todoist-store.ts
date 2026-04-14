@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { format, isBefore, startOfDay } from "date-fns";
+import { isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
 import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds, useFlowStore } from "./flow-store";
 import { useTimerStore } from "./timer-store";
@@ -15,8 +15,10 @@ interface TodoistState {
   removeTask: (taskId: string) => void;
   deleteTask: (taskId: string) => Promise<void>;
   updateEstimate: (taskId: string, estimatedMins: number | null) => void;
+  updateTitle: (taskId: string, title: string) => void;
   hydrate: () => Promise<void>;
   sync: () => Promise<void>;
+  addLocalTask: (title: string) => Promise<Task | null>;
 }
 
 export const useTodoistStore = create<TodoistState>()((set, get) => ({
@@ -75,6 +77,19 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
     }).catch(() => {});
   },
 
+  updateTitle: (taskId, title) => {
+    set((state) => ({
+      tasks: state.tasks.map((t) =>
+        t.id === taskId ? { ...t, title } : t
+      ),
+    }));
+    fetch("/api/tasks", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, title }),
+    }).catch(() => {});
+  },
+
   hydrate: async () => {
     set({ isLoading: true });
     try {
@@ -113,6 +128,25 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
       set({ isSyncing: false });
     }
   },
+
+  addLocalTask: async (title) => {
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          dueDate: new Date().toISOString().slice(0, 10),
+        }),
+      });
+      if (!res.ok) return null;
+      const task: Task = await res.json();
+      set((state) => ({ tasks: [...state.tasks, task] }));
+      return task;
+    } catch {
+      return null;
+    }
+  },
 }));
 
 interface TaskSections {
@@ -126,7 +160,6 @@ export function useTaskSections(): TaskSections {
   const flowTaskIds = useCurrentFlowTaskIds();
   const completedTaskIds = useCurrentCompletedTaskIds();
 
-  const todayStr = format(new Date(), "yyyy-MM-dd");
   const todayStart = startOfDay(new Date());
   const query = searchQuery.toLowerCase().trim();
   const inFlow = new Set([...flowTaskIds, ...completedTaskIds]);

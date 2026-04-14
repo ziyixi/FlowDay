@@ -1,7 +1,8 @@
 "use client";
 
+import { useState, useRef, useEffect } from "react";
 import { useDraggable } from "@dnd-kit/react";
-import { Trash2 } from "lucide-react";
+import { Trash2, Pencil } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
@@ -9,6 +10,67 @@ import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { cn } from "@/lib/utils";
+
+function EditableTitle({ task }: { task: Task }) {
+  const isLocal = !task.todoistId;
+  const updateTitle = useTodoistStore((s) => s.updateTitle);
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(task.title);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (editing) inputRef.current?.select();
+  }, [editing]);
+
+  if (!editing) {
+    return (
+      <div className="flex items-center gap-1 min-w-0">
+        <p className="truncate text-sm font-medium text-foreground">
+          {task.title}
+        </p>
+        {isLocal && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setValue(task.title);
+              setEditing(true);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="shrink-0 opacity-0 group-hover:opacity-100 inline-flex h-4 w-4 items-center justify-center rounded text-muted-foreground/60 hover:text-foreground transition-all"
+            title="Edit title"
+          >
+            <Pencil className="h-2.5 w-2.5" />
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  const commit = () => {
+    const trimmed = value.trim();
+    if (trimmed && trimmed !== task.title) {
+      updateTitle(task.id, trimmed);
+    }
+    setEditing(false);
+  };
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") commit();
+        if (e.key === "Escape") setEditing(false);
+      }}
+      onClick={(e) => e.stopPropagation()}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="w-full truncate text-sm font-medium text-foreground bg-transparent outline-none ring-1 ring-primary rounded px-0.5 -mx-0.5"
+    />
+  );
+}
 
 export function TaskCard({ task }: { task: Task }) {
   const { ref, isDragSource } = useDraggable({
@@ -29,9 +91,7 @@ export function TaskCard({ task }: { task: Task }) {
         className={cn("mt-1.5 h-2 w-2 shrink-0 rounded-full", priorityColor)}
       />
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-foreground">
-          {task.title}
-        </p>
+        <EditableTitle task={task} />
         {task.projectName && (
           <p className="truncate text-xs text-muted-foreground">
             {task.projectName}

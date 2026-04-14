@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatDuration } from "@/lib/utils/time";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
@@ -28,11 +28,12 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const updateEstimate = useTodoistStore((s) => s.updateEstimate);
 
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setCustomValue(task.estimatedMins?.toString() ?? "");
     }
-  }, [open, task.estimatedMins]);
+    setOpen(nextOpen);
+  };
 
   const commit = (mins: number | null) => {
     if (mins !== task.estimatedMins) {
@@ -62,7 +63,7 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
         : "—";
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger
         render={<button />}
         onClick={(e) => e.stopPropagation()}

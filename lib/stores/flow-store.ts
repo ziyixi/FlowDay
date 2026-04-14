@@ -70,7 +70,7 @@ function persistRemoveCompleted(date: string, taskId: string) {
   }).catch(() => {});
 }
 
-export const useFlowStore = create<FlowState>()((set, get) => ({
+export const useFlowStore = create<FlowState>()((set) => ({
   currentDate: todayStr(),
   viewMode: 1,
   flows: {},
@@ -216,9 +216,10 @@ export const useFlowStore = create<FlowState>()((set, get) => ({
 
   hydrate: async () => {
     try {
+      const today = format(new Date(), "yyyy-MM-dd");
       const [flowRes, settingsRes] = await Promise.all([
         fetch("/api/flows", { cache: "no-store" }),
-        fetch("/api/settings", { cache: "no-store" }),
+        fetch(`/api/settings?today=${encodeURIComponent(today)}`, { cache: "no-store" }),
       ]);
       if (flowRes.ok) {
         const data = await flowRes.json();

@@ -177,6 +177,16 @@ export function updateTaskEstimate(taskId: string, estimatedMins: number | null)
   return result.changes > 0;
 }
 
+export function updateTaskTitle(taskId: string, title: string): boolean {
+  const db = getDb();
+  const result = db
+    .update(tasks)
+    .set({ title })
+    .where(eq(tasks.id, taskId))
+    .run();
+  return result.changes > 0;
+}
+
 export function upsertTasks(taskList: Task[]): void {
   const db = getDb();
   const now = new Date().toISOString();
@@ -228,6 +238,54 @@ export function upsertTasks(taskList: Task[]): void {
     }
   });
   runTx();
+}
+
+export function createLocalTask(input: {
+  title: string;
+  priority?: number;
+  dueDate?: string;
+  estimatedMins?: number;
+  labels?: string[];
+  description?: string;
+}): Task {
+  const db = getDb();
+  const id = `local-${crypto.randomUUID()}`;
+  const now = new Date().toISOString();
+  db.insert(tasks)
+    .values({
+      id,
+      todoistId: null,
+      title: input.title,
+      description: input.description ?? null,
+      projectName: null,
+      projectColor: null,
+      priority: input.priority ?? 1,
+      labels: JSON.stringify(input.labels ?? []),
+      estimatedMins: input.estimatedMins ?? null,
+      isCompleted: 0,
+      completedAt: null,
+      dueDate: input.dueDate ?? null,
+      createdAt: now,
+      syncedAt: null,
+      deletedAt: null,
+    })
+    .run();
+  return {
+    id,
+    todoistId: null,
+    title: input.title,
+    description: input.description ?? null,
+    projectName: null,
+    projectColor: null,
+    priority: (input.priority ?? 1) as TaskPriority,
+    labels: input.labels ?? [],
+    estimatedMins: input.estimatedMins ?? null,
+    isCompleted: false,
+    completedAt: null,
+    dueDate: input.dueDate ?? null,
+    createdAt: now,
+    deletedAt: null,
+  };
 }
 
 

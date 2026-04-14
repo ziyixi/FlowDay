@@ -1,15 +1,20 @@
 import { NextResponse } from "next/server";
 import { getSetting, setSetting } from "@/lib/db/queries";
 
-export async function GET() {
+export async function GET(request: Request) {
   const capacityRaw = getSetting("day_capacity_mins");
-  const today = new Date().toISOString().slice(0, 10);
+  // Client passes its local date so we don't rely on server timezone
+  const url = new URL(request.url);
+  const clientToday = url.searchParams.get("today");
+  const planningCompleted = clientToday
+    ? getSetting(`planning_completed:${clientToday}`) === "true"
+    : false;
   return NextResponse.json({
     todoist_api_key: getSetting("todoist_api_key") ? "••••••••" : null,
     has_api_key: !!getSetting("todoist_api_key"),
     last_sync_at: getSetting("last_sync_at"),
     day_capacity_mins: capacityRaw != null ? Number(capacityRaw) : 360,
-    planning_completed_today: getSetting(`planning_completed:${today}`) === "true",
+    planning_completed_today: planningCompleted,
   });
 }
 

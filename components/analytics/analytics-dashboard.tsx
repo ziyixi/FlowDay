@@ -90,17 +90,17 @@ export function AnalyticsDashboard({
   const [weeklyDate, setWeeklyDate] = useState(currentDate);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Reset to current date and bump refresh key when dialog opens
-  useEffect(() => {
-    if (open) {
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
       setDailyDate(currentDate);
       setWeeklyDate(currentDate);
       setRefreshKey((k) => k + 1);
     }
-  }, [open, currentDate]);
+    onOpenChange(nextOpen);
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-3xl h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Analytics</DialogTitle>
@@ -209,17 +209,25 @@ function DailyReview({
 }) {
   const [data, setData] = useState<DailyData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [prevDate, setPrevDate] = useState(date);
+
+  if (prevDate !== date) {
+    setPrevDate(date);
+    setLoading(true);
+    setData(null);
+  }
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch(
       `/api/analytics?type=daily&date=${encodeURIComponent(date)}`,
       { cache: "no-store" }
     )
       .then((r) => r.json())
-      .then(setData)
+      .then((d) => { if (!cancelled) setData(d); })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [date]);
 
   const dateLabel = format(new Date(date + "T00:00:00"), "EEEE, MMM d, yyyy");
@@ -418,17 +426,25 @@ function WeeklyReview({
 }) {
   const [data, setData] = useState<WeeklyData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [prevDate, setPrevDate] = useState(date);
+
+  if (prevDate !== date) {
+    setPrevDate(date);
+    setLoading(true);
+    setData(null);
+  }
 
   useEffect(() => {
-    setLoading(true);
+    let cancelled = false;
     fetch(
       `/api/analytics?type=weekly&date=${encodeURIComponent(date)}`,
       { cache: "no-store" }
     )
       .then((r) => r.json())
-      .then(setData)
+      .then((d) => { if (!cancelled) setData(d); })
       .catch(() => {})
-      .finally(() => setLoading(false));
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [date]);
 
   const weekLabel = useMemo(() => {
@@ -891,7 +907,6 @@ function StatsView() {
   const [mode, setMode] = useState<"frequency" | "duration">("frequency");
 
   useEffect(() => {
-    setLoading(true);
     fetch("/api/analytics?type=stats", { cache: "no-store" })
       .then((r) => r.json())
       .then(setData)

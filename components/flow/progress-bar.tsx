@@ -25,6 +25,7 @@ export function ProgressBar({ date }: { date: string }) {
 
   // Fetch actual logged time for this date
   const [actualSeconds, setActualSeconds] = useState(0);
+  const entryRevision = getEntryRevision();
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
@@ -36,7 +37,7 @@ export function ProgressBar({ date }: { date: string }) {
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [date, completedCount, getEntryRevision()]);
+  }, [date, completedCount, entryRevision]);
 
   if (totalCount === 0) return null;
 
