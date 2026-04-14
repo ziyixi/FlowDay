@@ -65,12 +65,40 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # ─── Check if Docker-relevant files changed ─────
+  changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'release'
+    outputs:
+      docker: ${{ github.event_name == 'release' || steps.filter.outputs.docker == 'true' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      - id: filter
+        run: |
+          CHANGED=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          # Skip Docker rebuild if ONLY these paths changed
+          DOMINATED_ONLY=true
+          for f in $CHANGED; do
+            case "$f" in
+              *.md|.husky/*|.vscode/*) ;;
+              *) DOMINATED_ONLY=false; break ;;
+            esac
+          done
+          if [ "$DOMINATED_ONLY" = "true" ] && [ -n "$CHANGED" ]; then
+            echo "docker=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "docker=true" >> "$GITHUB_OUTPUT"
+          fi
+
   # ─── Docker Image ───────────────────────────────
   docker:
     name: Docker Image
-    needs: [lint, test-unit, test-integration, build]
+    needs: [lint, test-unit, test-integration, build, changes]
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' || github.event_name == 'release'
+    if: needs.changes.outputs.docker == 'true'
     steps:
       - uses: actions/checkout@v4
 

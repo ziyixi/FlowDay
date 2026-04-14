@@ -1,0 +1,11 @@
+services:
+  flowday:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - flowday-data:/app/db
+    restart: unless-stopped
+
+volumes:
+  flowday-data:

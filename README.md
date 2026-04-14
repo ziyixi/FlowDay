@@ -16,6 +16,12 @@ Open [http://localhost:3000](http://localhost:3000). The dev server wipes the SQ
 ### Docker
 
 ```bash
+docker compose up -d
+```
+
+Or build and run manually:
+
+```bash
 docker build -t flowday .
 docker run -p 3000:3000 -v flowday-data:/app/db flowday
 ```
