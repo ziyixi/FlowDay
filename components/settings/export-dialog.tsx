@@ -12,6 +12,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatLocalDate } from "@/lib/utils/time";
 
 interface ExportDialogProps {
   open: boolean;
@@ -19,13 +20,13 @@ interface ExportDialogProps {
 }
 
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return formatLocalDate();
 }
 
 function weekAgoStr() {
   const d = new Date();
   d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
+  return formatLocalDate(d);
 }
 
 export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {

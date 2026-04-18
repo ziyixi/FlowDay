@@ -3,6 +3,7 @@ import { isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
 import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds, useFlowStore } from "./flow-store";
 import { useTimerStore } from "./timer-store";
+import { formatLocalDate } from "@/lib/utils/time";
 
 interface TodoistState {
   tasks: Task[];
@@ -57,11 +58,22 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
     }
 
     // Persist to server
-    await fetch("/api/tasks", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId }),
-    }).catch(() => {});
+    try {
+      const res = await fetch("/api/tasks", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ taskId }),
+      });
+      if (!res.ok) {
+        throw new Error("Failed to delete task");
+      }
+    } catch {
+      // Recover server state if optimistic delete fails
+      await Promise.all([
+        get().hydrate(),
+        useFlowStore.getState().hydrate(),
+      ]);
+    }
   },
 
   updateEstimate: (taskId, estimatedMins) => {
@@ -74,7 +86,15 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId, estimatedMins }),
-    }).catch(() => {});
+    })
+      .then((res) => {
+        if (!res.ok) {
+          void get().hydrate();
+        }
+      })
+      .catch(() => {
+        void get().hydrate();
+      });
   },
 
   updateTitle: (taskId, title) => {
@@ -87,7 +107,15 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId, title }),
-    }).catch(() => {});
+    })
+      .then((res) => {
+        if (!res.ok) {
+          void get().hydrate();
+        }
+      })
+      .catch(() => {
+        void get().hydrate();
+      });
   },
 
   hydrate: async () => {
@@ -136,7 +164,7 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
-          dueDate: new Date().toISOString().slice(0, 10),
+          dueDate: formatLocalDate(),
         }),
       });
       if (!res.ok) return null;

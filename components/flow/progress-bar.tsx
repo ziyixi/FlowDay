@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
-import { getEntryRevision } from "@/lib/stores/timer-store";
+import { useTimerStore } from "@/lib/stores/timer-store";
 import { cn } from "@/lib/utils";
 
 export function ProgressBar({ date }: { date: string }) {
@@ -25,7 +25,7 @@ export function ProgressBar({ date }: { date: string }) {
 
   // Fetch actual logged time for this date
   const [actualSeconds, setActualSeconds] = useState(0);
-  const entryRevision = getEntryRevision();
+  const entryRevision = useTimerStore((s) => s.entryRevision);
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })

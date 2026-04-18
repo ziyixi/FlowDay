@@ -20,6 +20,68 @@ interface DayFlowProps {
   readOnly?: boolean;
 }
 
+interface NoteRow {
+  taskId: string;
+  content: string;
+}
+
+interface EntryRow {
+  taskId: string;
+  durationS: number | null;
+}
+
+function useDayNotesMap(date: string): Record<string, string> {
+  const [notesByTask, setNotesByTask] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/notes?date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((rows: NoteRow[]) => {
+        if (cancelled) return;
+        const next: Record<string, string> = {};
+        for (const row of rows) {
+          next[row.taskId] = row.content ?? "";
+        }
+        setNotesByTask(next);
+      })
+      .catch(() => {
+        if (!cancelled) setNotesByTask({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  return notesByTask;
+}
+
+function useDayLoggedSecondsMap(date: string): Record<string, number> {
+  const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((entries: EntryRow[]) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const entry of entries) {
+          next[entry.taskId] = (next[entry.taskId] ?? 0) + (entry.durationS ?? 0);
+        }
+        setSecondsByTask(next);
+      })
+      .catch(() => {
+        if (!cancelled) setSecondsByTask({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  return secondsByTask;
+}
+
 export function DayFlow({ date, readOnly = false }: DayFlowProps) {
   const flowTasks = useFlowTasksForDate(date);
   const completedTasks = useCompletedTasksForDate(date);
@@ -35,6 +97,8 @@ export function DayFlow({ date, readOnly = false }: DayFlowProps) {
 // --- Read-only view for multi-day mode ---
 
 function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[]; completedTasks: Task[]; date: string }) {
+  const notesByTask = useDayNotesMap(date);
+
   if (flowTasks.length === 0 && completedTasks.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -48,7 +112,12 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
       <div className="flex-1 overflow-y-auto px-2 py-2">
         <div className="space-y-1.5">
           {flowTasks.map((task, index) => (
-            <ReadOnlyTaskRow key={task.id} task={task} isNext={index === 0} date={date} />
+            <ReadOnlyTaskRow
+              key={task.id}
+              task={task}
+              isNext={index === 0}
+              noteText={notesByTask[task.id] ?? ""}
+            />
           ))}
         </div>
         {completedTasks.length > 0 && (
@@ -58,7 +127,11 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
             </p>
             <div className="space-y-1">
               {completedTasks.map((task) => (
-                <ReadOnlyCompletedRow key={task.id} task={task} date={date} />
+                <ReadOnlyCompletedRow
+                  key={task.id}
+                  task={task}
+                  noteText={notesByTask[task.id] ?? ""}
+                />
               ))}
             </div>
           </div>
@@ -69,18 +142,16 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
   );
 }
 
-function ReadOnlyTaskRow({ task, isNext, date }: { task: Task; isNext: boolean; date: string }) {
+function ReadOnlyTaskRow({
+  task,
+  isNext,
+  noteText,
+}: {
+  task: Task;
+  isNext: boolean;
+  noteText: string;
+}) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
-  const [noteText, setNoteText] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [task.id, date]);
 
   return (
     <div
@@ -110,18 +181,7 @@ function ReadOnlyTaskRow({ task, isNext, date }: { task: Task; isNext: boolean; 
   );
 }
 
-function ReadOnlyCompletedRow({ task, date }: { task: Task; date: string }) {
-  const [noteText, setNoteText] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [task.id, date]);
-
+function ReadOnlyCompletedRow({ task, noteText }: { task: Task; noteText: string }) {
   return (
     <div className="rounded-md bg-muted/30 px-2.5 py-1">
       <div className="flex items-center gap-2">
@@ -151,6 +211,8 @@ function EditableDayFlow({
 }) {
   const planningCompleted = useFlowStore((s) => s.planningCompletedDates[date]);
   const hydrated = useFlowStore((s) => s.hydrated);
+  const notesByTask = useDayNotesMap(date);
+  const loggedByTask = useDayLoggedSecondsMap(date);
 
   const isToday = date === format(new Date(), "yyyy-MM-dd");
   const autoShowWizard = hydrated && isEmpty && isToday && !planningCompleted;
@@ -264,7 +326,13 @@ function EditableDayFlow({
             </p>
             <div className="space-y-1.5">
               {completedTasks.map((task) => (
-                <CompletedTaskRow key={task.id} task={task} date={date} />
+                <CompletedTaskRow
+                  key={task.id}
+                  task={task}
+                  date={date}
+                  loggedSeconds={loggedByTask[task.id] ?? 0}
+                  noteText={notesByTask[task.id] ?? ""}
+                />
               ))}
             </div>
           </div>
@@ -275,32 +343,18 @@ function EditableDayFlow({
   );
 }
 
-function CompletedTaskRow({ task, date }: { task: Task; date: string }) {
+function CompletedTaskRow({
+  task,
+  date,
+  loggedSeconds,
+  noteText,
+}: {
+  task: Task;
+  date: string;
+  loggedSeconds: number;
+  noteText: string;
+}) {
   const uncompleteTask = useFlowStore((s) => s.uncompleteTask);
-
-  const [loggedSeconds, setLoggedSeconds] = useState(0);
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/entries?taskId=${encodeURIComponent(task.id)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: { durationS: number | null }[]) => {
-        if (!cancelled) {
-          setLoggedSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [task.id]);
-
-  const [noteText, setNoteText] = useState("");
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/notes?taskId=${encodeURIComponent(task.id)}&date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => { if (!cancelled && data?.content) setNoteText(data.content); })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [task.id, date]);
 
   return (
     <div className="group rounded-md border border-border/50 bg-muted/30 px-4 py-2">

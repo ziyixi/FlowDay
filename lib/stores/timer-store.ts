@@ -16,6 +16,8 @@ interface TimerState {
   priorSeconds: number;
   // Display value updated every tick
   displaySeconds: number;
+  // Monotonic counter bumped when entries are persisted
+  entryRevision: number;
 
   startTimer: (taskId: string, flowDate: string) => Promise<void>;
   pauseTimer: () => void;
@@ -95,7 +97,7 @@ async function fetchPriorSeconds(taskId: string): Promise<number> {
   }
 }
 
-function resetState(): Partial<TimerState> {
+function resetState(): Omit<TimerState, "entryRevision" | "startTimer" | "pauseTimer" | "resumeTimer" | "stopAndSave" | "stopWithoutSaving" | "tick"> {
   return {
     activeTaskId: null,
     activeFlowDate: null,
@@ -108,12 +110,6 @@ function resetState(): Partial<TimerState> {
   };
 }
 
-// Monotonic counter bumped every time a segment is saved, so UI can react
-let entryRevision = 0;
-export function getEntryRevision() {
-  return entryRevision;
-}
-
 export const useTimerStore = create<TimerState>()((set, get) => ({
   activeTaskId: null,
   activeFlowDate: null,
@@ -123,6 +119,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   sessionSavedSeconds: 0,
   priorSeconds: 0,
   displaySeconds: 0,
+  entryRevision: 0,
 
   startTimer: async (taskId, flowDate) => {
     const state = get();
@@ -131,7 +128,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
     if (state.activeTaskId && state.activeTaskId !== taskId && state.status !== "idle") {
       clearTickInterval();
       await saveSegment(state);
-      entryRevision++;
+      set((prev) => ({ entryRevision: prev.entryRevision + 1 }));
     }
 
     // Fetch prior seconds BEFORE setting state to avoid flash-to-zero
@@ -167,14 +164,13 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
 
     // Save this segment as an entry
     await saveSegment(state);
-    entryRevision++;
-
-    set({
+    set((prev) => ({
       status: "paused",
       sessionSavedSeconds: state.sessionSavedSeconds + segSeconds,
       segmentWallStart: null,
       segmentStartedAt: null,
-    });
+      entryRevision: prev.entryRevision + 1,
+    }));
   },
 
   resumeTimer: () => {
@@ -199,15 +195,19 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
     // Save current segment if running
     if (state.status === "running") {
       await saveSegment(state);
-      entryRevision++;
     }
-
-    set(resetState());
+    set((prev) => ({
+      ...resetState(),
+      entryRevision:
+        state.status === "running"
+          ? prev.entryRevision + 1
+          : prev.entryRevision,
+    }));
   },
 
   stopWithoutSaving: () => {
     clearTickInterval();
-    set(resetState());
+    set((prev) => ({ ...resetState(), entryRevision: prev.entryRevision }));
   },
 
   tick: () => {

@@ -10,11 +10,43 @@ import { TaskCard } from "./task-card";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 
+interface EntryRow {
+  taskId: string;
+  durationS: number | null;
+}
+
+function useLoggedByTaskForDate(date: string): Record<string, number> {
+  const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((entries: EntryRow[]) => {
+        if (cancelled) return;
+        const next: Record<string, number> = {};
+        for (const entry of entries) {
+          next[entry.taskId] = (next[entry.taskId] ?? 0) + (entry.durationS ?? 0);
+        }
+        setSecondsByTask(next);
+      })
+      .catch(() => {
+        if (!cancelled) setSecondsByTask({});
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [date]);
+
+  return secondsByTask;
+}
+
 export function TaskPool() {
   const { today, overdue } = useTaskSections();
   const currentDate = useFlowStore((s) => s.currentDate);
   const arrangedTasks = useFlowTasksForDate(currentDate);
   const completedTasks = useCompletedTasksForDate(currentDate);
+  const loggedByTask = useLoggedByTaskForDate(currentDate);
 
   return (
     <div className="space-y-1">
@@ -34,6 +66,7 @@ export function TaskPool() {
           defaultOpen={false}
           accentClass="text-green-500"
           variant="completed"
+          loggedByTask={loggedByTask}
         />
       )}
       {overdue.length > 0 && (
@@ -55,12 +88,14 @@ function TaskPoolSection({
   defaultOpen = false,
   accentClass,
   variant = "pool",
+  loggedByTask = {},
 }: {
   title: string;
   tasks: Task[];
   defaultOpen?: boolean;
   accentClass?: string;
   variant?: "pool" | "arranged" | "completed";
+  loggedByTask?: Record<string, number>;
 }) {
   const [open, setOpen] = useState(defaultOpen);
 
@@ -92,7 +127,13 @@ function TaskPoolSection({
                 ? tasks.map((task) => <TaskCard key={task.id} task={task} />)
                 : variant === "arranged"
                   ? tasks.map((task) => <ArrangedRow key={task.id} task={task} />)
-                  : tasks.map((task) => <CompletedRow key={task.id} task={task} />)}
+                  : tasks.map((task) => (
+                      <CompletedRow
+                        key={task.id}
+                        task={task}
+                        loggedSeconds={loggedByTask[task.id] ?? 0}
+                      />
+                    ))}
             </div>
           ) : (
             <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground/60 mb-1">
@@ -121,22 +162,7 @@ function ArrangedRow({ task }: { task: Task }) {
   );
 }
 
-function CompletedRow({ task }: { task: Task }) {
-  const [loggedSeconds, setLoggedSeconds] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/entries?taskId=${encodeURIComponent(task.id)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: { durationS: number | null }[]) => {
-        if (!cancelled) {
-          setLoggedSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
-        }
-      })
-      .catch(() => {});
-    return () => { cancelled = true; };
-  }, [task.id]);
-
+function CompletedRow({ task, loggedSeconds }: { task: Task; loggedSeconds: number }) {
   return (
     <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5 opacity-60">
       <Check className="h-3 w-3 shrink-0 text-green-500" />

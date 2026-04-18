@@ -46,12 +46,20 @@ function completedForDate(state: FlowState, date: string): string[] {
 }
 
 // Fire-and-forget persistence helpers
+function recoverFlowState() {
+  void useFlowStore.getState().hydrate();
+}
+
 function persistFlow(date: string, taskIds: string[]) {
   fetch("/api/flows", {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "setFlow", date, taskIds }),
-  }).catch(() => {});
+  })
+    .then((res) => {
+      if (!res.ok) recoverFlowState();
+    })
+    .catch(() => recoverFlowState());
 }
 
 function persistAddCompleted(date: string, taskId: string) {
@@ -59,7 +67,11 @@ function persistAddCompleted(date: string, taskId: string) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "addCompleted", date, taskId }),
-  }).catch(() => {});
+  })
+    .then((res) => {
+      if (!res.ok) recoverFlowState();
+    })
+    .catch(() => recoverFlowState());
 }
 
 function persistRemoveCompleted(date: string, taskId: string) {
@@ -67,7 +79,11 @@ function persistRemoveCompleted(date: string, taskId: string) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ action: "removeCompleted", date, taskId }),
-  }).catch(() => {});
+  })
+    .then((res) => {
+      if (!res.ok) recoverFlowState();
+    })
+    .catch(() => recoverFlowState());
 }
 
 export const useFlowStore = create<FlowState>()((set) => ({

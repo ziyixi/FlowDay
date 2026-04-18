@@ -79,6 +79,15 @@ export function getDb() {
       updated_at TEXT DEFAULT (datetime('now')),
       UNIQUE(task_id, flow_date)
     );
+
+    CREATE INDEX IF NOT EXISTS idx_time_entries_task_id ON time_entries(task_id);
+    CREATE INDEX IF NOT EXISTS idx_time_entries_flow_date ON time_entries(flow_date);
+    CREATE INDEX IF NOT EXISTS idx_flow_tasks_flow_date ON flow_tasks(flow_date);
+    CREATE INDEX IF NOT EXISTS idx_flow_tasks_task_id ON flow_tasks(task_id);
+    CREATE INDEX IF NOT EXISTS idx_completed_flow_tasks_flow_date ON completed_flow_tasks(flow_date);
+    CREATE INDEX IF NOT EXISTS idx_completed_flow_tasks_task_id ON completed_flow_tasks(task_id);
+    CREATE INDEX IF NOT EXISTS idx_flow_task_notes_flow_date ON flow_task_notes(flow_date);
+    CREATE INDEX IF NOT EXISTS idx_tasks_due_date ON tasks(due_date);
   `);
 
   // Lightweight migrations: add columns that may not exist yet
@@ -90,6 +99,7 @@ export function getDb() {
   if (!colNames.has("deleted_at")) {
     sqlite.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT");
   }
+  sqlite.exec("CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at)");
 
   const db = drizzle(sqlite, { schema });
   globalForDb.__flowdayDb = db;
