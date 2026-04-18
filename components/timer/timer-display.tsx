@@ -3,13 +3,15 @@
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
-import { formatElapsed } from "@/lib/utils/time";
+import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { Pause, Play, Check } from "lucide-react";
 
 function TimerContent() {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   const activeFlowDate = useTimerStore((s) => s.activeFlowDate);
   const status = useTimerStore((s) => s.status);
+  const timerMode = useTimerStore((s) => s.timerMode);
+  const pomodoroTargetSeconds = useTimerStore((s) => s.pomodoroTargetSeconds);
   const displaySeconds = useTimerStore((s) => s.displaySeconds);
   const pauseTimer = useTimerStore((s) => s.pauseTimer);
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
@@ -18,6 +20,12 @@ function TimerContent() {
   const task = useTaskById(activeTaskId ?? "");
 
   if (!activeTaskId || !task) return null;
+
+  const isPomodoro = timerMode === "pomodoro";
+  const pomodoroLabel =
+    pomodoroTargetSeconds != null
+      ? formatDuration(Math.round(pomodoroTargetSeconds / 60))
+      : null;
 
   const handleComplete = async () => {
     const date = activeFlowDate;
@@ -45,8 +53,16 @@ function TimerContent() {
         {task.title}
       </span>
 
+      {isPomodoro && (
+        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary sm:text-[10px]">
+          Pomodoro{pomodoroLabel ? ` ${pomodoroLabel}` : ""}
+        </span>
+      )}
+
       <span className="tabular-nums text-sm font-semibold text-primary">
-        {formatElapsed(displaySeconds)}
+        {isPomodoro
+          ? `${formatElapsed(displaySeconds)} left`
+          : formatElapsed(displaySeconds)}
       </span>
 
       <div className="flex items-center gap-0.5">

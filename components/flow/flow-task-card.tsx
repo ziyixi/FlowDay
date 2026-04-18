@@ -10,6 +10,7 @@ import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { ManualEntry } from "@/components/timer/manual-entry";
+import { PomodoroPicker } from "@/components/timer/pomodoro-picker";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { EditableLocalTitle } from "@/components/shared/editable-local-title";
 import { cn } from "@/lib/utils";
@@ -96,6 +97,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   const timerStatus = useTimerStore((s) => s.status);
   const displaySeconds = useTimerStore((s) => s.displaySeconds);
+  const timerMode = useTimerStore((s) => s.timerMode);
   const startTimer = useTimerStore((s) => s.startTimer);
   const pauseTimer = useTimerStore((s) => s.pauseTimer);
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
@@ -117,6 +119,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
 
   const loggedSeconds = useTaskLoggedSeconds(task.id, combinedRevision);
   const shownSeconds = isActive ? displaySeconds : loggedSeconds;
+  const isActivePomodoro = isActive && timerMode === "pomodoro";
 
   // Notes
   const { note, showNote, hasNote, updateNote, toggle: toggleNote } = useTaskNote(task.id, date);
@@ -233,7 +236,9 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                 isActive ? "text-primary" : "text-foreground"
               )}
             >
-              {formatElapsed(shownSeconds)}
+              {isActivePomodoro
+                ? `${formatElapsed(shownSeconds)} left`
+                : formatElapsed(shownSeconds)}
             </span>
           ) : (
             <span className="tabular-nums text-muted-foreground/60">&mdash;</span>
@@ -256,6 +261,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               <Play className="h-3.5 w-3.5" />
             )}
           </button>
+          <PomodoroPicker taskId={task.id} flowDate={date} />
           <ManualEntry taskId={task.id} flowDate={date} onEntriesChanged={onEntriesChanged} />
           <button
             className={cn(

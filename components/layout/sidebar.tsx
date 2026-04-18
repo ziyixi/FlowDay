@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
-import { formatElapsed } from "@/lib/utils/time";
+import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { TaskPool } from "@/components/todoist/task-pool";
 import { QuickAdd } from "@/components/todoist/quick-add";
 import { DeletedTasksDialog } from "@/components/todoist/deleted-tasks-dialog";
@@ -19,12 +19,20 @@ import { DeletedTasksDialog } from "@/components/todoist/deleted-tasks-dialog";
 function SidebarTimer() {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   const status = useTimerStore((s) => s.status);
+  const timerMode = useTimerStore((s) => s.timerMode);
+  const pomodoroTargetSeconds = useTimerStore((s) => s.pomodoroTargetSeconds);
   const displaySeconds = useTimerStore((s) => s.displaySeconds);
   const pauseTimer = useTimerStore((s) => s.pauseTimer);
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
   const task = useTaskById(activeTaskId ?? "");
 
   if (!activeTaskId || !task) return null;
+
+  const isPomodoro = timerMode === "pomodoro";
+  const pomodoroLabel =
+    pomodoroTargetSeconds != null
+      ? formatDuration(Math.round(pomodoroTargetSeconds / 60))
+      : null;
 
   return (
     <div className="mx-3 mb-2 flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
@@ -43,9 +51,16 @@ function SidebarTimer() {
         <p className="truncate text-sm font-medium text-foreground sm:text-xs">
           {task.title}
         </p>
+        {isPomodoro && (
+          <p className="truncate text-xs text-primary/80 sm:text-[10px]">
+            Pomodoro{pomodoroLabel ? ` ${pomodoroLabel}` : ""}
+          </p>
+        )}
       </div>
       <span className="shrink-0 tabular-nums text-sm font-semibold text-primary sm:text-xs">
-        {formatElapsed(displaySeconds)}
+        {isPomodoro
+          ? `${formatElapsed(displaySeconds)} left`
+          : formatElapsed(displaySeconds)}
       </span>
       <button
         onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}

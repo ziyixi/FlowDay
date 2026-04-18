@@ -1,9 +1,13 @@
 import { create } from "zustand";
 
+export type TimerMode = "countup" | "pomodoro";
+
 interface TimerState {
   activeTaskId: string | null;
   activeFlowDate: string | null;
   status: "idle" | "running" | "paused";
+  timerMode: TimerMode;
+  pomodoroTargetSeconds: number | null;
 
   // Current running segment wall-clock start (ISO string for the entry)
   segmentWallStart: string | null;
@@ -20,6 +24,11 @@ interface TimerState {
   entryRevision: number;
 
   startTimer: (taskId: string, flowDate: string) => Promise<void>;
+  startPomodoro: (
+    taskId: string,
+    flowDate: string,
+    targetSeconds: number
+  ) => Promise<void>;
   pauseTimer: () => void;
   resumeTimer: () => void;
   stopAndSave: () => Promise<void>;
@@ -50,8 +59,39 @@ function totalSeconds(state: TimerState): number {
   return state.priorSeconds + state.sessionSavedSeconds + currentSegmentSeconds(state);
 }
 
-async function saveSegment(state: TimerState): Promise<void> {
-  const segSeconds = currentSegmentSeconds(state);
+function pomodoroRemainingSeconds(state: TimerState): number {
+  if (state.pomodoroTargetSeconds == null) return 0;
+  const elapsed = state.sessionSavedSeconds + currentSegmentSeconds(state);
+  return Math.max(state.pomodoroTargetSeconds - elapsed, 0);
+}
+
+async function clearCurrentTimerForStart(
+  state: TimerState
+): Promise<void> {
+  if (state.status === "idle") return;
+
+  clearTickInterval();
+
+  if (state.status === "running") {
+    await saveSegment(state);
+    useTimerStore.setState((prev) => ({
+      ...resetState(),
+      entryRevision: prev.entryRevision + 1,
+    }));
+    return;
+  }
+
+  useTimerStore.setState((prev) => ({
+    ...resetState(),
+    entryRevision: prev.entryRevision,
+  }));
+}
+
+async function saveSegment(
+  state: TimerState,
+  durationOverrideS?: number
+): Promise<void> {
+  const segSeconds = durationOverrideS ?? currentSegmentSeconds(state);
   if (
     segSeconds <= 0 ||
     !state.segmentWallStart ||
@@ -60,7 +100,8 @@ async function saveSegment(state: TimerState): Promise<void> {
   )
     return;
 
-  const endTime = new Date().toISOString();
+  const segmentStartMs = new Date(state.segmentWallStart).getTime();
+  const endTime = new Date(segmentStartMs + segSeconds * 1000).toISOString();
 
   try {
     await fetch("/api/entries", {
@@ -97,11 +138,23 @@ async function fetchPriorSeconds(taskId: string): Promise<number> {
   }
 }
 
-function resetState(): Omit<TimerState, "entryRevision" | "startTimer" | "pauseTimer" | "resumeTimer" | "stopAndSave" | "stopWithoutSaving" | "tick"> {
+function resetState(): Omit<
+  TimerState,
+  | "entryRevision"
+  | "startTimer"
+  | "startPomodoro"
+  | "pauseTimer"
+  | "resumeTimer"
+  | "stopAndSave"
+  | "stopWithoutSaving"
+  | "tick"
+> {
   return {
     activeTaskId: null,
     activeFlowDate: null,
     status: "idle" as const,
+    timerMode: "countup" as const,
+    pomodoroTargetSeconds: null,
     segmentWallStart: null,
     segmentStartedAt: null,
     sessionSavedSeconds: 0,
@@ -114,6 +167,8 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   activeTaskId: null,
   activeFlowDate: null,
   status: "idle",
+  timerMode: "countup",
+  pomodoroTargetSeconds: null,
   segmentWallStart: null,
   segmentStartedAt: null,
   sessionSavedSeconds: 0,
@@ -124,11 +179,9 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   startTimer: async (taskId, flowDate) => {
     const state = get();
 
-    // If another task is active, stop and save it first — AWAIT to prevent data loss
-    if (state.activeTaskId && state.activeTaskId !== taskId && state.status !== "idle") {
-      clearTickInterval();
-      await saveSegment(state);
-      set((prev) => ({ entryRevision: prev.entryRevision + 1 }));
+    // Clear any existing timer state before switching tasks/modes.
+    if (state.status !== "idle" && state.activeTaskId !== taskId) {
+      await clearCurrentTimerForStart(state);
     }
 
     // Fetch prior seconds BEFORE setting state to avoid flash-to-zero
@@ -145,11 +198,53 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       activeTaskId: taskId,
       activeFlowDate: flowDate,
       status: "running",
+      timerMode: "countup",
+      pomodoroTargetSeconds: null,
       segmentWallStart: new Date(now).toISOString(),
       segmentStartedAt: now,
       sessionSavedSeconds: 0,
       priorSeconds: prior,
       displaySeconds: prior,
+    });
+
+    startTickInterval(() => get().tick());
+  },
+
+  startPomodoro: async (taskId, flowDate, targetSeconds) => {
+    if (!Number.isFinite(targetSeconds) || targetSeconds <= 0) return;
+
+    const state = get();
+
+    // Starting a pomodoro always replaces the previous active timer state.
+    if (state.status !== "idle") {
+      await clearCurrentTimerForStart(state);
+    }
+
+    // Keep parity with count-up mode for data consistency across UI refreshes
+    const prior = await fetchPriorSeconds(taskId);
+
+    // Guard: user might have clicked something else during the await
+    const current = get();
+    if (
+      current.activeTaskId &&
+      current.activeTaskId !== taskId &&
+      current.status === "running"
+    ) {
+      return;
+    }
+
+    const now = Date.now();
+    set({
+      activeTaskId: taskId,
+      activeFlowDate: flowDate,
+      status: "running",
+      timerMode: "pomodoro",
+      pomodoroTargetSeconds: targetSeconds,
+      segmentWallStart: new Date(now).toISOString(),
+      segmentStartedAt: now,
+      sessionSavedSeconds: 0,
+      priorSeconds: prior,
+      displaySeconds: targetSeconds,
     });
 
     startTickInterval(() => get().tick());
@@ -164,11 +259,17 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
 
     // Save this segment as an entry
     await saveSegment(state);
+    const nextSessionSaved = state.sessionSavedSeconds + segSeconds;
+    const nextDisplay =
+      state.timerMode === "pomodoro"
+        ? Math.max((state.pomodoroTargetSeconds ?? 0) - nextSessionSaved, 0)
+        : state.priorSeconds + nextSessionSaved;
     set((prev) => ({
       status: "paused",
-      sessionSavedSeconds: state.sessionSavedSeconds + segSeconds,
+      sessionSavedSeconds: nextSessionSaved,
       segmentWallStart: null,
       segmentStartedAt: null,
+      displaySeconds: nextDisplay,
       entryRevision: prev.entryRevision + 1,
     }));
   },
@@ -176,6 +277,13 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   resumeTimer: () => {
     const state = get();
     if (state.status !== "paused") return;
+    if (
+      state.timerMode === "pomodoro" &&
+      state.pomodoroTargetSeconds != null &&
+      state.sessionSavedSeconds >= state.pomodoroTargetSeconds
+    ) {
+      return;
+    }
 
     set({
       status: "running",
@@ -213,6 +321,34 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   tick: () => {
     const state = get();
     if (state.status !== "running") return;
+
+    if (state.timerMode === "pomodoro") {
+      const remaining = pomodoroRemainingSeconds(state);
+      if (remaining <= 0) {
+        clearTickInterval();
+        const segSecondsToSave = Math.max(
+          (state.pomodoroTargetSeconds ?? 0) - state.sessionSavedSeconds,
+          0
+        );
+
+        void (async () => {
+          if (segSecondsToSave > 0) {
+            await saveSegment(state, segSecondsToSave);
+          }
+
+          set((prev) => ({
+            ...resetState(),
+            entryRevision:
+              prev.entryRevision + (segSecondsToSave > 0 ? 1 : 0),
+          }));
+        })();
+        return;
+      }
+
+      set({ displaySeconds: remaining });
+      return;
+    }
+
     set({ displaySeconds: totalSeconds(state) });
   },
 }));

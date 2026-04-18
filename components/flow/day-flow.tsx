@@ -217,19 +217,24 @@ function EditableDayFlow({
   const isToday = date === format(new Date(), "yyyy-MM-dd");
   const autoShowWizard = hydrated && isEmpty && isToday && !planningCompleted;
 
-  // Track user dismissals and manual opens separately from derived auto-show state.
-  // Reset when date changes using React's "adjust state from props" pattern.
   const [dismissed, setDismissed] = useState(false);
-  const [manualOpen, setManualOpen] = useState(false);
+  const [wizardOpen, setWizardOpen] = useState(false);
   const [trackedDate, setTrackedDate] = useState(date);
+
   if (trackedDate !== date) {
     setTrackedDate(date);
     setDismissed(false);
-    setManualOpen(false);
+    setWizardOpen(false);
   }
 
-  const showWizard = manualOpen || (autoShowWizard && !dismissed);
-  const dismissWizard = () => { setDismissed(true); setManualOpen(false); };
+  if (autoShowWizard && !dismissed && !wizardOpen) {
+    setWizardOpen(true);
+  }
+
+  const dismissWizard = () => {
+    setDismissed(true);
+    setWizardOpen(false);
+  };
 
   const { ref: dropRef, isDropTarget } = useDroppable({
     id: `day-flow-${date}`,
@@ -237,7 +242,7 @@ function EditableDayFlow({
     data: { date },
   });
 
-  if (showWizard) {
+  if (wizardOpen) {
     return (
       <PlanningWizard
         date={date}
@@ -272,7 +277,7 @@ function EditableDayFlow({
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => setManualOpen(true)}
+                  onClick={() => setWizardOpen(true)}
                 >
                   <Sunrise className="mr-2 h-4 w-4" />
                   Plan My Day
