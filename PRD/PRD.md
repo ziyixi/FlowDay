@@ -25,7 +25,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 | Concept | Description |
 |---------|-------------|
-| **Task Pool** | Sidebar showing Todoist tasks (today + overdue). This is your "available work" drawer. |
+| **Task Pool** | Sidebar showing Todoist tasks (today + overdue). Future-dated tasks are synced but hidden until their due date arrives. |
 | **Day Flow** | The main canvas — an ordered list of tasks you've committed to today. Not time-slotted, just sequenced. |
 | **Active Task** | The task you're currently working on. One at a time. Timer runs automatically. |
 | **Time Entry** | A recorded span: which task, start time, end time, duration. Builds your history. |
@@ -51,14 +51,14 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Task description synced from Todoist; rendered as Markdown tooltip on hover in sidebar (via `react-markdown`)
 - "Refresh" button (sidebar header) + auto-sync every 60 seconds
 - Search/filter within the sidebar
-- Only fetches tasks due today or overdue (via `GET /api/v1/tasks/filter?query=today | overdue`)
+- Fetches all active tasks from Todoist (via `GET /api/v1/tasks`); sidebar filters to today + overdue, future-dated tasks stay in DB and reappear when their due date arrives
 - **Arranged list:** Shows tasks added to the current day's flow (primary accent), non-draggable summary
 - **Completed list:** Shows tasks completed in the current day's flow with logged time + estimated time
 - **Quick add:** Inline input at top of sidebar to create local tasks (no Todoist required). Local tasks get `local-<uuid>` IDs, today's due date, and are editable inline
 - **Editable titles:** Local tasks (non-Todoist) show a pencil icon on hover to edit the title inline in both sidebar and flow cards
 
 **Implementation notes:**
-- Todoist API v1 (`/api/v1/tasks/filter`, `/api/v1/projects`) with cursor-based pagination
+- Todoist API v1 (`/api/v1/tasks`, `/api/v1/projects`) with cursor-based pagination
 - Fetches task `content` (title) and `description` from Todoist API
 - API key stored in SQLite `settings` table, entered via Settings dialog in top bar
 - Tasks persisted in SQLite `tasks` table — survive page refresh
@@ -231,7 +231,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Export:** ✅ CSV/JSON export of time entries and flow history via `GET /api/export`. Export dialog in Settings with data type, date range, and format selectors.
 - **Todoist write-back:** (Planned) Optionally mark tasks complete in Todoist when completed in FlowDay (requires careful safeguards)
 - **Estimate presets:** ✅ The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
-- **PWA:** ✅ Installable progressive web app with service worker (`public/sw.js`), web manifest, app icons. Network-first for navigation and API calls, stale-while-revalidate for static assets. Service worker only registered in production (dev mode auto-unregisters stale workers).
+- **PWA:** ✅ Installable progressive web app with service worker (served via `app/sw/route.ts` for standalone compatibility), web manifest (`app/manifest.ts`), app icons. Network-first for navigation and API calls, stale-while-revalidate for static assets. Service worker only registered in production (dev mode auto-unregisters stale workers).
 
 ---
 
@@ -288,7 +288,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 ### Key Architecture Decisions
 
 - **SQLite as source of truth**: Tasks, flows, time entries, settings all in SQLite. Zustand stores are reactive cache only.
-- **Read-only Todoist**: FlowDay only reads from Todoist API, never writes. This prevents bugs from affecting real Todoist data.
+- **Read-only Todoist**: FlowDay only reads from Todoist API, never writes. Syncs all active tasks (not just today/overdue) so rescheduled tasks get their updated dueDate and reappear on the correct day with all FlowDay data intact.
 - **Write-through persistence**: UI mutations update Zustand optimistically, then fire-and-forget API calls to persist to SQLite.
 - **Segment-based timer**: Each pause saves a separate time entry for the actual running segment, ensuring accurate time tracking.
 - **Dev-mode fresh DB**: `predev` script wipes SQLite on `npm run dev`; production persists.
@@ -307,6 +307,7 @@ flowday/
 │   ├── page.tsx                   # Main app (single-page)
 │   ├── globals.css                # Tailwind CSS v4 theme + global styles
 │   ├── manifest.ts                # PWA web manifest (dynamic route)
+│   ├── sw/route.ts                # Service worker route (serves public/sw.js for standalone compat)
 │   └── api/
 │       ├── entries/
 │       │   ├── route.ts           # POST create, GET query time entries
@@ -385,7 +386,8 @@ flowday/
 │   ├── unit/
 │   │   ├── time.test.ts           # formatDuration, formatElapsed
 │   │   ├── queries-core.test.ts   # Settings, tasks, flows, completed flows
-│   │   └── queries-time-entries.test.ts # Time entry CRUD + range queries
+│   │   ├── queries-time-entries.test.ts # Time entry CRUD + range queries
+│   │   └── sync-logic.test.ts     # Sync dueDate updates, task section categorisation
 │   └── integration/
 │       ├── analytics-api.test.ts  # Analytics route handler (daily/weekly/stats)
 │       ├── entries-api.test.ts    # Entries route handler (CRUD)
@@ -399,7 +401,7 @@ flowday/
 │   └── workflows/
 │       └── ci.yml                 # CI/CD: lint → test → build → Docker push
 ├── public/
-│   ├── sw.js                      # Service worker (network-first nav, stale-while-revalidate assets)
+│   ├── sw.js                      # Service worker source (served via app/sw/route.ts in production)
 │   ├── icon.svg                   # App icon (SVG source)
 │   ├── icon-192x192.png           # PWA icon 192px
 │   ├── icon-512x512.png           # PWA icon 512px

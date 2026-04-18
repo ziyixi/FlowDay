@@ -46,7 +46,7 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 
 - **Sequential day flow** — ordered task list, not a calendar grid. Decide what to do and in what order.
 - **Quick add** — create local tasks without Todoist, with editable titles.
-- **Todoist sync** — read-only integration. FlowDay never modifies your Todoist data.
+- **Todoist sync** — read-only integration. Syncs all tasks so rescheduled items reappear on their new date with history intact. FlowDay never modifies your Todoist data.
 - **Time tracking** — segment-based timer with pause/resume. Manual entries supported.
 - **Data export** — CSV/JSON export of time entries and flow history with date range picker.
 - **Multi-day view** — 1, 3, or 5 day horizon for planning context.

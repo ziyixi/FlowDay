@@ -65,12 +65,7 @@ async function fetchPaginated<T>(
 export async function fetchTodoistTasks(
   apiKey: string
 ): Promise<TodoistApiTask[]> {
-  // Only fetch tasks due today or overdue — avoids pulling the entire task list
-  return fetchPaginated<TodoistApiTask>(
-    `${TODOIST_BASE}/tasks/filter`,
-    apiKey,
-    { query: "today | overdue" }
-  );
+  return fetchPaginated<TodoistApiTask>(`${TODOIST_BASE}/tasks`, apiKey);
 }
 
 export async function fetchTodoistProjects(

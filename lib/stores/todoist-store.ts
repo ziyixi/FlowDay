@@ -177,15 +177,17 @@ export function useTaskSections(): TaskSections {
 
   const today: Task[] = [];
   const overdue: Task[] = [];
+  const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
 
   for (const task of filtered) {
-    if (task.dueDate && isBefore(new Date(task.dueDate + "T00:00:00"), todayStart)) {
+    if (!task.dueDate) continue;
+    const due = new Date(task.dueDate + "T00:00:00");
+    if (isBefore(due, todayStart)) {
       overdue.push(task);
-    } else {
-      // API filter guarantees all tasks are today-or-overdue;
-      // anything not strictly overdue belongs in today
+    } else if (isBefore(due, tomorrowStart)) {
       today.push(task);
     }
+    // Future-dated tasks: skip — they'll reappear when their date arrives
   }
 
   return { today, overdue };
