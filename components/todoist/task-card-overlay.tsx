@@ -22,13 +22,13 @@ export function TaskCardOverlay({ task }: TaskCardOverlayProps) {
           {task.title}
         </p>
         {task.projectName && (
-          <p className="truncate text-xs text-muted-foreground">
+          <p className="truncate text-sm text-muted-foreground sm:text-xs">
             {task.projectName}
           </p>
         )}
       </div>
       {task.estimatedMins != null && task.estimatedMins > 0 && (
-        <span className="mt-0.5 shrink-0 text-xs tabular-nums text-muted-foreground">
+        <span className="mt-0.5 shrink-0 text-sm tabular-nums text-muted-foreground sm:text-xs">
           {formatDuration(task.estimatedMins)}
         </span>
       )}

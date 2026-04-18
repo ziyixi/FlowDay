@@ -102,7 +102,7 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
   if (flowTasks.length === 0 && completedTasks.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center">
-        <p className="text-xs text-muted-foreground/60">No tasks</p>
+        <p className="text-sm text-muted-foreground/60 sm:text-xs">No tasks</p>
       </div>
     );
   }
@@ -122,7 +122,7 @@ function ReadOnlyDayFlow({ flowTasks, completedTasks, date }: { flowTasks: Task[
         </div>
         {completedTasks.length > 0 && (
           <div className="mt-3">
-            <p className="mb-1 text-[10px] font-medium text-muted-foreground">
+            <p className="mb-1 text-xs font-medium text-muted-foreground sm:text-[10px]">
               Done ({completedTasks.length})
             </p>
             <div className="space-y-1">
@@ -165,9 +165,9 @@ function ReadOnlyTaskRow({
       <div className="flex items-start gap-2">
         <span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", priorityColor)} />
         <div className="min-w-0 flex-1">
-          <p className="truncate text-xs font-medium text-foreground">{task.title}</p>
+          <p className="truncate text-sm font-medium text-foreground sm:text-xs">{task.title}</p>
           {task.estimatedMins != null && task.estimatedMins > 0 && (
-            <p className="text-[10px] tabular-nums text-muted-foreground">
+            <p className="text-xs tabular-nums text-muted-foreground sm:text-[10px]">
               {formatDuration(task.estimatedMins)}
             </p>
           )}
@@ -175,7 +175,7 @@ function ReadOnlyTaskRow({
         {noteText && <StickyNote className="mt-1 h-2.5 w-2.5 shrink-0 text-primary/50" />}
       </div>
       {noteText && (
-        <p className="ml-4 truncate text-[10px] text-muted-foreground/70">{noteText}</p>
+        <p className="ml-4 truncate text-xs text-muted-foreground/70 sm:text-[10px]">{noteText}</p>
       )}
     </div>
   );
@@ -186,11 +186,11 @@ function ReadOnlyCompletedRow({ task, noteText }: { task: Task; noteText: string
     <div className="rounded-md bg-muted/30 px-2.5 py-1">
       <div className="flex items-center gap-2">
         <Check className="h-2.5 w-2.5 shrink-0 text-green-500" />
-        <p className="truncate text-[11px] text-muted-foreground line-through decoration-muted-foreground/40">{task.title}</p>
+        <p className="truncate text-sm text-muted-foreground line-through decoration-muted-foreground/40 sm:text-[11px]">{task.title}</p>
         {noteText && <StickyNote className="h-2.5 w-2.5 shrink-0 text-primary/40" />}
       </div>
       {noteText && (
-        <p className="ml-4 truncate text-[10px] text-muted-foreground/60">{noteText}</p>
+        <p className="ml-4 truncate text-xs text-muted-foreground/60 sm:text-[10px]">{noteText}</p>
       )}
     </div>
   );
@@ -313,7 +313,7 @@ function EditableDayFlow({
           )}
         >
           {isDropTarget && (
-            <p className="text-center text-xs text-primary/60">
+            <p className="text-center text-sm text-primary/60 sm:text-xs">
               Drop here to add to end
             </p>
           )}
@@ -321,7 +321,7 @@ function EditableDayFlow({
 
         {completedTasks.length > 0 && (
           <div className="mx-auto mt-6 max-w-2xl">
-            <p className="mb-2 text-xs font-medium text-muted-foreground">
+            <p className="mb-2 text-sm font-medium text-muted-foreground sm:text-xs">
               Completed ({completedTasks.length})
             </p>
             <div className="space-y-1.5">
@@ -363,7 +363,7 @@ function CompletedTaskRow({
         <p className="flex-1 truncate text-sm text-muted-foreground line-through decoration-muted-foreground/40">
           {task.title}
         </p>
-        <div className="flex items-center gap-2 shrink-0 text-xs tabular-nums text-muted-foreground/60">
+        <div className="flex items-center gap-2 shrink-0 text-sm tabular-nums text-muted-foreground/60 sm:text-xs">
           {task.estimatedMins != null && task.estimatedMins > 0 && (
             <span>{formatDuration(task.estimatedMins)} est</span>
           )}
@@ -373,13 +373,13 @@ function CompletedTaskRow({
         </div>
         <button
           onClick={() => uncompleteTask(task.id, date)}
-          className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 sm:h-6 sm:w-6"
         >
           <RotateCcw className="h-3 w-3" />
         </button>
       </div>
       {noteText && (
-        <p className="mt-1 ml-[18px] text-xs text-muted-foreground/60 line-clamp-2">
+        <p className="mt-1 ml-[18px] text-sm text-muted-foreground/60 line-clamp-2 sm:text-xs">
           {noteText}
         </p>
       )}

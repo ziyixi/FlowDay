@@ -41,7 +41,7 @@ function TimerContent() {
         />
       </div>
 
-      <span className="max-w-[120px] truncate text-xs font-medium text-foreground">
+      <span className="max-w-[120px] truncate text-sm font-medium text-foreground sm:text-xs">
         {task.title}
       </span>
 
@@ -52,7 +52,7 @@ function TimerContent() {
       <div className="flex items-center gap-0.5">
         <button
           onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
-          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
         >
           {status === "running" ? (
             <Pause className="h-3 w-3" />
@@ -62,7 +62,7 @@ function TimerContent() {
         </button>
         <button
           onClick={handleComplete}
-          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:bg-green-500/20 hover:text-green-600 transition-colors"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-green-500/20 hover:text-green-600 sm:h-6 sm:w-6"
         >
           <Check className="h-3 w-3" />
         </button>

@@ -103,7 +103,7 @@ function TaskPoolSection({
     <div className="mb-1">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-1 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+        className="flex w-full items-center gap-1 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
       >
         <ChevronRight
           className={cn(
@@ -136,7 +136,7 @@ function TaskPoolSection({
                     ))}
             </div>
           ) : (
-            <div className="flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 text-xs text-muted-foreground/60 mb-1">
+            <div className="mb-1 flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 text-sm text-muted-foreground/60 sm:text-xs">
               No tasks
             </div>
           )}
@@ -152,9 +152,9 @@ function ArrangedRow({ task }: { task: Task }) {
   return (
     <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
       <span className={cn("h-2 w-2 shrink-0 rounded-full", priorityColor)} />
-      <p className="flex-1 truncate text-xs font-medium text-foreground">{task.title}</p>
+      <p className="flex-1 truncate text-sm font-medium text-foreground sm:text-xs">{task.title}</p>
       {task.estimatedMins != null && task.estimatedMins > 0 && (
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+        <span className="shrink-0 text-xs tabular-nums text-muted-foreground sm:text-[10px]">
           {formatDuration(task.estimatedMins)}
         </span>
       )}
@@ -166,8 +166,8 @@ function CompletedRow({ task, loggedSeconds }: { task: Task; loggedSeconds: numb
   return (
     <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5 opacity-60">
       <Check className="h-3 w-3 shrink-0 text-green-500" />
-      <p className="flex-1 truncate text-xs text-muted-foreground line-through">{task.title}</p>
-      <div className="flex items-center gap-1.5 shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
+      <p className="flex-1 truncate text-sm text-muted-foreground line-through sm:text-xs">{task.title}</p>
+      <div className="flex items-center gap-1.5 shrink-0 text-xs tabular-nums text-muted-foreground/60 sm:text-[10px]">
         {task.estimatedMins != null && task.estimatedMins > 0 && (
           <span>{formatDuration(task.estimatedMins)}</span>
         )}

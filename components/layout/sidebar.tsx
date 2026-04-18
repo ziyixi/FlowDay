@@ -40,16 +40,16 @@ function SidebarTimer() {
         />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium text-foreground">
+        <p className="truncate text-sm font-medium text-foreground sm:text-xs">
           {task.title}
         </p>
       </div>
-      <span className="shrink-0 tabular-nums text-xs font-semibold text-primary">
+      <span className="shrink-0 tabular-nums text-sm font-semibold text-primary sm:text-xs">
         {formatElapsed(displaySeconds)}
       </span>
       <button
         onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
-        className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors"
+        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground sm:h-5 sm:w-5"
       >
         {status === "running" ? (
           <Pause className="h-3 w-3" />
@@ -76,7 +76,7 @@ export function Sidebar() {
         <div className="relative shrink-0">
           <Tooltip>
             <TooltipTrigger
-              className="absolute left-1 top-1 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              className="absolute left-1 top-1 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
               onClick={() => setCollapsed(false)}
             >
               <PanelLeft className="h-4 w-4" />
@@ -94,13 +94,13 @@ export function Sidebar() {
       >
         {/* Sidebar header */}
         <div className="flex h-10 items-center justify-between px-3">
-          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground sm:text-xs">
             Todoist
           </span>
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => sync()}
               >
                 <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
@@ -109,7 +109,7 @@ export function Sidebar() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => setTrashOpen(true)}
               >
                 <Trash2 className="h-3 w-3" />
@@ -118,7 +118,7 @@ export function Sidebar() {
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => setCollapsed(true)}
               >
                 <PanelLeftClose className="h-3 w-3" />

@@ -192,7 +192,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
             {isNext && (
-              <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-primary">
+              <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-primary sm:text-[10px]">
                 Next
               </span>
             )}
@@ -203,7 +203,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             />
           </div>
           {task.projectName && (
-            <p className="mt-0.5 truncate text-xs text-muted-foreground">
+            <p className="mt-0.5 truncate text-sm text-muted-foreground sm:text-xs">
               {task.projectName}
             </p>
           )}
@@ -212,7 +212,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               {task.labels.map((label) => (
                 <span
                   key={label}
-                  className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground"
+                  className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]"
                 >
                   {label}
                 </span>
@@ -224,7 +224,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
 
       {/* Footer row: time info + action buttons */}
       <div className="mt-2.5 flex items-center justify-between">
-        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+        <div className="flex items-center gap-3 text-sm text-muted-foreground sm:text-xs">
           <EstimateEditor task={task} variant="flow" />
           {shownSeconds > 0 ? (
             <span
@@ -243,6 +243,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           <button
             className={cn(
               "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+              "h-8 w-8 sm:h-7 sm:w-7",
               isActive
                 ? "text-primary hover:bg-primary/10"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -259,6 +260,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           <button
             className={cn(
               "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+              "h-8 w-8 sm:h-7 sm:w-7",
               showNote || hasNote
                 ? "text-primary hover:bg-primary/10"
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -269,19 +271,19 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             <StickyNote className="h-3.5 w-3.5" />
           </button>
           <button
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-green-500/20 hover:text-green-600 transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-green-500/20 hover:text-green-600 transition-colors sm:h-7 sm:w-7"
             onClick={handleComplete}
           >
             <Check className="h-3.5 w-3.5" />
           </button>
           <button
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors sm:h-7 sm:w-7"
             onClick={() => skipTask(task.id, date)}
           >
             <ChevronsDown className="h-3.5 w-3.5" />
           </button>
           <button
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-red-500/20 hover:text-red-600 transition-colors"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-500/20 hover:text-red-600 transition-colors sm:h-7 sm:w-7"
             onClick={handleRemove}
             title="Return to pool"
           >
@@ -298,7 +300,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             onChange={(e) => updateNote(e.target.value)}
             onMouseDown={(e) => e.stopPropagation()}
             placeholder="Jot notes while working…"
-            className="w-full resize-none rounded-md bg-muted/50 px-2.5 py-1.5 text-xs text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-primary/30"
+            className="w-full resize-none rounded-md bg-muted/50 px-2.5 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/40 outline-none focus:ring-1 focus:ring-primary/30 sm:text-xs"
             rows={2}
           />
         </div>

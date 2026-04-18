@@ -34,7 +34,7 @@ export function QuickAdd() {
       <button
         onClick={handleSubmit}
         disabled={submitting || !value.trim()}
-        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors disabled:opacity-40"
+        className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 sm:h-7 sm:w-7"
       >
         <Plus className="h-3.5 w-3.5" />
       </button>

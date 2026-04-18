@@ -37,7 +37,7 @@ function IconButton({
   return (
     <Tooltip>
       <TooltipTrigger
-        className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
         onClick={onClick}
       >
         {children}
@@ -104,7 +104,7 @@ export function TopBar() {
         >
           {format(currentDate, "EEE, MMM d")}
           {!isToday && (
-            <span className="ml-1.5 text-xs text-muted-foreground">
+            <span className="ml-1.5 text-sm text-muted-foreground sm:text-xs">
               {format(currentDate, "yyyy")}
             </span>
           )}
@@ -117,7 +117,7 @@ export function TopBar() {
         {!isToday && (
           <button
             onClick={goToToday}
-            className="ml-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-xs font-medium text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+            className="ml-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-xs"
           >
             Today
           </button>
@@ -129,7 +129,7 @@ export function TopBar() {
               key={mode}
               pressed={viewMode === mode}
               onPressedChange={() => setViewMode(mode)}
-              className="h-6 w-7 rounded-sm px-0 text-xs font-medium data-[state=on]:bg-background data-[state=on]:shadow-sm"
+              className="h-7 w-8 rounded-sm px-0 text-sm font-medium data-[state=on]:bg-background data-[state=on]:shadow-sm sm:h-6 sm:w-7 sm:text-xs"
             >
               {mode}
             </Toggle>

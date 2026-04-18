@@ -47,7 +47,7 @@ export function ProgressBar({ date }: { date: string }) {
   return (
     <div className="border-t border-border bg-background/80 px-4 py-2.5 backdrop-blur-sm">
       {overCapacity && (
-        <div className="mb-1.5 flex items-center gap-1.5 text-xs text-amber-600 dark:text-amber-400">
+        <div className="mb-1.5 flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400 sm:text-xs">
           <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
           <span>
             You&apos;ve planned ~{formatDuration(estimatedTotalMins)} for a{" "}
@@ -55,7 +55,7 @@ export function ProgressBar({ date }: { date: string }) {
           </span>
         </div>
       )}
-      <div className="flex items-center justify-between text-xs text-muted-foreground">
+      <div className="flex items-center justify-between text-sm text-muted-foreground sm:text-xs">
         <span>
           {completedCount}/{totalCount} tasks
         </span>

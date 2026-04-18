@@ -78,7 +78,7 @@ export function AppShell() {
                 {dates.map((date) => (
                   <div key={date} className="flex flex-1 flex-col overflow-hidden min-w-0">
                     <div className="shrink-0 border-b border-border px-3 py-2 text-center">
-                      <p className="text-xs font-medium text-muted-foreground">
+                      <p className="text-sm font-medium text-muted-foreground sm:text-xs">
                         {format(new Date(date + "T00:00:00"), "EEE")}
                       </p>
                       <p className="text-sm font-semibold text-foreground">

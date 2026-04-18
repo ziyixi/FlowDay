@@ -282,8 +282,8 @@ function EntryRow({
 
   return (
     <div className="group flex items-center justify-between rounded px-1.5 py-1 hover:bg-accent/50">
-      <div className="flex items-center gap-2 text-xs">
-        <span className="text-muted-foreground/60 text-[10px] w-10 shrink-0">
+      <div className="flex items-center gap-2 text-sm sm:text-xs">
+        <span className="w-10 shrink-0 text-xs text-muted-foreground/60 sm:text-[10px]">
           {entryDate}
         </span>
         <span className="text-foreground">
@@ -294,20 +294,20 @@ function EntryRow({
             ({formatDurationShort(entry.durationS)})
           </span>
         )}
-        <span className="text-muted-foreground/60 text-[10px] uppercase">
+        <span className="text-xs uppercase text-muted-foreground/60 sm:text-[10px]">
           {entry.source}
         </span>
       </div>
       <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
         <button
           onClick={onEdit}
-          className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-foreground sm:h-5 sm:w-5"
         >
           <Pencil className="h-2.5 w-2.5" />
         </button>
         <button
           onClick={handleDelete}
-          className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground hover:text-red-600"
+          className="inline-flex h-6 w-6 items-center justify-center rounded text-muted-foreground hover:text-red-600 sm:h-5 sm:w-5"
         >
           <Trash2 className="h-2.5 w-2.5" />
         </button>
@@ -362,7 +362,7 @@ export function ManualEntry({
     <>
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
-          className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors relative"
+          className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
           title="Time entries"
         >
           <Clock className="h-3.5 w-3.5" />
@@ -375,18 +375,18 @@ export function ManualEntry({
         <PopoverContent align="end" className="w-80">
           <div className="space-y-1">
             <div className="flex items-center justify-between px-1.5">
-              <h4 className="text-xs font-medium text-muted-foreground">
+              <h4 className="text-sm font-medium text-muted-foreground sm:text-xs">
                 Time Entries
               </h4>
               {totalSeconds > 0 && (
-                <span className="text-xs font-medium text-primary tabular-nums">
+                <span className="text-sm font-medium tabular-nums text-primary sm:text-xs">
                   Total: {formatDurationShort(totalSeconds)}
                 </span>
               )}
             </div>
 
             {entries.length === 0 && (
-              <p className="text-xs text-muted-foreground/60 px-1.5 py-1">
+              <p className="px-1.5 py-1 text-sm text-muted-foreground/60 sm:text-xs">
                 No entries yet
               </p>
             )}
@@ -404,7 +404,7 @@ export function ManualEntry({
 
             <button
               onClick={() => setAddDialogOpen(true)}
-              className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-xs text-muted-foreground hover:bg-accent/50 hover:text-foreground transition-colors"
+              className="flex w-full items-center gap-1.5 rounded px-1.5 py-1 text-sm text-muted-foreground transition-colors hover:bg-accent/50 hover:text-foreground sm:text-xs"
             >
               <Plus className="h-3 w-3" />
               Add time entry
