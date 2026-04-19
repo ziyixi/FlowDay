@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { format, addDays } from "date-fns";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { isSortable } from "@dnd-kit/react/sortable";
@@ -11,14 +11,60 @@ import { TaskCardOverlay } from "@/components/todoist/task-card-overlay";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useHydration } from "@/lib/hooks/use-hydration";
 import { useAutoSync } from "@/lib/hooks/use-auto-sync";
+import { useTimerStore } from "@/lib/stores/timer-store";
 import type { Task } from "@/lib/types/task";
 
-export function AppShell() {
+declare global {
+  interface Window {
+    __FLOWDAY_E2E__?: {
+      setRunningTimerElapsed: (seconds: number) => void;
+      getTimerState: () => {
+        activeTaskId: string | null;
+        status: "idle" | "running" | "paused";
+        timerMode: "countup" | "pomodoro";
+        displaySeconds: number;
+      };
+    };
+  }
+}
+
+export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
   useHydration();
   useAutoSync();
 
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
+
+  useEffect(() => {
+    if (!e2eEnabled || typeof window === "undefined") return;
+
+    window.__FLOWDAY_E2E__ = {
+      setRunningTimerElapsed: (seconds: number) => {
+        const state = useTimerStore.getState();
+        if (state.status !== "running" || state.segmentStartedAt == null) {
+          throw new Error("No running timer available for E2E time control");
+        }
+
+        useTimerStore.setState({
+          segmentStartedAt: Date.now() - seconds * 1000,
+        });
+        useTimerStore.getState().tick();
+      },
+      getTimerState: () => {
+        const state = useTimerStore.getState();
+        return {
+          activeTaskId: state.activeTaskId,
+          status: state.status,
+          timerMode: state.timerMode,
+          displaySeconds: state.displaySeconds,
+        };
+      },
+    };
+
+    return () => {
+      delete window.__FLOWDAY_E2E__;
+    };
+  }, [e2eEnabled]);
 
   const dates = useMemo(() => {
     const base = new Date(currentDateStr + "T00:00:00");

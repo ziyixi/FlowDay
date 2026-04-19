@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   format,
   startOfMonth,
@@ -54,28 +54,39 @@ export function DeletedTasksDialog({
   const [searchQuery, setSearchQuery] = useState("");
   const hydrate = useTodoistStore((s) => s.hydrate);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setSearchQuery("");
-      fetch("/api/tasks/deleted", { cache: "no-store" })
-        .then((r) => (r.ok ? r.json() : []))
-        .then((tasks: Task[]) => {
-          setAllDeleted(tasks);
-          if (tasks.length > 0) {
-            const sorted = [...tasks].sort((a, b) =>
-              (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "")
-            );
-            const mostRecent = sorted[0].deletedAt?.slice(0, 10) ?? null;
-            setSelectedDate(mostRecent);
-            if (mostRecent) {
-              setViewMonth(new Date(mostRecent + "T00:00:00"));
-            }
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    fetch("/api/tasks/deleted", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : []))
+      .then((tasks: Task[]) => {
+        if (cancelled) return;
+        setAllDeleted(tasks);
+        if (tasks.length > 0) {
+          const sorted = [...tasks].sort((a, b) =>
+            (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "")
+          );
+          const mostRecent = sorted[0].deletedAt?.slice(0, 10) ?? null;
+          setSelectedDate(mostRecent);
+          if (mostRecent) {
+            setViewMonth(new Date(mostRecent + "T00:00:00"));
           }
-        })
-        .catch(() => setAllDeleted([]));
-    }
-    onOpenChange(nextOpen);
-  };
+        } else {
+          setSelectedDate(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setAllDeleted([]);
+          setSelectedDate(null);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
 
   const query = searchQuery.toLowerCase().trim();
 
@@ -138,7 +149,7 @@ export function DeletedTasksDialog({
   }, [query, displayTasks]);
 
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Deleted Tasks</DialogTitle>

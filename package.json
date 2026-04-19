@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:unit": "vitest run __tests__/unit",
     "test:integration": "vitest run __tests__/integration",
+    "test:ui": "TZ=UTC playwright test",
+    "test:ui:headed": "TZ=UTC playwright test --headed",
     "test:watch": "vitest",
     "prepare": "husky"
   },
@@ -33,6 +35,7 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",

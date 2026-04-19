@@ -39,6 +39,8 @@ function IconButton({
       <TooltipTrigger
         className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
         onClick={onClick}
+        aria-label={tooltip}
+        title={tooltip}
       >
         {children}
       </TooltipTrigger>

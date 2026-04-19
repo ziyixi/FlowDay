@@ -163,6 +163,8 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   return (
     <div
       ref={ref}
+      data-testid="flow-task-card"
+      data-task-id={task.id}
       className={cn(
         "relative cursor-grab active:cursor-grabbing",
         isDragSource && "opacity-50"
@@ -254,6 +256,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                 : "text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
             onClick={handlePlayPause}
+            aria-label={isRunning ? "Pause timer" : isPaused ? "Resume timer" : "Start timer"}
           >
             {isRunning ? (
               <Pause className="h-3.5 w-3.5" />
@@ -273,18 +276,21 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             )}
             onClick={toggleNote}
             title="Toggle notes"
+            aria-label="Toggle notes"
           >
             <StickyNote className="h-3.5 w-3.5" />
           </button>
           <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-green-500/20 hover:text-green-600 transition-colors sm:h-7 sm:w-7"
             onClick={handleComplete}
+            aria-label="Complete task"
           >
             <Check className="h-3.5 w-3.5" />
           </button>
           <button
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors sm:h-7 sm:w-7"
             onClick={() => skipTask(task.id, date)}
+            aria-label="Skip task"
           >
             <ChevronsDown className="h-3.5 w-3.5" />
           </button>
@@ -292,6 +298,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-red-500/20 hover:text-red-600 transition-colors sm:h-7 sm:w-7"
             onClick={handleRemove}
             title="Return to pool"
+            aria-label="Return to pool"
           >
             <X className="h-3.5 w-3.5" />
           </button>

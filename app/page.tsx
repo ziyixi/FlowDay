@@ -1,5 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
 
 export default function Home() {
-  return <AppShell />;
+  return <AppShell e2eEnabled={process.env.E2E_TEST_MODE === "1"} />;
 }

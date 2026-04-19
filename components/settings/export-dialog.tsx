@@ -121,7 +121,7 @@ export function ExportDialog({ open, onOpenChange }: ExportDialogProps) {
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleDownload}>
+          <Button data-testid="download-export" onClick={handleDownload}>
             <Download className="mr-1.5 h-3.5 w-3.5" />
             Download
           </Button>

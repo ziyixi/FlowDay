@@ -160,6 +160,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </p>
             <div className="flex items-center gap-2">
               <Input
+                data-testid="capacity-input"
                 type="number"
                 min="0"
                 step="0.5"
@@ -169,6 +170,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               />
               <span className="text-sm text-muted-foreground">hours</span>
               <Button
+                data-testid="capacity-save"
                 variant="outline"
                 size="sm"
                 disabled={savingCapacity}
@@ -213,7 +215,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             <p className="text-xs text-muted-foreground">
               Download your time entries or flow history as CSV or JSON.
             </p>
-            <Button variant="outline" size="sm" onClick={() => setExportOpen(true)}>
+            <Button data-testid="open-export-dialog" variant="outline" size="sm" onClick={() => setExportOpen(true)}>
               <Download className="mr-1.5 h-3.5 w-3.5" />
               Export
             </Button>

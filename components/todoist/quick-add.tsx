@@ -21,6 +21,7 @@ export function QuickAdd() {
   return (
     <div className="flex items-center gap-1.5">
       <input
+        data-testid="quick-add-input"
         type="text"
         placeholder="Quick add task..."
         value={value}
@@ -32,6 +33,7 @@ export function QuickAdd() {
         disabled={submitting}
       />
       <button
+        data-testid="quick-add-submit"
         onClick={handleSubmit}
         disabled={submitting || !value.trim()}
         className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-40 sm:h-7 sm:w-7"

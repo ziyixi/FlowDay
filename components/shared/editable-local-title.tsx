@@ -28,6 +28,7 @@ export function EditableLocalTitle({
         <p className="truncate text-sm font-medium text-foreground">{title}</p>
         {isLocal && (
           <button
+            data-testid="edit-local-title"
             onClick={(e) => {
               e.stopPropagation();
               setValue(title);
@@ -55,6 +56,7 @@ export function EditableLocalTitle({
   return (
     <input
       ref={inputRef}
+      data-testid="edit-local-title-input"
       type="text"
       value={value}
       onChange={(e) => setValue(e.target.value)}

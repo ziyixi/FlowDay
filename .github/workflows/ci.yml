@@ -52,6 +52,27 @@ jobs:
       - run: npm ci
       - run: npm run test:integration
 
+  # ─── Browser UI Tests ───────────────────────────
+  test-ui:
+    name: UI Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:ui
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-artifacts
+          path: output/playwright
+          if-no-files-found: ignore
+
   # ─── Type Check & Build ─────────────────────────
   build:
     name: Build
@@ -96,7 +117,7 @@ jobs:
   # ─── Docker Image ───────────────────────────────
   docker:
     name: Docker Image
-    needs: [lint, test-unit, test-integration, build, changes]
+    needs: [lint, test-unit, test-integration, test-ui, build, changes]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.docker == 'true'
     steps:

@@ -322,6 +322,7 @@ function StepAddTasks({
             return (
               <div
                 key={task.id}
+                data-testid={`planning-add-row-${task.id}`}
                 className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2"
               >
                 <span
@@ -346,8 +347,10 @@ function StepAddTasks({
                   </span>
                 )}
                 <button
+                  data-testid={`planning-add-task-${task.id}`}
                   onClick={() => onAdd(task.id)}
                   className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-primary hover:bg-primary/10 transition-colors"
+                  aria-label={`Add ${task.title}`}
                 >
                   <Plus className="h-3.5 w-3.5" />
                 </button>

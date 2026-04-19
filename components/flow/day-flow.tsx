@@ -5,6 +5,7 @@ import { format } from "date-fns";
 import { useDroppable } from "@dnd-kit/react";
 import { Check, RotateCcw, Sunrise, StickyNote } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
+import { useTimerStore } from "@/lib/stores/timer-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { FlowTaskCard } from "./flow-task-card";
@@ -58,6 +59,7 @@ function useDayNotesMap(date: string): Record<string, string> {
 
 function useDayLoggedSecondsMap(date: string): Record<string, number> {
   const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
+  const entryRevision = useTimerStore((s) => s.entryRevision);
 
   useEffect(() => {
     let cancelled = false;
@@ -77,7 +79,7 @@ function useDayLoggedSecondsMap(date: string): Record<string, number> {
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [date, entryRevision]);
 
   return secondsByTask;
 }
@@ -257,6 +259,7 @@ function EditableDayFlow({
       <div className="flex flex-1 flex-col">
         <div
           ref={dropRef}
+          data-testid="day-flow-empty-state"
           className={cn(
             "flex flex-1 flex-col rounded-lg border-2 border-dashed m-4 transition-colors",
             isDropTarget ? "border-primary/40 bg-primary/5" : "border-transparent"
@@ -362,7 +365,7 @@ function CompletedTaskRow({
   const uncompleteTask = useFlowStore((s) => s.uncompleteTask);
 
   return (
-    <div className="group rounded-md border border-border/50 bg-muted/30 px-4 py-2">
+    <div data-testid="completed-task-row" className="group rounded-md border border-border/50 bg-muted/30 px-4 py-2">
       <div className="flex items-center gap-2.5">
         <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
         <p className="flex-1 truncate text-sm text-muted-foreground line-through decoration-muted-foreground/40">
@@ -379,6 +382,7 @@ function CompletedTaskRow({
         <button
           onClick={() => uncompleteTask(task.id, date)}
           className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 sm:h-6 sm:w-6"
+          aria-label="Undo complete task"
         >
           <RotateCcw className="h-3 w-3" />
         </button>

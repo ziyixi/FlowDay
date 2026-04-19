@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# test output (Playwright reports, traces, screenshots, videos)
+/output/
+
 # production
 /build
 

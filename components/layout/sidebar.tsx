@@ -93,6 +93,8 @@ export function Sidebar() {
             <TooltipTrigger
               className="absolute left-1 top-1 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
               onClick={() => setCollapsed(false)}
+              aria-label="Expand sidebar"
+              title="Expand sidebar"
             >
               <PanelLeft className="h-4 w-4" />
             </TooltipTrigger>
@@ -117,6 +119,8 @@ export function Sidebar() {
               <TooltipTrigger
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => sync()}
+                aria-label="Sync tasks"
+                title="Sync tasks"
               >
                 <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
               </TooltipTrigger>
@@ -126,6 +130,8 @@ export function Sidebar() {
               <TooltipTrigger
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => setTrashOpen(true)}
+                aria-label="Deleted tasks"
+                title="Deleted tasks"
               >
                 <Trash2 className="h-3 w-3" />
               </TooltipTrigger>
@@ -135,6 +141,8 @@ export function Sidebar() {
               <TooltipTrigger
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
                 onClick={() => setCollapsed(true)}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
               >
                 <PanelLeftClose className="h-3 w-3" />
               </TooltipTrigger>

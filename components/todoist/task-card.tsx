@@ -58,9 +58,9 @@ export function TaskCard({ task }: { task: Task }) {
     isDragSource && "opacity-50"
   );
 
-  if (!hasTooltipContent) {
-    return (
-      <div ref={ref} className={cardClassName}>
+    if (!hasTooltipContent) {
+      return (
+      <div ref={ref} data-testid="task-pool-card" data-task-id={task.id} className={cardClassName}>
         {cardContent}
       </div>
     );
@@ -69,7 +69,7 @@ export function TaskCard({ task }: { task: Task }) {
   return (
     <Tooltip>
       <TooltipTrigger render={<div />} className="w-full">
-        <div ref={ref} className={cardClassName}>
+        <div ref={ref} data-testid="task-pool-card" data-task-id={task.id} className={cardClassName}>
           {cardContent}
         </div>
       </TooltipTrigger>
