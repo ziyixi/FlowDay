@@ -66,6 +66,8 @@ test("[UI-009] Skip, complete, undo, and return-to-pool update flow state", asyn
   await seedAppState(request, "two-flow-tasks");
   await openApp(page);
 
+  await expect(flowCardById(page, "flow-task-a")).toBeVisible();
+
   const initialOrder = await page
     .locator('[data-testid="flow-task-card"]')
     .evaluateAll((cards) =>
