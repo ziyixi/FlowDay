@@ -33,6 +33,29 @@ test("[UI-002] Start Your Day wizard stays open after the first add", async ({ p
   await expect(page.getByRole("button", { name: "Continue" })).toBeVisible();
 });
 
+test("[UI-017] Wizard add-all button adds every available task in one click", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "wizard-today-tasks");
+  await openApp(page);
+
+  await expect(page.getByTestId("planning-add-all")).toHaveText(/Add all \(2\)/);
+
+  await page.getByTestId("planning-add-all").click();
+
+  await expect(page.getByText("2 tasks in flow")).toBeVisible();
+  await expect(page.getByTestId("planning-add-all")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("Review your plan")).toBeVisible();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Start My Day" }).click();
+
+  await expect(flowCard(page, "Review roadmap")).toBeVisible();
+  await expect(flowCard(page, "Draft release notes")).toBeVisible();
+});
+
 test("[UI-003] Start Your Day wizard completes and persists the plan", async ({ page, request }) => {
   await seedAppState(request, "wizard-today-tasks");
   await openApp(page);

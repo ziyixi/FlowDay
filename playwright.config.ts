@@ -1,6 +1,11 @@
 import { defineConfig } from "@playwright/test";
 
-const port = 3000;
+// Avoid port 3000: on macOS, the VSCode extension host and many dev tools
+// squat there and accept TCP connections without answering HTTP. With
+// reuseExistingServer:true that makes Playwright wait forever on the health
+// probe and the test runner never starts. Override with PLAYWRIGHT_PORT if 4567
+// also collides.
+const port = Number(process.env.PLAYWRIGHT_PORT ?? 4567);
 const baseURL = `http://127.0.0.1:${port}`;
 
 export default defineConfig({

@@ -181,6 +181,7 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
               todayTasks={todayTasks}
               overdueTasks={overdueTasks}
               flowCount={flowTasks.length}
+              flowTaskIds={new Set(flowTasks.map((t) => t.id))}
               onAdd={(id) => addTask(id, date)}
               onNext={handleNext}
               onBack={hasRollover ? handleBack : undefined}
@@ -294,6 +295,7 @@ function StepAddTasks({
   todayTasks,
   overdueTasks,
   flowCount,
+  flowTaskIds,
   onAdd,
   onNext,
   onBack,
@@ -301,20 +303,41 @@ function StepAddTasks({
   todayTasks: Task[];
   overdueTasks: Task[];
   flowCount: number;
+  flowTaskIds: Set<string>;
   onAdd: (id: string) => void;
   onNext: () => void;
   onBack?: () => void;
 }) {
   const available = [...overdueTasks, ...todayTasks];
+  const unadded = available.filter((t) => !flowTaskIds.has(t.id));
+  const handleAddAll = () => {
+    for (const task of unadded) onAdd(task.id);
+  };
 
   return (
     <div className="p-5">
-      <p className="text-sm font-medium text-foreground">
-        Add tasks to your day
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Pick from your Todoist tasks, or skip to add later via drag &amp; drop.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-medium text-foreground">
+            Add tasks to your day
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Pick from your Todoist tasks, or skip to add later via drag &amp; drop.
+          </p>
+        </div>
+        {unadded.length >= 2 && (
+          <Button
+            data-testid="planning-add-all"
+            size="sm"
+            variant="outline"
+            onClick={handleAddAll}
+            className="shrink-0"
+          >
+            <Plus className="mr-1 h-3.5 w-3.5" />
+            Add all ({unadded.length})
+          </Button>
+        )}
+      </div>
       {available.length > 0 ? (
         <div className="mt-4 max-h-64 space-y-1.5 overflow-y-auto">
           {available.map((task) => {
