@@ -1,10 +1,30 @@
 "use client";
 
+import { useEffect } from "react";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { Pause, Play, Check } from "lucide-react";
+
+function useAppBadge() {
+  const status = useTimerStore((s) => s.status);
+  const displaySeconds = useTimerStore((s) => s.displaySeconds);
+
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("setAppBadge" in navigator)) {
+      return;
+    }
+
+    if (status === "idle") {
+      void navigator.clearAppBadge?.();
+      return;
+    }
+
+    const minutes = Math.max(Math.ceil(displaySeconds / 60), 1);
+    void navigator.setAppBadge?.(minutes);
+  }, [status, displaySeconds]);
+}
 
 function TimerContent() {
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
@@ -88,6 +108,7 @@ function TimerContent() {
 }
 
 export function TimerDisplay() {
+  useAppBadge();
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   if (!activeTaskId) return null;
   return <TimerContent />;

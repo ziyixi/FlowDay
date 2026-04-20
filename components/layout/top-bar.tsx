@@ -20,6 +20,7 @@ import {
 import { useTheme } from "@/components/theme-provider";
 import { useFlowStore, type ViewMode } from "@/lib/stores/flow-store";
 import { TimerDisplay } from "@/components/timer/timer-display";
+import { PopOutTimerButton } from "@/components/timer/pop-out-timer";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
 import { AnalyticsDashboard } from "@/components/analytics/analytics-dashboard";
 
@@ -142,6 +143,7 @@ export function TopBar() {
       {/* Right: Timer + Theme toggle + Settings */}
       <div className="flex items-center gap-2">
         <TimerDisplay />
+        <PopOutTimerButton />
 
         <IconButton onClick={() => setAnalyticsOpen(true)} tooltip="Analytics">
           <BarChart3 className="h-4 w-4" />
