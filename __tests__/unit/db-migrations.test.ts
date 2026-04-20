@@ -42,6 +42,19 @@ function deleteDbFiles() {
   }
 }
 
+function readRawTaskRow(id: string): { deleted_at: string | null; deleted_source: string | null } | undefined {
+  // Peek the raw row — getDeletedTasks() hides sync-deleted rows from the UI
+  // on purpose, but the DB still tracks them for the auto-restore path.
+  const db = new Database(DB_PATH, { readonly: true });
+  try {
+    return db
+      .prepare("SELECT deleted_at, deleted_source FROM tasks WHERE id = ?")
+      .get(id) as { deleted_at: string | null; deleted_source: string | null } | undefined;
+  } finally {
+    db.close();
+  }
+}
+
 function makeStoredTodoistTask(id: string): Task {
   return {
     id,
@@ -189,12 +202,14 @@ describe("markOrphanedTodoistTasksDeleted — edge cases", () => {
     upsertTasks([makeStoredTodoistTask("td-1")]);
     expect(markOrphanedTodoistTasksDeleted([])).toBe(1);
 
-    const firstStamp = getDeletedTasks()[0].deletedAt;
+    const firstStamp = readRawTaskRow("td-1")?.deleted_at;
     expect(firstStamp).not.toBeNull();
+    expect(firstStamp).not.toBeUndefined();
 
     // Second call sees deletedAt already non-null → WHERE clause excludes it.
     expect(markOrphanedTodoistTasksDeleted([])).toBe(0);
-    expect(getDeletedTasks()[0].deletedAt).toBe(firstStamp);
+    expect(readRawTaskRow("td-1")?.deleted_at).toBe(firstStamp);
+    expect(readRawTaskRow("td-1")?.deleted_source).toBe("sync");
   });
 
   it("survives the full lifecycle: orphan → restore in Todoist → orphan again", () => {
@@ -211,6 +226,9 @@ describe("markOrphanedTodoistTasksDeleted — edge cases", () => {
     // Cycle 3: Todoist drops it again → re-deletes.
     expect(markOrphanedTodoistTasksDeleted([])).toBe(1);
     expect(getAllTasks()).toHaveLength(0);
-    expect(getDeletedTasks()).toHaveLength(1);
+    // Sync-deleted rows are hidden from the trash dialog by design, but the
+    // row itself still exists in the DB so auto-restore keeps working.
+    expect(getDeletedTasks()).toHaveLength(0);
+    expect(readRawTaskRow("td-1")?.deleted_source).toBe("sync");
   });
 });

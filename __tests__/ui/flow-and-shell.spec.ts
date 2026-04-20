@@ -155,11 +155,11 @@ test("[UI-016] Tasks deleted in Todoist disappear from the sidebar after sync", 
   await expect(taskPoolCard(page, "Survives sync")).toBeVisible();
   await expect(taskPoolCard(page, "Deleted in Todoist")).toHaveCount(0);
 
-  // It should now show up in the deleted-tasks dialog so the user can audit
-  // what FlowDay hid on their behalf.
+  // Sync-deleted tasks must NOT clutter the trash dialog — the user manages
+  // those in Todoist itself. The dialog is reserved for FlowDay-local deletes.
   await page.getByRole("button", { name: "Deleted tasks" }).click();
   await expect(page.getByRole("heading", { name: "Deleted Tasks" })).toBeVisible();
-  await expect(page.getByText("Deleted in Todoist")).toBeVisible();
+  await expect(page.getByText("Deleted in Todoist")).toHaveCount(0);
 });
 
 test("[UI-011] Settings, export, and analytics dialogs smoke test", async ({

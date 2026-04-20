@@ -1,4 +1,4 @@
-import { eq, and, sql, isNull, isNotNull, gte, lte, inArray, notInArray } from "drizzle-orm";
+import { eq, or, and, sql, isNull, isNotNull, gte, lte, inArray, notInArray, ne } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -135,9 +135,22 @@ export function getAllTasks(): Task[] {
   return rows.map(rowToTask);
 }
 
+// Only returns rows the user deleted in FlowDay itself (or legacy NULL source
+// from pre-migration soft-deletes — safer default than hiding them). Sync
+// soft-deletes are excluded: the user can restore them in Todoist directly,
+// and surfacing every Todoist deletion here overflows the trash dialog.
 export function getDeletedTasks(): Task[] {
   const db = getDb();
-  const rows = db.select().from(tasks).where(isNotNull(tasks.deletedAt)).all();
+  const rows = db
+    .select()
+    .from(tasks)
+    .where(
+      and(
+        isNotNull(tasks.deletedAt),
+        or(isNull(tasks.deletedSource), ne(tasks.deletedSource, "sync"))
+      )
+    )
+    .all();
   return rows.map(rowToTask);
 }
 

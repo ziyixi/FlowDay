@@ -98,15 +98,16 @@ describe("task queries", () => {
     const active = getAllTasks();
     expect(active.map((t) => t.id).sort()).toEqual(["local-1", "td-1"]);
 
-    const deleted = getDeletedTasks();
-    expect(deleted.map((t) => t.id)).toEqual(["td-2"]);
+    // Sync-deleted rows are hidden from the trash dialog — user manages those
+    // in Todoist directly, so surfacing them in FlowDay's trash is just noise.
+    expect(getDeletedTasks()).toHaveLength(0);
   });
 
   it("auto-restores a sync-deleted task when Todoist returns it again", () => {
     upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Original" })]);
     markOrphanedTodoistTasksDeleted([]); // simulate Todoist no longer returning it
     expect(getAllTasks()).toHaveLength(0);
-    expect(getDeletedTasks()).toHaveLength(1);
+    expect(getDeletedTasks()).toHaveLength(0); // sync-deleted rows stay hidden
 
     // Next sync brings it back
     upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Resurrected" })]);

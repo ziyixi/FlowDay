@@ -98,8 +98,9 @@ describe("syncTodoistToDb — orphan reconciliation", () => {
     const active = getAllTasks().map((t) => t.id);
     expect(active).toEqual(["td-keep"]);
 
-    const deleted = getDeletedTasks();
-    expect(deleted.map((t) => t.id)).toEqual(["td-overdue-deleted"]);
+    // Sync-deleted rows stay hidden from the trash dialog (the user can manage
+    // them in Todoist directly), so getDeletedTasks excludes them.
+    expect(getDeletedTasks()).toHaveLength(0);
   });
 
   it("auto-restores a previously sync-deleted task if Todoist returns it again", async () => {
@@ -110,7 +111,7 @@ describe("syncTodoistToDb — orphan reconciliation", () => {
     mockTodoist([]);
     await syncTodoistToDb();
     expect(getAllTasks()).toHaveLength(0);
-    expect(getDeletedTasks()).toHaveLength(1);
+    expect(getDeletedTasks()).toHaveLength(0); // sync-deletes hidden from trash UI
 
     // Pass 2: task reappears in Todoist (e.g. user un-completed) → restore.
     mockTodoist([{ id: "td-1", content: "Task td-1", project_id: "p1", due: { date: "2026-04-15" } }]);
