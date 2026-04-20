@@ -3,7 +3,7 @@
 const CACHE_NAME = "flowday-v1";
 
 // App shell files to pre-cache on install
-const APP_SHELL = ["/", "/icon-192x192.png", "/icon-512x512.png"];
+const APP_SHELL = ["/", "/pwa/icon-192x192.png", "/pwa/icon-512x512.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

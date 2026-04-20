@@ -12,6 +12,7 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: "FlowDay",
   description: "A visual daily task flow planner with Todoist integration",
+  manifest: "/pwa/manifest.webmanifest",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
@@ -30,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${inter.variable} h-full antialiased`} suppressHydrationWarning>
       <head>
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+        <link rel="apple-touch-icon" href="/pwa/apple-touch-icon.png" />
         <meta name="theme-color" content="#0a0a0a" media="(prefers-color-scheme: dark)" />
         <meta name="theme-color" content="#fafafa" media="(prefers-color-scheme: light)" />
         <script
@@ -52,7 +53,7 @@ export default function RootLayout({
               __html: `
                 if ('serviceWorker' in navigator) {
                   window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw');
+                    navigator.serviceWorker.register('/pwa/sw', { scope: '/' });
                   });
                 }
               `,
