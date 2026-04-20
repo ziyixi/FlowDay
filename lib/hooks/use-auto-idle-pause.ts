@@ -5,23 +5,6 @@ import { usePopOutStore } from "@/lib/stores/pop-out-store";
 const IDLE_THRESHOLD_MS = 10 * 60 * 1000;
 const VISIBILITY_FALLBACK_MS = 10 * 60 * 1000;
 
-interface IdleDetectorInstance extends EventTarget {
-  userState: "active" | "idle" | null;
-  screenState: "locked" | "unlocked" | null;
-  start(options?: { threshold?: number; signal?: AbortSignal }): Promise<void>;
-}
-
-interface IdleDetectorCtor {
-  new (): IdleDetectorInstance;
-  requestPermission(): Promise<"granted" | "denied">;
-}
-
-declare global {
-  interface Window {
-    IdleDetector?: IdleDetectorCtor;
-  }
-}
-
 function pauseAt(timestamp: number) {
   const state = useTimerStore.getState();
   if (state.status === "running") {

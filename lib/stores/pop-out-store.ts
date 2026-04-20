@@ -1,19 +1,5 @@
 import { create } from "zustand";
 
-interface DocumentPictureInPicture {
-  requestWindow: (options?: {
-    width?: number;
-    height?: number;
-  }) => Promise<Window>;
-  window: Window | null;
-}
-
-declare global {
-  interface Window {
-    documentPictureInPicture?: DocumentPictureInPicture;
-  }
-}
-
 interface PopOutState {
   pipWindow: Window | null;
   container: HTMLElement | null;
@@ -76,6 +62,17 @@ export const usePopOutStore = create<PopOutState>()((set, get) => ({
     win.addEventListener("pagehide", () => {
       set({ pipWindow: null, container: null });
     });
+
+    // Best-effort move to the top-left of the screen. The PiP spec doesn't
+    // formally guarantee moveTo works on a PiP window, but Chrome currently
+    // honors it; if a browser rejects the call we silently keep the default.
+    try {
+      const left = typeof screen !== "undefined" ? screen.availLeft ?? 0 : 0;
+      const top = typeof screen !== "undefined" ? screen.availTop ?? 0 : 0;
+      win.moveTo(left, top);
+    } catch {
+      // ignored — browser disallowed moving the PiP window
+    }
 
     set({ pipWindow: win, container: root });
   },

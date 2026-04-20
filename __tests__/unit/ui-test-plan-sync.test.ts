@@ -71,11 +71,12 @@ describe("UI test plan sync", () => {
     for (const title of testTitles) {
       const matches = title.match(caseIdPattern) ?? [];
       expect(matches, `expected exactly one case ID in test title "${title}"`).toHaveLength(1);
+      const id = matches[0]!;
       expect(
-        title.startsWith(`[${matches[0]}] `),
-        `expected test title "${title}" to start with [${matches[0]}]`
+        title.startsWith(`[${id}] `),
+        `expected test title "${title}" to start with [${id}]`
       ).toBe(true);
-      idsFromTests.push(matches[0]);
+      idsFromTests.push(id);
     }
 
     const duplicateTestIds = idsFromTests.filter(

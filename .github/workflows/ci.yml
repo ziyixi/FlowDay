@@ -73,7 +73,20 @@ jobs:
           path: output/playwright
           if-no-files-found: ignore
 
-  # ─── Type Check & Build ─────────────────────────
+  # ─── Type Check ─────────────────────────────────
+  typecheck:
+    name: Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+
+  # ─── Build ──────────────────────────────────────
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -117,7 +130,7 @@ jobs:
   # ─── Docker Image ───────────────────────────────
   docker:
     name: Docker Image
-    needs: [lint, test-unit, test-integration, test-ui, build, changes]
+    needs: [lint, typecheck, test-unit, test-integration, test-ui, build, changes]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.docker == 'true'
     steps:

@@ -28,8 +28,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     isCompleted: false,
     completedAt: null,
     dueDate: null,
-    createdAt: null,
-    syncedAt: null,
+    createdAt: new Date().toISOString(),
     deletedAt: null,
     ...overrides,
   };

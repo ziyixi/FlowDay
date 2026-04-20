@@ -20,6 +20,8 @@ interface SettingsDialogProps {
   onOpenChange: (open: boolean) => void;
 }
 
+type IdlePermissionState = "granted" | "denied" | "prompt" | "unsupported";
+
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [apiKey, setApiKey] = useState("");
   const [hasExistingKey, setHasExistingKey] = useState(false);
@@ -28,6 +30,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   const [savingCapacity, setSavingCapacity] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [idleStatus, setIdleStatus] = useState<IdlePermissionState>("unsupported");
+  const [requestingIdle, setRequestingIdle] = useState(false);
 
   const isSyncing = useTodoistStore((s) => s.isSyncing);
   const lastSyncAt = useTodoistStore((s) => s.lastSyncAt);
@@ -49,6 +53,51 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         .catch(() => {});
     }
   }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    let permStatus: PermissionStatus | null = null;
+    let onChange: (() => void) | null = null;
+
+    async function check() {
+      if (typeof window === "undefined" || !window.IdleDetector) {
+        setIdleStatus("unsupported");
+        return;
+      }
+      try {
+        permStatus = await navigator.permissions.query({
+          name: "idle-detection" as PermissionName,
+        });
+        if (cancelled) return;
+        setIdleStatus(permStatus.state);
+        onChange = () => setIdleStatus(permStatus!.state);
+        permStatus.addEventListener("change", onChange);
+      } catch {
+        setIdleStatus("unsupported");
+      }
+    }
+    void check();
+    return () => {
+      cancelled = true;
+      if (permStatus && onChange) {
+        permStatus.removeEventListener("change", onChange);
+      }
+    };
+  }, [open]);
+
+  async function handleGrantIdle() {
+    if (!window.IdleDetector) return;
+    setRequestingIdle(true);
+    try {
+      const result = await window.IdleDetector.requestPermission();
+      setIdleStatus(result === "granted" ? "granted" : "denied");
+    } catch {
+      // user dismissed the prompt
+    } finally {
+      setRequestingIdle(false);
+    }
+  }
 
   async function handleSave() {
     if (!apiKey.trim()) {
@@ -206,6 +255,44 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
               </Button>
             </div>
           </div>
+
+          {/* Auto-pause when idle */}
+          {idleStatus !== "unsupported" && (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Auto-pause when idle
+              </label>
+              <p className="text-xs text-muted-foreground">
+                Allow FlowDay to detect when you lock your screen or have no
+                input for ≥ 10 minutes, so the running timer pauses
+                automatically. Without this, FlowDay falls back to a less
+                precise window-visibility heuristic.
+              </p>
+              <div className="flex items-center gap-2">
+                {idleStatus === "granted" && (
+                  <span className="text-xs font-medium text-green-600">
+                    Enabled
+                  </span>
+                )}
+                {idleStatus === "denied" && (
+                  <span className="text-xs text-muted-foreground">
+                    Denied — re-enable from your browser&apos;s site settings
+                    for this page.
+                  </span>
+                )}
+                {idleStatus === "prompt" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGrantIdle}
+                    disabled={requestingIdle}
+                  >
+                    Allow
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Export Data */}
           <div className="space-y-2">

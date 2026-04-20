@@ -5,16 +5,6 @@ import { X } from "lucide-react";
 
 const STORAGE_KEY = "flowday.idleDetectionAsked";
 
-interface IdleDetectorCtor {
-  requestPermission(): Promise<"granted" | "denied">;
-}
-
-declare global {
-  interface Window {
-    IdleDetector?: IdleDetectorCtor;
-  }
-}
-
 export function IdlePermissionPrompt() {
   const [show, setShow] = useState(false);
 
