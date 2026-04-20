@@ -1,4 +1,9 @@
-import { getSetting, setSetting, upsertTasks } from "@/lib/db/queries";
+import {
+  getSetting,
+  setSetting,
+  upsertTasks,
+  markOrphanedTodoistTasksDeleted,
+} from "@/lib/db/queries";
 import { fetchTodoistTasks, fetchTodoistProjects } from "./api";
 import { todoistColorToHex } from "./colors";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -55,8 +60,12 @@ export async function syncTodoistToDb(): Promise<{ taskCount: number; error?: st
     };
   });
 
-  // Persist
+  // Persist current Todoist state, then reconcile: any task we previously
+  // tracked from Todoist that no longer appears in the response was either
+  // deleted or completed in Todoist. Mark it sync-deleted so it disappears
+  // from FlowDay's UI; if it ever reappears, upsertTasks auto-restores it.
   upsertTasks(transformedTasks);
+  markOrphanedTodoistTasksDeleted(apiTasks.map((t) => t.id));
   setSetting("last_sync_at", new Date().toISOString());
 
   return { taskCount: transformedTasks.length };

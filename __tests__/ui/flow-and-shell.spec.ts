@@ -7,6 +7,7 @@ import {
   openApp,
   resetAppState,
   seedAppState,
+  simulateTodoistOrphanSweep,
   taskPoolCard,
 } from "./helpers/e2e";
 
@@ -132,6 +133,33 @@ test("[UI-010] Deleted-task dialog restores a soft-deleted local task", async ({
   await page.keyboard.press("Escape");
 
   await expect(taskPoolCard(page, "Restore me")).toBeVisible();
+});
+
+test("[UI-016] Tasks deleted in Todoist disappear from the sidebar after sync", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "todoist-overdue");
+  await openApp(page);
+
+  await expect(page.getByRole("button", { name: /^Overdue/ })).toBeVisible();
+  await expect(taskPoolCard(page, "Survives sync")).toBeVisible();
+  await expect(taskPoolCard(page, "Deleted in Todoist")).toBeVisible();
+
+  // Simulate the next sync: Todoist now only returns "td-keep". The other
+  // task is treated as deleted-in-Todoist and gets sync-soft-deleted.
+  await simulateTodoistOrphanSweep(request, ["td-keep"]);
+
+  await page.reload();
+
+  await expect(taskPoolCard(page, "Survives sync")).toBeVisible();
+  await expect(taskPoolCard(page, "Deleted in Todoist")).toHaveCount(0);
+
+  // It should now show up in the deleted-tasks dialog so the user can audit
+  // what FlowDay hid on their behalf.
+  await page.getByRole("button", { name: "Deleted tasks" }).click();
+  await expect(page.getByRole("heading", { name: "Deleted Tasks" })).toBeVisible();
+  await expect(page.getByText("Deleted in Todoist")).toBeVisible();
 });
 
 test("[UI-011] Settings, export, and analytics dialogs smoke test", async ({

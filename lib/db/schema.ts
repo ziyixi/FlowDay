@@ -28,6 +28,9 @@ export const tasks = sqliteTable("tasks", {
   createdAt: text("created_at"),
   syncedAt: text("synced_at"),
   deletedAt: text("deleted_at"),
+  // 'sync' = Todoist no longer returns this task; 'local' or null = user-initiated.
+  // Sync-deleted tasks auto-restore if Todoist starts returning them again.
+  deletedSource: text("deleted_source"),
 });
 
 export const settings = sqliteTable("settings", {

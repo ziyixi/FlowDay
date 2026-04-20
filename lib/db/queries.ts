@@ -1,4 +1,4 @@
-import { eq, and, sql, isNull, isNotNull, gte, lte, inArray } from "drizzle-orm";
+import { eq, and, sql, isNull, isNotNull, gte, lte, inArray, notInArray } from "drizzle-orm";
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
@@ -145,7 +145,7 @@ export function softDeleteTask(taskId: string): boolean {
   const db = getDb();
   const result = db
     .update(tasks)
-    .set({ deletedAt: new Date().toISOString() })
+    .set({ deletedAt: new Date().toISOString(), deletedSource: "local" })
     .where(eq(tasks.id, taskId))
     .run();
   return result.changes > 0;
@@ -155,10 +155,35 @@ export function restoreTask(taskId: string): boolean {
   const db = getDb();
   const result = db
     .update(tasks)
-    .set({ deletedAt: null })
+    .set({ deletedAt: null, deletedSource: null })
     .where(eq(tasks.id, taskId))
     .run();
   return result.changes > 0;
+}
+
+// Marks Todoist-sourced tasks that no longer appear in the latest sync as
+// deleted with source='sync'. These auto-restore in upsertTasks if Todoist
+// starts returning them again. Returns the number of rows newly marked.
+export function markOrphanedTodoistTasksDeleted(activeTodoistIds: string[]): number {
+  const db = getDb();
+  const now = new Date().toISOString();
+  const baseConditions = [
+    isNotNull(tasks.todoistId),
+    isNull(tasks.deletedAt),
+  ];
+  const result = db
+    .update(tasks)
+    .set({ deletedAt: now, deletedSource: "sync" })
+    .where(
+      and(
+        ...baseConditions,
+        activeTodoistIds.length > 0
+          ? notInArray(tasks.todoistId, activeTodoistIds)
+          : sql`1=1`
+      )
+    )
+    .run();
+  return result.changes;
 }
 
 export function removeTaskFromFlows(taskId: string): void {
@@ -230,8 +255,11 @@ export function upsertTasks(taskList: Task[]): void {
             completedAt: t.completedAt,
             dueDate: t.dueDate,
             syncedAt: now,
-            // Preserve soft-delete status across syncs
-            deletedAt: sql`${tasks.deletedAt}`,
+            // Auto-restore tasks that were sync-deleted (Todoist removed them)
+            // when Todoist returns them again. Preserve user-initiated local
+            // deletes ('local' or legacy NULL) so the trash stays sticky.
+            deletedAt: sql`CASE WHEN ${tasks.deletedSource} = 'sync' THEN NULL ELSE ${tasks.deletedAt} END`,
+            deletedSource: sql`CASE WHEN ${tasks.deletedSource} = 'sync' THEN NULL ELSE ${tasks.deletedSource} END`,
           },
         })
         .run();

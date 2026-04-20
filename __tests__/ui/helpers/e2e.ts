@@ -52,7 +52,8 @@ export type SeedName =
   | "wizard-today-tasks"
   | "single-flow-task"
   | "two-flow-tasks"
-  | "analytics-seeded";
+  | "analytics-seeded"
+  | "todoist-overdue";
 
 function localTask(
   id: string,
@@ -166,6 +167,29 @@ function buildSeed(name: SeedName): SeedPayload {
           day_capacity_mins: 360,
         },
       };
+    case "todoist-overdue":
+      // Two Todoist-sourced overdue tasks. The UI test deletes one in
+      // Todoist (simulated via /api/test/sync-orphans) and verifies it
+      // disappears from the sidebar while the other stays put.
+      return {
+        tasks: [
+          localTask("td-keep", "Survives sync", {
+            todoistId: "td-keep",
+            dueDate: YESTERDAY,
+            estimatedMins: 25,
+          }),
+          localTask("td-deleted", "Deleted in Todoist", {
+            todoistId: "td-deleted",
+            dueDate: YESTERDAY,
+            estimatedMins: 15,
+          }),
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
     default:
       throw new Error(`Unknown seed "${name}"`);
   }
@@ -181,6 +205,17 @@ export async function seedAppState(request: APIRequestContext, name: SeedName) {
     data: buildSeed(name),
   });
   expect(response.ok()).toBeTruthy();
+}
+
+export async function simulateTodoistOrphanSweep(
+  request: APIRequestContext,
+  activeTodoistIds: string[]
+) {
+  const response = await request.post("/api/test/sync-orphans", {
+    data: { activeTodoistIds },
+  });
+  expect(response.ok()).toBeTruthy();
+  return response.json();
 }
 
 export async function installFixedClock(page: Page) {

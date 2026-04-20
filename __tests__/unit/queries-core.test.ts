@@ -8,6 +8,7 @@ import {
   restoreTask,
   getDeletedTasks,
   updateTaskEstimate,
+  markOrphanedTodoistTasksDeleted,
   setFlowTaskIds,
   getAllFlows,
   addCompletedFlowTask,
@@ -82,6 +83,47 @@ describe("task queries", () => {
     expect(getDeletedTasks()).toHaveLength(0);
     // Should be back in regular tasks
     expect(getAllTasks()).toHaveLength(1);
+  });
+
+  it("marks Todoist-orphaned tasks as deleted on sync", () => {
+    upsertTasks([
+      makeTask({ id: "td-1", todoistId: "td-1", title: "Still in Todoist" }),
+      makeTask({ id: "td-2", todoistId: "td-2", title: "Deleted in Todoist" }),
+      makeTask({ id: "local-1", todoistId: null, title: "Local only" }),
+    ]);
+
+    const changed = markOrphanedTodoistTasksDeleted(["td-1"]);
+    expect(changed).toBe(1);
+
+    const active = getAllTasks();
+    expect(active.map((t) => t.id).sort()).toEqual(["local-1", "td-1"]);
+
+    const deleted = getDeletedTasks();
+    expect(deleted.map((t) => t.id)).toEqual(["td-2"]);
+  });
+
+  it("auto-restores a sync-deleted task when Todoist returns it again", () => {
+    upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Original" })]);
+    markOrphanedTodoistTasksDeleted([]); // simulate Todoist no longer returning it
+    expect(getAllTasks()).toHaveLength(0);
+    expect(getDeletedTasks()).toHaveLength(1);
+
+    // Next sync brings it back
+    upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Resurrected" })]);
+    const active = getAllTasks();
+    expect(active).toHaveLength(1);
+    expect(active[0].title).toBe("Resurrected");
+    expect(getDeletedTasks()).toHaveLength(0);
+  });
+
+  it("preserves user-initiated soft-delete across syncs", () => {
+    upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Hidden by user" })]);
+    softDeleteTask("td-1");
+
+    // Todoist still returns the task — sync must NOT auto-restore a local delete
+    upsertTasks([makeTask({ id: "td-1", todoistId: "td-1", title: "Hidden by user" })]);
+    expect(getAllTasks()).toHaveLength(0);
+    expect(getDeletedTasks()).toHaveLength(1);
   });
 
   it("updates task estimate", () => {

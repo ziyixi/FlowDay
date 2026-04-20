@@ -99,7 +99,11 @@ export function getDb() {
   if (!colNames.has("deleted_at")) {
     sqlite.exec("ALTER TABLE tasks ADD COLUMN deleted_at TEXT");
   }
+  if (!colNames.has("deleted_source")) {
+    sqlite.exec("ALTER TABLE tasks ADD COLUMN deleted_source TEXT");
+  }
   sqlite.exec("CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at)");
+  sqlite.exec("CREATE INDEX IF NOT EXISTS idx_tasks_todoist_id ON tasks(todoist_id)");
 
   const db = drizzle(sqlite, { schema });
   globalForDb.__flowdayDb = db;
