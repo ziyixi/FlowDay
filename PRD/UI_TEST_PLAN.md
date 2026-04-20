@@ -16,3 +16,4 @@
 | UI-012 | Portrait wizard and flow-card usability regression | portrait | `wizard-today-tasks` | active | Verifies wizard flow and portrait-specific readability/tap-target behavior. |
 | UI-013 | Pop-out timer button toggles with timer activity | desktop | `single-flow-task` | active | Pop-out entry point appears only while a timer is active and disappears when the task is completed. |
 | UI-014 | Pomodoro completion fires a single chime | desktop | `single-flow-task` | active | Verifies the gentle completion chime fires exactly once when a pomodoro reaches zero and never for count-up timers. |
+| UI-015 | Auto-idle pause backdates the segment | desktop | `single-flow-task` | active | Verifies that when the auto-idle hook detects the user was away, the resulting pause backdates the segment and the away period is not logged. |

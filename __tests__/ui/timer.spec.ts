@@ -10,6 +10,7 @@ import {
   resetChimeCount,
   setRunningTimerElapsed,
   seedAppState,
+  simulateIdleAway,
 } from "./helpers/e2e";
 
 test.beforeEach(async ({ request }) => {
@@ -131,6 +132,36 @@ test("[UI-014] Pomodoro completion fires a single chime", async ({
   await setRunningTimerElapsed(page, 30);
   await card.getByRole("button", { name: "Pause timer" }).click();
   expect(await getChimeCount(page)).toBe(1);
+});
+
+test("[UI-015] Auto-idle pause backdates the segment to drop the away period", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByRole("button", { name: "Start timer" }).click();
+  await expect(card.getByRole("button", { name: "Pause timer" })).toBeVisible();
+
+  // Pretend the timer has been running for 5 minutes total in real time…
+  await setRunningTimerElapsed(page, 300);
+  // …but the user actually walked away 2 minutes ago. Backdating to that
+  // moment should keep only the first 3 minutes of work and drop the rest.
+  await simulateIdleAway(page, 120);
+
+  await expect
+    .poll(async () => (await getTimerState(page))?.status)
+    .toBe("paused");
+
+  // Card displays only the work that happened before the user went idle.
+  await expect(card.getByText("3:00", { exact: true })).toBeVisible();
+
+  // Persisted entry total reflects the same — 3m, NOT 5m.
+  await card.getByTitle("Time entries").click();
+  await expect(page.getByText("Total: 3m", { exact: true })).toBeVisible();
+  await expect(page.getByText("Total: 5m", { exact: true })).toHaveCount(0);
 });
 
 test("[UI-008] Manual entry CRUD updates time entry surfaces", async ({

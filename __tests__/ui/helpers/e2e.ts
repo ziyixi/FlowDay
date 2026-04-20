@@ -205,6 +205,13 @@ export async function resetChimeCount(page: Page) {
   await page.evaluate(() => window.__FLOWDAY_E2E__?.resetChimeCount());
 }
 
+export async function simulateIdleAway(page: Page, secondsAgo: number) {
+  await page.evaluate(
+    (s) => window.__FLOWDAY_E2E__?.simulateIdleAway(s),
+    secondsAgo
+  );
+}
+
 export async function openApp(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "FlowDay" })).toBeVisible();

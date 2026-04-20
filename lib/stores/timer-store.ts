@@ -30,7 +30,7 @@ interface TimerState {
     flowDate: string,
     targetSeconds: number
   ) => Promise<void>;
-  pauseTimer: () => void;
+  pauseTimer: (effectiveStopMs?: number) => Promise<void>;
   resumeTimer: () => void;
   stopAndSave: () => Promise<void>;
   stopWithoutSaving: () => void;
@@ -251,15 +251,22 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
     startTickInterval(() => get().tick());
   },
 
-  pauseTimer: async () => {
+  pauseTimer: async (effectiveStopMs) => {
     const state = get();
     if (state.status !== "running") return;
 
-    const segSeconds = currentSegmentSeconds(state);
+    // Backdate the segment to `effectiveStopMs` when provided (used by the
+    // auto-idle hook to drop the time the user was away from the screen).
+    const segSeconds =
+      effectiveStopMs != null && state.segmentStartedAt != null
+        ? Math.max(
+            Math.floor((effectiveStopMs - state.segmentStartedAt) / 1000),
+            0
+          )
+        : currentSegmentSeconds(state);
     clearTickInterval();
 
-    // Save this segment as an entry
-    await saveSegment(state);
+    await saveSegment(state, segSeconds);
     const nextSessionSaved = state.sessionSavedSeconds + segSeconds;
     const nextDisplay =
       state.timerMode === "pomodoro"

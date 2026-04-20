@@ -47,7 +47,10 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 - **Sequential day flow** — ordered task list, not a calendar grid. Decide what to do and in what order.
 - **Quick add** — create local tasks without Todoist, with editable titles.
 - **Todoist sync** — read-only integration. Syncs all tasks so rescheduled items reappear on their new date with history intact. FlowDay never modifies your Todoist data.
-- **Time tracking** — segment-based timer with pause/resume. Manual entries supported.
+- **Time tracking** — segment-based count-up timer with pause/resume. Manual entries supported.
+- **Pomodoro mode** — preset focus blocks (5m, 30m, 45m, 1h, 1h 30m, 2h) that auto-save when they hit zero and play a gentle completion chime.
+- **Pop-out timer** — Document Picture-in-Picture window that floats above other apps with the active task, countdown, pause/resume + complete buttons, and a peek at what's next. Auto-opens when you start a pomodoro.
+- **Auto-idle pause** — long-running timers automatically pause when you lock your screen or step away (≥10 min idle). Uses the precise `IdleDetector` API when permission is granted (one-time on-entry prompt), otherwise falls back to a Page Visibility heuristic.
 - **Data export** — CSV/JSON export of time entries and flow history with date range picker.
 - **Multi-day view** — 1, 3, or 5 day horizon for planning context.
 - **Daily planning ritual** — guided "Start My Day" wizard with task rollover from yesterday.
@@ -55,7 +58,7 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 - **Day capacity** — configurable work-hours budget with overcommitment warnings.
 - **Analytics** — daily review, weekly review with heatmaps, estimation accuracy tracking.
 - **Soft-delete** — tasks are never hard-deleted. Calendar-based trash browser with restore.
-- **PWA** — installable progressive web app with offline support via service worker.
+- **PWA** — installable progressive web app with offline support. All PWA assets (manifest, service worker, icons) live under `/pwa/*` so a single Cloudflare Access bypass policy can protect the rest of the app.
 
 ## Tech Stack
 
@@ -66,6 +69,7 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 - **shadcn/ui v4** + **Tailwind CSS v4** — UI components
 - **@dnd-kit/react** — drag and drop
 - **Vitest** — unit and integration tests
+- **Playwright** — end-to-end UI tests (run in CI)
 
 ## Scripts
 
@@ -78,14 +82,16 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 | `npm test` | Run all tests |
 | `npm run test:unit` | Unit tests only |
 | `npm run test:integration` | Integration tests only |
+| `npm run test:ui` | Playwright UI tests (run in CI; can hang on some local setups) |
 | `npm run test:watch` | Watch mode |
 
 ## Testing
 
 Tests use a fresh SQLite database per test case (no mocks for DB layer).
 
-- **Unit tests** (`__tests__/unit/`): utility functions, database query helpers
+- **Unit tests** (`__tests__/unit/`): utility functions, database query helpers, store logic
 - **Integration tests** (`__tests__/integration/`): API route handlers end-to-end
+- **UI tests** (`__tests__/ui/`): Playwright end-to-end specs against the production build, seeded via `/api/test/*` routes. The catalogue lives in [PRD/UI_TEST_PLAN.md](PRD/UI_TEST_PLAN.md) and a unit test enforces that every plan entry has a matching `[UI-NNN]` spec.
 
 ```bash
 npm test

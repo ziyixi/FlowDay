@@ -93,12 +93,33 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 ### 4.3 — Time Tracking ✅ Implemented
 
-**Segment-based timer:**
+**Segment-based count-up timer:**
 - Timer starts when you click play on a task, shows elapsed time on the card and in sidebar/top bar
 - Pause saves the current running segment as a `time_entry` and stops the clock
 - Resume starts a new segment — each pause/resume creates a separate time entry for accuracy
 - Complete stops timer + saves + marks task complete in flow
 - Only one task can have an active timer at a time; switching auto-saves the previous
+
+**Pomodoro mode:**
+- Hourglass icon on each flow card opens a preset picker: 5m, 30m, 45m, 1h, 1h 30m, 2h
+- Selecting a preset starts a countdown timer that displays time *remaining* instead of elapsed
+- When the timer reaches zero it auto-saves the full segment and clears the active state
+- A gentle G5–E5–C5 NBC-style chime plays exactly once on completion (sawtooth fundamentals through a `DynamicsCompressor` for loudness, ~0.8s release per note). The sound is engineered to cut through background music; it never plays for count-up timers
+- The same active-timer rules apply: starting a pomodoro replaces any other running timer
+
+**Pop-out timer:**
+- Document Picture-in-Picture window (`window.documentPictureInPicture.requestWindow`) that floats above other apps
+- Shows the active task title, mode badge, large countdown/elapsed, pause/resume + complete buttons, and a subtle "Next: …" line so you can see what's queued without leaving the focus surface
+- When the active task completes, the window switches to an "Up next" view with a single Start button for the next queued task
+- Auto-opens when a pomodoro starts (the picker click is the user gesture that satisfies the PiP gesture requirement)
+- Styles are copied from the main document at open; a `MutationObserver` keeps the dark-mode class in sync
+- Pop-out window state lives in a dedicated `pop-out-store` (Zustand) so any component can request opening without prop drilling
+
+**Auto-idle pause:**
+- Long-running timers automatically pause when the user is away from the screen for ≥ 10 minutes
+- Preferred signal: **Idle Detection API** (`window.IdleDetector`) — gives true screen-lock detection (`screenState === "locked"`) and OS-level idle-input detection (no keyboard/mouse for the threshold). Requires one user grant of the `idle-detection` permission. A small banner appears on the first FlowDay visit asking the user to allow it
+- Fallback signal (Safari/Firefox or denied permission): Page Visibility on **both** the main window and the pop-out window — only counts as "away" when both surfaces are hidden simultaneously, so background tabs while pop-out is open never falsely pause
+- The pause is **backdated** to the moment the user became hidden (or `now − threshold` for the IdleDetector idle case), so the away interval is never logged as work time — `pauseTimer(effectiveStopMs?)` accepts an optional override for this
 
 **Manual time entry:**
 - Clock icon on each flow task card opens a popover showing all time entries for that task
@@ -110,15 +131,18 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 **Timer display locations:**
 - Flow task card: shows live elapsed when active, cumulative logged time when inactive
-- Top bar: `TimerDisplay` component with task name, elapsed, pause/complete buttons
+- Top bar: `TimerDisplay` component with task name, elapsed, pause/complete buttons + the pop-out entry-point button (visible only while a timer is active)
 - Sidebar: `SidebarTimer` with task name, elapsed, pause/play toggle
+- Pop-out window: standalone PiP surface (see Pop-out timer above)
 
 **Implementation notes:**
 - Segment-based model: `segmentWallStart` (ISO) + `segmentStartedAt` (Date.now()) for wall-clock accuracy
 - `setInterval` at 1Hz, module-level `intervalId` (not in Zustand — not serializable)
+- Pomodoro completion path: `tick()` checks `pomodoroRemainingSeconds(state) <= 0`, fires `playCompletionChime()`, saves the remaining segment, then resets state
 - Time entries stored in SQLite `time_entries` table via `/api/entries` routes
 - `{ cache: "no-store" }` on all fetch calls to avoid Next.js response caching
 - `entryRevision` counter in timer store bumped on segment saves, triggers UI refresh of time entry lists
+- E2E test bridge (`window.__FLOWDAY_E2E__`) exposes `setRunningTimerElapsed`, `getTimerState`, `getChimeCount`, `resetChimeCount`, and `simulateIdleAway` for deterministic UI tests
 
 ### 4.4 — Day View / Multi-Day View ✅ Implemented
 
@@ -231,7 +255,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Export:** ✅ CSV/JSON export of time entries and flow history via `GET /api/export`. Export dialog in Settings with data type, date range, and format selectors.
 - **Todoist write-back:** (Planned) Optionally mark tasks complete in Todoist when completed in FlowDay (requires careful safeguards)
 - **Estimate presets:** ✅ The `EstimateEditor` component provides 30m, 45m, 1h, 1.5h, 2h, 2.5h, 3h presets plus custom minute input and clear
-- **PWA:** ✅ Installable progressive web app with service worker (served via `app/sw/route.ts` for standalone compatibility), web manifest (`app/manifest.ts`), app icons. Network-first for navigation and API calls, stale-while-revalidate for static assets. Service worker only registered in production (dev mode auto-unregisters stale workers).
+- **PWA:** ✅ Installable progressive web app with service worker, web manifest, and app icons. **All PWA assets live under the `/pwa/*` URL prefix** (`app/pwa/sw/route.ts`, `app/pwa/manifest.webmanifest/route.ts`, `public/pwa/*` for icons + `sw.js` source) so a single bypass policy can be configured in Cloudflare Access (or similar zero-trust proxies) without exposing the rest of the app. The SW is registered with `{ scope: '/' }` and the route returns `Service-Worker-Allowed: /` so it can still control the entire origin. Network-first for navigation and API calls, stale-while-revalidate for static assets. Service worker only registered in production (dev mode auto-unregisters stale workers).
 
 ---
 
@@ -240,7 +264,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Not a full project management tool (Todoist handles that)
 - Not a team collaboration tool (no shared views, no resource allocation)
 - Not a calendar app (no clock-time slots, no meeting integration in v1)
-- Not a Pomodoro app (continuous tracking, not intervals)
+- Not a strict Pomodoro app — pomodoro mode is offered as an optional focus block, but FlowDay's core model is continuous segment-based tracking rather than enforced 25/5 cycles
 
 ---
 

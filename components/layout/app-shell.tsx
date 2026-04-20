@@ -8,9 +8,11 @@ import { TopBar } from "./top-bar";
 import { Sidebar } from "./sidebar";
 import { DayFlow } from "@/components/flow/day-flow";
 import { TaskCardOverlay } from "@/components/todoist/task-card-overlay";
+import { IdlePermissionPrompt } from "@/components/shared/idle-permission-prompt";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useHydration } from "@/lib/hooks/use-hydration";
 import { useAutoSync } from "@/lib/hooks/use-auto-sync";
+import { useAutoIdlePause } from "@/lib/hooks/use-auto-idle-pause";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 import type { Task } from "@/lib/types/task";
@@ -27,6 +29,7 @@ declare global {
       };
       getChimeCount: () => number;
       resetChimeCount: () => void;
+      simulateIdleAway: (secondsAgo: number) => void;
     };
   }
 }
@@ -34,6 +37,7 @@ declare global {
 export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
   useHydration();
   useAutoSync();
+  useAutoIdlePause();
 
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
@@ -64,6 +68,13 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
       },
       getChimeCount: () => _getChimeCount(),
       resetChimeCount: () => _resetChime(),
+      simulateIdleAway: (secondsAgo: number) => {
+        const state = useTimerStore.getState();
+        if (state.status !== "running") {
+          throw new Error("No running timer to backdate");
+        }
+        void state.pauseTimer(Date.now() - secondsAgo * 1000);
+      },
     };
 
     return () => {
@@ -115,6 +126,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
         }
       }}
     >
+      <IdlePermissionPrompt />
       <div className="flex h-screen flex-col">
         <TopBar />
         <div className="flex flex-1 overflow-hidden">

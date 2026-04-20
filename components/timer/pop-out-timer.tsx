@@ -1,51 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play } from "lucide-react";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore, useFlowTasksForDate } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
+import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 
-interface DocumentPictureInPicture {
-  requestWindow: (options?: {
-    width?: number;
-    height?: number;
-  }) => Promise<Window>;
-  window: Window | null;
-}
-
-declare global {
-  interface Window {
-    documentPictureInPicture?: DocumentPictureInPicture;
-  }
-}
-
-function copyStylesToPipWindow(pipWindow: Window) {
-  for (const sheet of Array.from(document.styleSheets)) {
-    try {
-      const cssText = Array.from(sheet.cssRules)
-        .map((rule) => rule.cssText)
-        .join("\n");
-      const style = pipWindow.document.createElement("style");
-      style.textContent = cssText;
-      pipWindow.document.head.appendChild(style);
-    } catch {
-      // Cross-origin sheet — link by href instead so the PiP window can fetch it.
-      if (sheet.href) {
-        const link = pipWindow.document.createElement("link");
-        link.rel = "stylesheet";
-        link.href = sheet.href;
-        pipWindow.document.head.appendChild(link);
-      }
-    }
-  }
-}
-
 export function PopOutTimerButton() {
-  const [pipWindow, setPipWindow] = useState<Window | null>(null);
-  const [container, setContainer] = useState<HTMLElement | null>(null);
+  const pipWindow = usePopOutStore((s) => s.pipWindow);
+  const container = usePopOutStore((s) => s.container);
+  const open = usePopOutStore((s) => s.open);
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
 
   const supported =
@@ -67,46 +34,12 @@ export function PopOutTimerButton() {
     return () => observer.disconnect();
   }, [pipWindow]);
 
-  const handleOpen = async () => {
-    if (!supported) return;
-    if (pipWindow) {
-      pipWindow.focus();
-      return;
-    }
-
-    const win = await window.documentPictureInPicture!.requestWindow({
-      width: 280,
-      height: 200,
-    });
-
-    copyStylesToPipWindow(win);
-
-    win.document.documentElement.style.height = "100%";
-    win.document.documentElement.style.overflow = "hidden";
-    win.document.body.style.margin = "0";
-    win.document.body.style.height = "100%";
-    win.document.body.style.overflow = "hidden";
-
-    const root = win.document.createElement("div");
-    root.className =
-      "h-full w-full overflow-hidden font-sans antialiased bg-background text-foreground";
-    win.document.body.appendChild(root);
-
-    win.addEventListener("pagehide", () => {
-      setPipWindow(null);
-      setContainer(null);
-    });
-
-    setPipWindow(win);
-    setContainer(root);
-  };
-
   if (!supported || !activeTaskId) return null;
 
   return (
     <>
       <button
-        onClick={handleOpen}
+        onClick={() => void open()}
         title="Pop out timer"
         className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
       >
