@@ -14,3 +14,5 @@
 | UI-010 | Deleted-task restore returns task to active pool | desktop | `shell-empty` | active | Local task delete plus deleted-task dialog restore path. |
 | UI-011 | Settings, export, and analytics smoke | desktop | `analytics-seeded` | active | Update capacity, verify warning, open analytics tabs, and trigger export. |
 | UI-012 | Portrait wizard and flow-card usability regression | portrait | `wizard-today-tasks` | active | Verifies wizard flow and portrait-specific readability/tap-target behavior. |
+| UI-013 | Pop-out timer button toggles with timer activity | desktop | `single-flow-task` | active | Pop-out entry point appears only while a timer is active and disappears when the task is completed. |
+| UI-014 | Pomodoro completion fires a single chime | desktop | `single-flow-task` | active | Verifies the gentle completion chime fires exactly once when a pomodoro reaches zero and never for count-up timers. |

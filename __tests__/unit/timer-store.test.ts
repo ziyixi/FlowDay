@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 
 function resetTimerStore() {
   useTimerStore.getState().stopWithoutSaving();
@@ -23,12 +24,14 @@ describe("timer store", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-13T09:00:00.000Z"));
     resetTimerStore();
+    _resetChime();
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     resetTimerStore();
+    _resetChime();
   });
 
   it("switches active tasks and saves the previous running segment", async () => {
@@ -141,5 +144,52 @@ describe("timer store", () => {
       durationS: 3,
       source: "timer",
     });
+  });
+
+  it("plays a completion chime exactly once when a pomodoro reaches zero", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      if (url.startsWith("/api/entries?taskId=") && method === "GET") {
+        return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url === "/api/entries" && method === "POST") {
+        return new Response(JSON.stringify({ id: "x" }), { status: 201, headers: { "Content-Type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    expect(_getChimeCount()).toBe(0);
+
+    await useTimerStore.getState().startPomodoro("task-1", "2026-04-13", 2);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    expect(_getChimeCount()).toBe(1);
+
+    // Idempotence guard: extra ticks after completion must not double-fire.
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(_getChimeCount()).toBe(1);
+  });
+
+  it("does not chime for count-up timers regardless of elapsed time", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      if (url.startsWith("/api/entries?taskId=") && method === "GET") {
+        return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url === "/api/entries" && method === "POST") {
+        return new Response(JSON.stringify({ id: "x" }), { status: 201, headers: { "Content-Type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useTimerStore.getState().startTimer("task-1", "2026-04-13");
+    await vi.advanceTimersByTimeAsync(60_000);
+    await useTimerStore.getState().stopAndSave();
+
+    expect(_getChimeCount()).toBe(0);
   });
 });

@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { playCompletionChime } from "@/lib/utils/chime";
 
 export type TimerMode = "countup" | "pomodoro";
 
@@ -326,6 +327,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       const remaining = pomodoroRemainingSeconds(state);
       if (remaining <= 0) {
         clearTickInterval();
+        playCompletionChime();
         const segSecondsToSave = Math.max(
           (state.pomodoroTargetSeconds ?? 0) - state.sessionSavedSeconds,
           0

@@ -12,6 +12,7 @@ import { useFlowStore } from "@/lib/stores/flow-store";
 import { useHydration } from "@/lib/hooks/use-hydration";
 import { useAutoSync } from "@/lib/hooks/use-auto-sync";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 import type { Task } from "@/lib/types/task";
 
 declare global {
@@ -24,6 +25,8 @@ declare global {
         timerMode: "countup" | "pomodoro";
         displaySeconds: number;
       };
+      getChimeCount: () => number;
+      resetChimeCount: () => void;
     };
   }
 }
@@ -59,6 +62,8 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
           displaySeconds: state.displaySeconds,
         };
       },
+      getChimeCount: () => _getChimeCount(),
+      resetChimeCount: () => _resetChime(),
     };
 
     return () => {

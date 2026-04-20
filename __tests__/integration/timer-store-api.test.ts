@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getEntriesByTask } from "@/lib/db/queries";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 
 function resetTimerStore() {
   useTimerStore.getState().stopWithoutSaving();
@@ -48,6 +49,7 @@ describe("timer store -> entries API integration", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-13T09:00:00.000Z"));
     resetTimerStore();
+    _resetChime();
     vi.stubGlobal("fetch", dispatchEntriesFetch as typeof fetch);
   });
 
@@ -55,6 +57,7 @@ describe("timer store -> entries API integration", () => {
     vi.unstubAllGlobals();
     vi.useRealTimers();
     resetTimerStore();
+    _resetChime();
   });
 
   it("persists prior timer entry when switching tasks", async () => {
@@ -92,5 +95,32 @@ describe("timer store -> entries API integration", () => {
     const state = useTimerStore.getState();
     expect(state.activeTaskId).toBeNull();
     expect(state.status).toBe("idle");
+  });
+
+  it("fires the completion chime once when a pomodoro reaches zero and the entry is persisted", async () => {
+    expect(_getChimeCount()).toBe(0);
+
+    await useTimerStore.getState().startPomodoro("task-2", "2026-04-13", 2);
+    await vi.advanceTimersByTimeAsync(2000);
+
+    // Chime fired exactly once at completion.
+    expect(_getChimeCount()).toBe(1);
+
+    // And the corresponding time entry is durably stored via the real API route.
+    const entries = getEntriesByTask("task-2");
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      taskId: "task-2",
+      flowDate: "2026-04-13",
+      durationS: 2,
+      source: "timer",
+    });
+
+    // Pausing/stopping a count-up timer must not produce additional chimes.
+    await useTimerStore.getState().startTimer("task-3", "2026-04-13");
+    await vi.advanceTimersByTimeAsync(5000);
+    await useTimerStore.getState().stopAndSave();
+
+    expect(_getChimeCount()).toBe(1);
   });
 });

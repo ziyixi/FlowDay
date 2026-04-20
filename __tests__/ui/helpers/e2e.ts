@@ -197,6 +197,14 @@ export async function getTimerState(page: Page) {
   return page.evaluate(() => window.__FLOWDAY_E2E__?.getTimerState() ?? null);
 }
 
+export async function getChimeCount(page: Page): Promise<number> {
+  return page.evaluate(() => window.__FLOWDAY_E2E__?.getChimeCount() ?? 0);
+}
+
+export async function resetChimeCount(page: Page) {
+  await page.evaluate(() => window.__FLOWDAY_E2E__?.resetChimeCount());
+}
+
 export async function openApp(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "FlowDay" })).toBeVisible();
