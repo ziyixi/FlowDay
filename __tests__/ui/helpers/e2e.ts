@@ -51,6 +51,7 @@ export type SeedName =
   | "shell-empty"
   | "wizard-today-tasks"
   | "single-flow-task"
+  | "single-flow-task-with-history"
   | "two-flow-tasks"
   | "analytics-seeded"
   | "todoist-overdue";
@@ -111,6 +112,33 @@ function buildSeed(name: SeedName): SeedPayload {
         flows: {
           [TODAY]: ["flow-task-1"],
         },
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "single-flow-task-with-history":
+      return {
+        tasks: [
+          localTask("flow-task-1", "Deep work block", {
+            estimatedMins: 45,
+            labels: ["focus"],
+          }),
+        ],
+        flows: {
+          [TODAY]: ["flow-task-1"],
+        },
+        timeEntries: [
+          {
+            taskId: "flow-task-1",
+            flowDate: TODAY,
+            startTime: `${TODAY}T08:00:00.000Z`,
+            endTime: `${TODAY}T08:02:00.000Z`,
+            durationS: 120,
+            source: "timer",
+          },
+        ],
         settings: {
           [`planning_completed:${TODAY}`]: true,
           day_capacity_mins: 360,

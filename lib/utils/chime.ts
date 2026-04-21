@@ -24,13 +24,10 @@ function getAudioContext(): AudioContext | null {
   return audioContext;
 }
 
-// NBC chime — the classic G–E–C descending triad, voiced an octave up
-// (G5 → E5 → C5) so the higher partials cut through music in the background.
-// Each note layers a sawtooth fundamental (rich in odd+even harmonics, perceived
-// much louder than sine/triangle) with octave + fifth overtones for bell-like
-// brightness. The whole chain runs through a heavy compressor that squashes peaks
-// and boosts average loudness — this is the same trick mastering engineers use to
-// make a track "loud" without clipping. ~1.0s total; notes overlap into a major triad.
+// Replaced with a softer public-domain Beethoven reference: the opening of
+// "Ode to Joy" (E–E–F–G–G–F). The tone is intentionally gentler than the old
+// alert-style chime: master gain is halved, compression is light, and the
+// waveform stack uses triangle/sine instead of bright sawtooth layers.
 export function playCompletionChime(): void {
   chimeCount++;
 
@@ -51,24 +48,27 @@ export function playCompletionChime(): void {
   }
 
   compressor.threshold.value = -18;
-  compressor.knee.value = 12;
-  compressor.ratio.value = 20;
-  compressor.attack.value = 0.001;
-  compressor.release.value = 0.1;
-  master.gain.value = 0.8;
+  compressor.knee.value = 10;
+  compressor.ratio.value = 3;
+  compressor.attack.value = 0.01;
+  compressor.release.value = 0.2;
+  master.gain.value = 0.4;
 
   compressor.connect(master);
   master.connect(ctx.destination);
 
   const now = ctx.currentTime;
   const notes = [
-    { freq: 783.99, offset: 0 },    // G5
-    { freq: 659.25, offset: 0.25 }, // E5
-    { freq: 523.25, offset: 0.5 },  // C5
+    { freq: 659.25, offset: 0 },    // E5
+    { freq: 659.25, offset: 0.16 }, // E5
+    { freq: 698.46, offset: 0.32 }, // F5
+    { freq: 783.99, offset: 0.48 }, // G5
+    { freq: 783.99, offset: 0.64 }, // G5
+    { freq: 698.46, offset: 0.8 },  // F5
   ];
 
   for (const { freq, offset } of notes) {
-    playBellNote(ctx, compressor, freq, now + offset);
+    playBellNote(ctx, compressor, freq, now + offset, 0.24);
   }
 }
 
@@ -76,14 +76,14 @@ function playBellNote(
   ctx: AudioContext,
   destination: AudioNode,
   freq: number,
-  start: number
+  start: number,
+  duration: number
 ): void {
-  // Sawtooth fundamental gives the loudest perceived level (all harmonics
-  // present); octave + fifth overtones add bell-like sparkle on top.
+  // Triangle fundamental keeps the melody warm; a faint sine octave adds a
+  // little lift without turning the cue into a piercing alarm.
   const layers: Array<{ type: OscillatorType; multiplier: number; gain: number }> = [
-    { type: "sawtooth", multiplier: 1, gain: 0.45 },
-    { type: "triangle", multiplier: 2, gain: 0.22 },
-    { type: "triangle", multiplier: 3, gain: 0.1 },
+    { type: "triangle", multiplier: 1, gain: 0.32 },
+    { type: "sine", multiplier: 2, gain: 0.08 },
   ];
 
   for (const { type, multiplier, gain: peakGain } of layers) {
@@ -99,8 +99,8 @@ function playBellNote(
     osc.type = type;
     osc.frequency.value = freq * multiplier;
 
-    const peak = start + 0.005;
-    const end = start + 0.8;
+    const peak = start + 0.012;
+    const end = start + duration;
 
     gain.gain.setValueAtTime(0.0001, start);
     gain.gain.linearRampToValueAtTime(peakGain, peak);

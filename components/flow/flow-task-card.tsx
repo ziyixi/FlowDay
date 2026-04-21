@@ -6,6 +6,7 @@ import { Play, Pause, Check, ChevronsDown, X, StickyNote } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatElapsed } from "@/lib/utils/time";
+import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
@@ -98,6 +99,8 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const timerStatus = useTimerStore((s) => s.status);
   const displaySeconds = useTimerStore((s) => s.displaySeconds);
   const timerMode = useTimerStore((s) => s.timerMode);
+  const pomodoroTargetSeconds = useTimerStore((s) => s.pomodoroTargetSeconds);
+  const priorSeconds = useTimerStore((s) => s.priorSeconds);
   const startTimer = useTimerStore((s) => s.startTimer);
   const pauseTimer = useTimerStore((s) => s.pauseTimer);
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
@@ -120,6 +123,14 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const loggedSeconds = useTaskLoggedSeconds(task.id, combinedRevision);
   const shownSeconds = isActive ? displaySeconds : loggedSeconds;
   const isActivePomodoro = isActive && timerMode === "pomodoro";
+  const activePomodoroLoggedSeconds =
+    isActivePomodoro && pomodoroTargetSeconds != null
+      ? derivePomodoroLoggedSeconds(
+          priorSeconds,
+          pomodoroTargetSeconds,
+          displaySeconds
+        )
+      : null;
 
   // Notes
   const { note, showNote, hasNote, updateNote, toggle: toggleNote } = useTaskNote(task.id, date);
@@ -232,16 +243,25 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
         <div className="flex items-center gap-3 text-sm text-muted-foreground sm:text-xs">
           <EstimateEditor task={task} variant="flow" />
           {shownSeconds > 0 ? (
-            <span
-              className={cn(
-                "tabular-nums font-medium",
-                isActive ? "text-primary" : "text-foreground"
-              )}
-            >
-              {isActivePomodoro
-                ? `${formatElapsed(shownSeconds)} left`
-                : formatElapsed(shownSeconds)}
-            </span>
+            <div className="flex items-center gap-2">
+              <span
+                className={cn(
+                  "tabular-nums font-medium",
+                  isActive ? "text-primary" : "text-foreground"
+                )}
+              >
+                {isActivePomodoro
+                  ? `${formatElapsed(shownSeconds)} left`
+                  : formatElapsed(shownSeconds)}
+              </span>
+              {isActivePomodoro &&
+                activePomodoroLoggedSeconds != null &&
+                activePomodoroLoggedSeconds > 0 && (
+                  <span className="tabular-nums text-muted-foreground">
+                    {formatElapsed(activePomodoroLoggedSeconds)} logged
+                  </span>
+                )}
+            </div>
           ) : (
             <span className="tabular-nums text-muted-foreground/60">&mdash;</span>
           )}

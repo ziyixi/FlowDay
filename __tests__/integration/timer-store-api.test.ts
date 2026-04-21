@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { getEntriesByTask } from "@/lib/db/queries";
+import { createTimeEntry, getEntriesByTask } from "@/lib/db/queries";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 
 function resetTimerStore() {
@@ -143,5 +144,42 @@ describe("timer store -> entries API integration", () => {
     await useTimerStore.getState().stopAndSave();
 
     expect(_getChimeCount()).toBe(1);
+  });
+
+  it("combines prior logged time with the active pomodoro elapsed time", async () => {
+    createTimeEntry({
+      id: "prior-entry-1",
+      taskId: "task-4",
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T08:00:00.000Z",
+      endTime: "2026-04-13T08:02:00.000Z",
+      durationS: 120,
+      source: "timer",
+    });
+
+    await useTimerStore.getState().startPomodoro("task-4", "2026-04-13", 30 * 60);
+
+    let state = useTimerStore.getState();
+    expect(state.priorSeconds).toBe(120);
+    expect(state.displaySeconds).toBe(30 * 60);
+    expect(
+      derivePomodoroLoggedSeconds(
+        state.priorSeconds,
+        state.pomodoroTargetSeconds,
+        state.displaySeconds
+      )
+    ).toBe(120);
+
+    await vi.advanceTimersByTimeAsync(120_000);
+
+    state = useTimerStore.getState();
+    expect(state.displaySeconds).toBe(28 * 60);
+    expect(
+      derivePomodoroLoggedSeconds(
+        state.priorSeconds,
+        state.pomodoroTargetSeconds,
+        state.displaySeconds
+      )
+    ).toBe(240);
   });
 });

@@ -229,6 +229,27 @@ test("[UI-020] reload restores running pomodoro", async ({ page, request }) => {
     });
 });
 
+test("[UI-021] Active pomodoro card keeps showing cumulative logged time", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task-with-history");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+  await page.getByRole("button", { name: "30m", exact: true }).click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 30m")).toBeVisible();
+
+  await expect(card.getByText("30:00 left", { exact: true })).toBeVisible();
+  await expect(card.getByText("2:00 logged", { exact: true })).toBeVisible();
+
+  await setRunningTimerElapsed(page, 120);
+
+  await expect(card.getByText("28:00 left", { exact: true })).toBeVisible();
+  await expect(card.getByText("4:00 logged", { exact: true })).toBeVisible();
+});
+
 test("[UI-015] Auto-idle pause backdates the segment to drop the away period", async ({
   page,
   request,

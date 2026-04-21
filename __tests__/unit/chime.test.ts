@@ -15,6 +15,7 @@ interface FakeOscillator {
 
 interface FakeGain {
   gain: {
+    value: number;
     setValueAtTime: ReturnType<typeof vi.fn>;
     linearRampToValueAtTime: ReturnType<typeof vi.fn>;
     exponentialRampToValueAtTime: ReturnType<typeof vi.fn>;
@@ -70,6 +71,7 @@ function makeFakeContext(): {
     createGain: vi.fn(() => {
       const gain: FakeGain = {
         gain: {
+          value: 0,
           setValueAtTime: vi.fn(),
           linearRampToValueAtTime: vi.fn(),
           exponentialRampToValueAtTime: vi.fn(),
@@ -116,7 +118,7 @@ describe("playCompletionChime", () => {
     expect(_getChimeCount()).toBe(2);
   });
 
-  it("plays the NBC G5-E5-C5 chime with sawtooth fundamentals through a loudness compressor", () => {
+  it("plays a softer Beethoven-inspired Ode to Joy motif at half master gain", () => {
     const { ctx, oscillators, gains, compressors } = makeFakeContext();
     const Ctor = vi.fn(() => ctx);
     vi.stubGlobal("window", { AudioContext: Ctor });
@@ -124,60 +126,60 @@ describe("playCompletionChime", () => {
     playCompletionChime();
 
     expect(Ctor).toHaveBeenCalledTimes(1);
-    // Three notes × (fundamental + octave + fifth) = nine oscillators.
-    // Plus one master gain on top of the per-note gains (9 + 1 = 10).
-    expect(oscillators).toHaveLength(9);
-    expect(gains).toHaveLength(10);
+    // Six melody notes × (fundamental + octave) = twelve oscillators.
+    // Plus one master gain on top of the per-note gains (12 + 1 = 13).
+    expect(oscillators).toHaveLength(12);
+    expect(gains).toHaveLength(13);
     expect(compressors).toHaveLength(1);
 
-    // Compressor squashes peaks so the makeup gain can boost the average level.
+    // Compression is intentionally light now — just enough to smooth overlaps.
     const compressor = compressors[0];
     expect(compressor.threshold.value).toBeCloseTo(-18);
-    expect(compressor.ratio.value).toBeCloseTo(20);
-    expect(compressor.attack.value).toBeCloseTo(0.001);
+    expect(compressor.ratio.value).toBeCloseTo(3);
+    expect(compressor.attack.value).toBeCloseTo(0.01);
 
-    // Master gain (first gain created — before the note loop) provides makeup
-    // gain after compression. .value is set directly, so no ramp methods fire.
+    // Master gain is set directly to half the previous 0.8 level.
     expect(gains[0].gain.linearRampToValueAtTime).not.toHaveBeenCalled();
     expect(gains[0].gain.exponentialRampToValueAtTime).not.toHaveBeenCalled();
+    expect(gains[0].gain.value).toBeCloseTo(0.4);
 
     for (const osc of oscillators) {
       expect(osc.start).toHaveBeenCalledTimes(1);
       expect(osc.stop).toHaveBeenCalledTimes(1);
     }
 
-    // Fundamentals (indices 0, 3, 6): sawtooth for maximum perceived loudness.
-    expect(oscillators[0].type).toBe("sawtooth");
-    expect(oscillators[3].type).toBe("sawtooth");
-    expect(oscillators[6].type).toBe("sawtooth");
-
-    // Overtones use triangle for bell-like sparkle without harshness.
-    expect(oscillators[1].type).toBe("triangle");
+    // Fundamentals alternate at even indices; overtones sit at odd indices.
+    expect(oscillators[0].type).toBe("triangle");
     expect(oscillators[2].type).toBe("triangle");
+    expect(oscillators[10].type).toBe("triangle");
 
-    // Fundamentals form the G5 → E5 → C5 NBC chime, an octave up.
-    expect(oscillators[0].frequency.value).toBeCloseTo(783.99);
-    expect(oscillators[3].frequency.value).toBeCloseTo(659.25);
-    expect(oscillators[6].frequency.value).toBeCloseTo(523.25);
+    // Overtones are sine to keep the cue soft.
+    expect(oscillators[1].type).toBe("sine");
+    expect(oscillators[11].type).toBe("sine");
 
-    // Octave overtones (indices 1, 4, 7) are 2× the fundamental.
-    expect(oscillators[1].frequency.value).toBeCloseTo(783.99 * 2);
-    expect(oscillators[4].frequency.value).toBeCloseTo(659.25 * 2);
-    expect(oscillators[7].frequency.value).toBeCloseTo(523.25 * 2);
+    // Melody fundamentals follow E5 → E5 → F5 → G5 → G5 → F5.
+    expect(oscillators[0].frequency.value).toBeCloseTo(659.25);
+    expect(oscillators[2].frequency.value).toBeCloseTo(659.25);
+    expect(oscillators[4].frequency.value).toBeCloseTo(698.46);
+    expect(oscillators[6].frequency.value).toBeCloseTo(783.99);
+    expect(oscillators[8].frequency.value).toBeCloseTo(783.99);
+    expect(oscillators[10].frequency.value).toBeCloseTo(698.46);
 
-    // Fifth overtones (indices 2, 5, 8) are 3× the fundamental.
-    expect(oscillators[2].frequency.value).toBeCloseTo(783.99 * 3);
-    expect(oscillators[5].frequency.value).toBeCloseTo(659.25 * 3);
-    expect(oscillators[8].frequency.value).toBeCloseTo(523.25 * 3);
+    // Octave overtones are 2× the fundamentals.
+    expect(oscillators[1].frequency.value).toBeCloseTo(659.25 * 2);
+    expect(oscillators[3].frequency.value).toBeCloseTo(659.25 * 2);
+    expect(oscillators[5].frequency.value).toBeCloseTo(698.46 * 2);
+    expect(oscillators[7].frequency.value).toBeCloseTo(783.99 * 2);
+    expect(oscillators[9].frequency.value).toBeCloseTo(783.99 * 2);
+    expect(oscillators[11].frequency.value).toBeCloseTo(698.46 * 2);
 
-    // Per-note gains (skip master at index 0): 0.45 / 0.22 / 0.1.
+    // Per-note gains (skip master at index 0): 0.32 / 0.08.
     const peaks = gains
       .slice(1)
       .map((g) => g.gain.linearRampToValueAtTime.mock.calls[0]?.[0]);
-    for (let i = 0; i < 3; i++) {
-      expect(peaks[i * 3]).toBeCloseTo(0.45);
-      expect(peaks[i * 3 + 1]).toBeCloseTo(0.22);
-      expect(peaks[i * 3 + 2]).toBeCloseTo(0.1);
+    for (let i = 0; i < 6; i++) {
+      expect(peaks[i * 2]).toBeCloseTo(0.32);
+      expect(peaks[i * 2 + 1]).toBeCloseTo(0.08);
     }
   });
 
@@ -189,7 +191,7 @@ describe("playCompletionChime", () => {
     playCompletionChime();
 
     expect(ctx.resume).toHaveBeenCalledTimes(1);
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(9);
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(12);
   });
 
   it("reuses a single AudioContext across multiple chimes", () => {
@@ -202,6 +204,6 @@ describe("playCompletionChime", () => {
     playCompletionChime();
 
     expect(Ctor).toHaveBeenCalledTimes(1);
-    expect(ctx.createOscillator).toHaveBeenCalledTimes(27);
+    expect(ctx.createOscillator).toHaveBeenCalledTimes(36);
   });
 });
