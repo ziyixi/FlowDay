@@ -104,3 +104,27 @@ test("[UI-012] @portrait portrait wizard flow keeps controls readable and tappab
   expect(startButtonBox!.width).toBeGreaterThanOrEqual(28);
   expect(startButtonBox!.height).toBeGreaterThanOrEqual(28);
 });
+
+test("[UI-022] Start Your Day no longer rolls yesterday into today automatically", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "wizard-with-yesterday-incomplete");
+  await openApp(page);
+
+  await expect(page.getByText("Start Your Day")).toBeVisible();
+  await expect(page.getByText("Add tasks to your day")).toBeVisible();
+  await expect(page.getByRole("button", { name: /Roll Over/i })).toHaveCount(0);
+  await expect(page.getByText(/unfinished task.*yesterday/i)).toHaveCount(0);
+
+  await page.getByTestId("planning-add-task-wizard-task-1").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Continue" }).click();
+  await page.getByRole("button", { name: "Start My Day" }).click();
+
+  await expect(flowCard(page, "Review roadmap")).toBeVisible();
+  await expect(flowCard(page, "Yesterday carryover")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Previous day" }).click();
+  await expect(flowCard(page, "Yesterday carryover")).toBeVisible();
+});

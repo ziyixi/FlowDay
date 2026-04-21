@@ -1,9 +1,9 @@
 import { create } from "zustand";
-import { isBefore, startOfDay } from "date-fns";
 import type { Task } from "@/lib/types/task";
-import { useCurrentFlowTaskIds, useCurrentCompletedTaskIds, useFlowStore } from "./flow-store";
+import { useFlowStore } from "./flow-store";
 import { useTimerStore } from "./timer-store";
 import { formatLocalDate } from "@/lib/utils/time";
+import { partitionTasksByDueDate } from "@/lib/utils/task-sections";
 
 interface TodoistState {
   tasks: Task[];
@@ -178,17 +178,22 @@ export const useTodoistStore = create<TodoistState>()((set, get) => ({
 }));
 
 interface TaskSections {
-  today: Task[];
+  dueOnDate: Task[];
   overdue: Task[];
 }
 
-export function useTaskSections(): TaskSections {
+const EMPTY_IDS: string[] = [];
+
+export function useTaskSections(date?: string): TaskSections {
   const tasks = useTodoistStore((s) => s.tasks);
   const searchQuery = useTodoistStore((s) => s.searchQuery);
-  const flowTaskIds = useCurrentFlowTaskIds();
-  const completedTaskIds = useCurrentCompletedTaskIds();
+  const currentDate = useFlowStore((s) => s.currentDate);
+  const targetDate = date ?? currentDate;
+  const flowTaskIds = useFlowStore((s) => s.flows[targetDate] ?? EMPTY_IDS);
+  const completedTaskIds = useFlowStore(
+    (s) => s.completedTasks[targetDate] ?? EMPTY_IDS
+  );
 
-  const todayStart = startOfDay(new Date());
   const query = searchQuery.toLowerCase().trim();
   const inFlow = new Set([...flowTaskIds, ...completedTaskIds]);
 
@@ -203,22 +208,7 @@ export function useTaskSections(): TaskSections {
     );
   });
 
-  const today: Task[] = [];
-  const overdue: Task[] = [];
-  const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
-
-  for (const task of filtered) {
-    if (!task.dueDate) continue;
-    const due = new Date(task.dueDate + "T00:00:00");
-    if (isBefore(due, todayStart)) {
-      overdue.push(task);
-    } else if (isBefore(due, tomorrowStart)) {
-      today.push(task);
-    }
-    // Future-dated tasks: skip — they'll reappear when their date arrives
-  }
-
-  return { today, overdue };
+  return partitionTasksByDueDate(filtered, targetDate);
 }
 
 export function useTaskById(id: string): Task | undefined {

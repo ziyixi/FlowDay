@@ -10,9 +10,18 @@ function formatDate(date: Date): string {
 const todayDate = new Date();
 const yesterdayDate = new Date(todayDate);
 yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+const tomorrowDate = new Date(todayDate);
+tomorrowDate.setDate(tomorrowDate.getDate() + 1);
+const inTwoDaysDate = new Date(todayDate);
+inTwoDaysDate.setDate(inTwoDaysDate.getDate() + 2);
+const inThreeDaysDate = new Date(todayDate);
+inThreeDaysDate.setDate(inThreeDaysDate.getDate() + 3);
 
 export const TODAY = formatDate(todayDate);
 export const YESTERDAY = formatDate(yesterdayDate);
+export const TOMORROW = formatDate(tomorrowDate);
+export const IN_TWO_DAYS = formatDate(inTwoDaysDate);
+export const IN_THREE_DAYS = formatDate(inThreeDaysDate);
 export const FIXED_TIME_ISO = `${TODAY}T09:00:00.000Z`;
 
 interface SeedPayload {
@@ -50,8 +59,10 @@ interface SeedPayload {
 export type SeedName =
   | "shell-empty"
   | "wizard-today-tasks"
+  | "wizard-with-yesterday-incomplete"
   | "single-flow-task"
   | "single-flow-task-with-history"
+  | "future-dated-pool"
   | "two-flow-tasks"
   | "analytics-seeded"
   | "todoist-overdue";
@@ -101,6 +112,25 @@ function buildSeed(name: SeedName): SeedPayload {
         },
       };
 
+    case "wizard-with-yesterday-incomplete":
+      return {
+        tasks: [
+          localTask("yesterday-task-1", "Yesterday carryover", {
+            dueDate: YESTERDAY,
+          }),
+          localTask("wizard-task-1", "Review roadmap", {
+            estimatedMins: 30,
+            priority: 3,
+          }),
+        ],
+        flows: {
+          [YESTERDAY]: ["yesterday-task-1"],
+        },
+        settings: {
+          day_capacity_mins: 360,
+        },
+      };
+
     case "single-flow-task":
       return {
         tasks: [
@@ -138,6 +168,24 @@ function buildSeed(name: SeedName): SeedPayload {
             durationS: 120,
             source: "timer",
           },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "future-dated-pool":
+      return {
+        tasks: [
+          localTask("future-task-2", "Plan for two days later", {
+            dueDate: IN_TWO_DAYS,
+            estimatedMins: 45,
+          }),
+          localTask("future-task-3", "Plan for three days later", {
+            dueDate: IN_THREE_DAYS,
+            estimatedMins: 60,
+          }),
         ],
         settings: {
           [`planning_completed:${TODAY}`]: true,
@@ -278,6 +326,10 @@ export async function simulateIdleAway(page: Page, secondsAgo: number) {
 export async function openApp(page: Page) {
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "FlowDay" })).toBeVisible();
+  const idlePromptDismiss = page.getByTitle("Not now");
+  if (await idlePromptDismiss.count()) {
+    await idlePromptDismiss.click();
+  }
 }
 
 export function flowCard(page: Page, title: string): Locator {

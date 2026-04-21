@@ -10,7 +10,6 @@ import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { FlowTaskCard } from "./flow-task-card";
 import { ProgressBar } from "./progress-bar";
-import { RolloverPrompt } from "./rollover-prompt";
 import { PlanningWizard } from "./planning-wizard";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -265,9 +264,6 @@ function EditableDayFlow({
             isDropTarget ? "border-primary/40 bg-primary/5" : "border-transparent"
           )}
         >
-          <div className="px-6 pt-4">
-            <RolloverPrompt date={date} />
-          </div>
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
               <h2 className="text-lg font-medium text-foreground/80">
@@ -296,9 +292,6 @@ function EditableDayFlow({
   return (
     <div className="flex flex-1 flex-col">
       <div ref={dropRef} className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="mx-auto max-w-2xl">
-          <RolloverPrompt date={date} />
-        </div>
         <div className="mx-auto max-w-2xl space-y-2">
           {flowTasks.map((task, index) => (
             <FlowTaskCard

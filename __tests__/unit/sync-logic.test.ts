@@ -5,6 +5,7 @@ import {
   softDeleteTask,
   getDeletedTasks,
 } from "@/lib/db/queries";
+import { partitionTasksByDueDate } from "@/lib/utils/task-sections";
 import type { Task } from "@/lib/types/task";
 
 /**
@@ -93,49 +94,27 @@ describe("upsertTasks — dueDate updates", () => {
 });
 
 describe("task section categorisation", () => {
-  // These test the filtering logic inline since useTaskSections uses React hooks
-  // and can't be called directly. We test the core logic instead.
-
-  function categorise(tasks: { dueDate: string | null }[], todayStr: string) {
-    const todayStart = new Date(todayStr + "T00:00:00");
-    const tomorrowStart = new Date(todayStart.getTime() + 86_400_000);
-    const today: typeof tasks = [];
-    const overdue: typeof tasks = [];
-
-    for (const task of tasks) {
-      if (!task.dueDate) continue;
-      const due = new Date(task.dueDate + "T00:00:00");
-      if (due < todayStart) {
-        overdue.push(task);
-      } else if (due < tomorrowStart) {
-        today.push(task);
-      }
-      // future and no-date: skip
-    }
-    return { today, overdue };
-  }
-
   it("puts task due today in today", () => {
-    const result = categorise([{ dueDate: "2026-04-16" }], "2026-04-16");
-    expect(result.today).toHaveLength(1);
+    const result = partitionTasksByDueDate([{ dueDate: "2026-04-16" }], "2026-04-16");
+    expect(result.dueOnDate).toHaveLength(1);
     expect(result.overdue).toHaveLength(0);
   });
 
   it("puts task due yesterday in overdue", () => {
-    const result = categorise([{ dueDate: "2026-04-15" }], "2026-04-16");
-    expect(result.today).toHaveLength(0);
+    const result = partitionTasksByDueDate([{ dueDate: "2026-04-15" }], "2026-04-16");
+    expect(result.dueOnDate).toHaveLength(0);
     expect(result.overdue).toHaveLength(1);
   });
 
   it("skips future-dated tasks", () => {
-    const result = categorise([{ dueDate: "2026-04-20" }], "2026-04-16");
-    expect(result.today).toHaveLength(0);
+    const result = partitionTasksByDueDate([{ dueDate: "2026-04-20" }], "2026-04-16");
+    expect(result.dueOnDate).toHaveLength(0);
     expect(result.overdue).toHaveLength(0);
   });
 
   it("hides tasks with no dueDate", () => {
-    const result = categorise([{ dueDate: null }], "2026-04-16");
-    expect(result.today).toHaveLength(0);
+    const result = partitionTasksByDueDate([{ dueDate: null }], "2026-04-16");
+    expect(result.dueOnDate).toHaveLength(0);
     expect(result.overdue).toHaveLength(0);
   });
 
@@ -146,8 +125,19 @@ describe("task section categorisation", () => {
       { dueDate: "2026-04-20" }, // future — skipped
       { dueDate: null },          // no date — skipped
     ];
-    const result = categorise(tasks, "2026-04-16");
+    const result = partitionTasksByDueDate(tasks, "2026-04-16");
     expect(result.overdue).toHaveLength(1);
-    expect(result.today).toHaveLength(1);
+    expect(result.dueOnDate).toHaveLength(1);
+  });
+
+  it("uses the selected future planning date as the anchor", () => {
+    const tasks = [
+      { dueDate: "2026-04-18" }, // selected date
+      { dueDate: "2026-04-17" }, // overdue relative to selected date
+      { dueDate: "2026-04-19" }, // still future
+    ];
+    const result = partitionTasksByDueDate(tasks, "2026-04-18");
+    expect(result.dueOnDate).toHaveLength(1);
+    expect(result.overdue).toHaveLength(1);
   });
 });

@@ -1,12 +1,10 @@
 "use client";
 
-import { useState, useMemo } from "react";
-import { format, subDays } from "date-fns";
+import { useState } from "react";
 import {
   Sunrise,
   Plus,
   Check,
-  ArrowRight,
   AlertTriangle,
   X,
   Minus,
@@ -14,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useFlowStore, useFlowTasksForDate } from "@/lib/stores/flow-store";
-import { useTodoistStore, useTaskSections } from "@/lib/stores/todoist-store";
+import { useTaskSections } from "@/lib/stores/todoist-store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { formatDuration } from "@/lib/utils/time";
@@ -27,46 +25,22 @@ interface PlanningWizardProps {
   onComplete: () => void;
 }
 
+const STEPS = [
+  { id: "add", label: "Add Tasks" },
+  { id: "review", label: "Review" },
+  { id: "confirm", label: "Ready" },
+] as const;
+
 export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardProps) {
-  const flows = useFlowStore((s) => s.flows);
-  const completedTasks = useFlowStore((s) => s.completedTasks);
-  const rolloverSelectedTasks = useFlowStore((s) => s.rolloverSelectedTasks);
   const setPlanningCompleted = useFlowStore((s) => s.setPlanningCompleted);
   const addTask = useFlowStore((s) => s.addTask);
   const removeTask = useFlowStore((s) => s.removeTask);
-  const tasks = useTodoistStore((s) => s.tasks);
   const flowTasks = useFlowTasksForDate(date);
-  const { today: todayTasks, overdue: overdueTasks } = useTaskSections();
+  const { dueOnDate, overdue } = useTaskSections(date);
   const capacityMins = useFlowStore((s) => s.dayCapacityMins);
 
-  // Yesterday's incomplete tasks
-  const yesterday = format(subDays(new Date(date + "T00:00:00"), 1), "yyyy-MM-dd");
-  const yesterdayFlow = flows[yesterday] ?? [];
-  const yesterdayCompleted = new Set(completedTasks[yesterday] ?? []);
-  const incompleteIds = yesterdayFlow.filter((id) => !yesterdayCompleted.has(id));
-  const incompleteTaskObjects = incompleteIds
-    .map((id) => tasks.find((t) => t.id === id))
-    .filter((t): t is Task => t != null);
-  const hasRollover = incompleteTaskObjects.length > 0;
-
-  // Dynamic steps
-  const steps = useMemo(() => {
-    const s: { id: string; label: string }[] = [];
-    if (hasRollover) s.push({ id: "rollover", label: "Roll Over" });
-    s.push({ id: "add", label: "Add Tasks" });
-    s.push({ id: "review", label: "Review" });
-    s.push({ id: "confirm", label: "Ready" });
-    return s;
-  }, [hasRollover]);
-
   const [stepIndex, setStepIndex] = useState(0);
-  const currentStep = steps[stepIndex];
-
-  // Roll-over selection state
-  const [selectedRollover, setSelectedRollover] = useState<Set<string>>(
-    () => new Set(incompleteIds)
-  );
-  const [isRolling, setIsRolling] = useState(false);
+  const currentStep = STEPS[stepIndex];
 
   const handleDismiss = () => {
     setPlanningCompleted(date);
@@ -74,35 +48,16 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
   };
 
   const handleNext = () => {
-    if (stepIndex < steps.length - 1) setStepIndex(stepIndex + 1);
+    if (stepIndex < STEPS.length - 1) setStepIndex((i) => i + 1);
   };
 
   const handleBack = () => {
-    if (stepIndex > 0) setStepIndex(stepIndex - 1);
-  };
-
-  const handleRollover = async () => {
-    const selected = Array.from(selectedRollover);
-    if (selected.length > 0) {
-      setIsRolling(true);
-      await rolloverSelectedTasks(yesterday, date, selected);
-      setIsRolling(false);
-    }
-    handleNext();
+    if (stepIndex > 0) setStepIndex((i) => i - 1);
   };
 
   const handleComplete = () => {
     setPlanningCompleted(date);
     onComplete();
-  };
-
-  const toggleRollover = (taskId: string) => {
-    setSelectedRollover((prev) => {
-      const next = new Set(prev);
-      if (next.has(taskId)) next.delete(taskId);
-      else next.add(taskId);
-      return next;
-    });
   };
 
   // Capacity calculations
@@ -133,7 +88,7 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
 
         {/* Step indicator */}
         <div className="mb-5 flex items-center gap-1">
-          {steps.map((step, i) => (
+          {STEPS.map((step, i) => (
             <div key={step.id} className="flex items-center gap-1">
               {i > 0 && <div className="mx-1 h-px w-6 bg-border" />}
               <div
@@ -166,25 +121,14 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
 
         {/* Step content card */}
         <div className="rounded-lg border border-border bg-card">
-          {currentStep.id === "rollover" && (
-            <StepRollover
-              tasks={incompleteTaskObjects}
-              selected={selectedRollover}
-              onToggle={toggleRollover}
-              onRollover={handleRollover}
-              onSkip={handleNext}
-              isRolling={isRolling}
-            />
-          )}
           {currentStep.id === "add" && (
             <StepAddTasks
-              todayTasks={todayTasks}
-              overdueTasks={overdueTasks}
+              dueOnDateTasks={dueOnDate}
+              overdueTasks={overdue}
               flowCount={flowTasks.length}
               flowTaskIds={new Set(flowTasks.map((t) => t.id))}
               onAdd={(id) => addTask(id, date)}
               onNext={handleNext}
-              onBack={hasRollover ? handleBack : undefined}
             />
           )}
           {currentStep.id === "review" && (
@@ -211,104 +155,24 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
   );
 }
 
-// --- Step 1: Roll Over ---
-
-function StepRollover({
-  tasks,
-  selected,
-  onToggle,
-  onRollover,
-  onSkip,
-  isRolling,
-}: {
-  tasks: Task[];
-  selected: Set<string>;
-  onToggle: (id: string) => void;
-  onRollover: () => void;
-  onSkip: () => void;
-  isRolling: boolean;
-}) {
-  return (
-    <div className="p-5">
-      <p className="text-sm font-medium text-foreground">
-        You have {tasks.length} unfinished task{tasks.length !== 1 ? "s" : ""}{" "}
-        from yesterday
-      </p>
-      <p className="mt-1 text-xs text-muted-foreground">
-        Select which tasks to carry forward to today.
-      </p>
-      <div className="mt-4 max-h-56 space-y-1.5 overflow-y-auto">
-        {tasks.map((task) => {
-          const checked = selected.has(task.id);
-          const priorityColor = PRIORITY_CONFIG[task.priority].color;
-          return (
-            <label
-              key={task.id}
-              className="flex cursor-pointer items-center gap-2.5 rounded-md border border-border px-3 py-2 transition-colors hover:bg-accent/50"
-            >
-              <input
-                type="checkbox"
-                checked={checked}
-                onChange={() => onToggle(task.id)}
-                className="h-3.5 w-3.5 rounded border-border accent-primary"
-              />
-              <span
-                className={cn(
-                  "h-2 w-2 shrink-0 rounded-full",
-                  priorityColor
-                )}
-              />
-              <span className="flex-1 truncate text-sm text-foreground">
-                {task.title}
-              </span>
-              {task.estimatedMins != null && task.estimatedMins > 0 && (
-                <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {formatDuration(task.estimatedMins)}
-                </span>
-              )}
-            </label>
-          );
-        })}
-      </div>
-      <div className="mt-4 flex items-center gap-2">
-        <Button
-          size="sm"
-          onClick={onRollover}
-          disabled={isRolling || selected.size === 0}
-        >
-          <ArrowRight className="mr-1.5 h-3.5 w-3.5" />
-          {isRolling
-            ? "Rolling over…"
-            : `Roll Over ${selected.size} Task${selected.size !== 1 ? "s" : ""}`}
-        </Button>
-        <Button size="sm" variant="ghost" onClick={onSkip}>
-          Skip
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-// --- Step 2: Add Tasks ---
+// --- Step 1: Add Tasks ---
 
 function StepAddTasks({
-  todayTasks,
+  dueOnDateTasks,
   overdueTasks,
   flowCount,
   flowTaskIds,
   onAdd,
   onNext,
-  onBack,
 }: {
-  todayTasks: Task[];
+  dueOnDateTasks: Task[];
   overdueTasks: Task[];
   flowCount: number;
   flowTaskIds: Set<string>;
   onAdd: (id: string) => void;
   onNext: () => void;
-  onBack?: () => void;
 }) {
-  const available = [...overdueTasks, ...todayTasks];
+  const available = [...overdueTasks, ...dueOnDateTasks];
   const unadded = available.filter((t) => !flowTaskIds.has(t.id));
   const handleAddAll = () => {
     for (const task of unadded) onAdd(task.id);
@@ -395,11 +259,6 @@ function StepAddTasks({
           {flowCount} task{flowCount !== 1 ? "s" : ""} in flow
         </span>
         <div className="flex items-center gap-2">
-          {onBack && (
-            <Button size="sm" variant="ghost" onClick={onBack}>
-              Back
-            </Button>
-          )}
           <Button size="sm" onClick={onNext}>
             Continue
             <ChevronRight className="ml-1 h-3.5 w-3.5" />

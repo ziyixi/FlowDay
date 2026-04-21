@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { ChevronRight, Check } from "lucide-react";
 import { useTaskSections } from "@/lib/stores/todoist-store";
 import { useFlowStore, useFlowTasksForDate, useCompletedTasksForDate } from "@/lib/stores/flow-store";
@@ -42,11 +43,15 @@ function useLoggedByTaskForDate(date: string): Record<string, number> {
 }
 
 export function TaskPool() {
-  const { today, overdue } = useTaskSections();
   const currentDate = useFlowStore((s) => s.currentDate);
+  const { dueOnDate, overdue } = useTaskSections(currentDate);
   const arrangedTasks = useFlowTasksForDate(currentDate);
   const completedTasks = useCompletedTasksForDate(currentDate);
   const loggedByTask = useLoggedByTaskForDate(currentDate);
+  const dateLabel =
+    currentDate === format(new Date(), "yyyy-MM-dd")
+      ? "Today"
+      : format(new Date(currentDate + "T00:00:00"), "EEE, MMM d");
 
   return (
     <div className="space-y-1">
@@ -77,7 +82,7 @@ export function TaskPool() {
           accentClass="text-destructive"
         />
       )}
-      <TaskPoolSection title="Today" tasks={today} defaultOpen />
+      <TaskPoolSection title={dateLabel} tasks={dueOnDate} defaultOpen />
     </div>
   );
 }

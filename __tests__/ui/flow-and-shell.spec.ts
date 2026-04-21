@@ -194,3 +194,31 @@ test("[UI-011] Settings, export, and analytics dialogs smoke test", async ({
   await page.getByRole("button", { name: "Work Patterns" }).click();
   await expect(page.getByText("Peak Work Hours")).toBeVisible();
 });
+
+test("[UI-023] Future task pool follows the selected planning date", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "future-dated-pool");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Next day" }).click();
+  await page.getByRole("button", { name: "Next day" }).click();
+
+  await expect(taskPoolCard(page, "Plan for two days later")).toBeVisible();
+  await expect(taskPoolCard(page, "Plan for three days later")).toHaveCount(0);
+
+  await dragTaskToEmptyFlow(page, "Plan for two days later");
+  await expect(flowCard(page, "Plan for two days later")).toBeVisible();
+
+  await page.getByRole("button", { name: "Next day" }).click();
+
+  await expect(taskPoolCard(page, "Plan for three days later")).toBeVisible();
+
+  await dragTaskToEmptyFlow(page, "Plan for three days later");
+  await expect(flowCard(page, "Plan for three days later")).toBeVisible();
+
+  await page.getByRole("button", { name: "Previous day" }).click();
+  await expect(flowCard(page, "Plan for two days later")).toBeVisible();
+  await expect(flowCard(page, "Plan for three days later")).toHaveCount(0);
+});
