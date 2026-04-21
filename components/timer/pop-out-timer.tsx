@@ -2,18 +2,21 @@
 
 import { useEffect } from "react";
 import { createPortal } from "react-dom";
-import { Check, Pause, PictureInPicture2, Play } from "lucide-react";
+import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore, useFlowTasksForDate } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
+import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { cn } from "@/lib/utils";
 
 export function PopOutTimerButton() {
   const pipWindow = usePopOutStore((s) => s.pipWindow);
   const container = usePopOutStore((s) => s.container);
   const open = usePopOutStore((s) => s.open);
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
+  const pomodoroFinishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
 
   const supported =
     typeof window !== "undefined" && "documentPictureInPicture" in window;
@@ -34,17 +37,23 @@ export function PopOutTimerButton() {
     return () => observer.disconnect();
   }, [pipWindow]);
 
-  if (!supported || !activeTaskId) return null;
+  if (!supported) return null;
+  // Keep the portal mounted while a pomodoro-finished marker is set so the
+  // "restart or complete" panel stays visible after the timer drops to idle.
+  const hasActivity = Boolean(activeTaskId) || Boolean(pomodoroFinishedTaskId);
+  if (!hasActivity) return null;
 
   return (
     <>
-      <button
-        onClick={() => void open()}
-        title="Pop out timer"
-        className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
-      >
-        <PictureInPicture2 className="h-3 w-3" />
-      </button>
+      {activeTaskId && (
+        <button
+          onClick={() => void open()}
+          title="Pop out timer"
+          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+        >
+          <PictureInPicture2 className="h-3 w-3" />
+        </button>
+      )}
       {pipWindow && container && createPortal(<PipTimerContent />, container)}
     </>
   );
@@ -61,6 +70,8 @@ function PipTimerContent() {
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
   const stopAndSave = useTimerStore((s) => s.stopAndSave);
   const startTimer = useTimerStore((s) => s.startTimer);
+  const pomodoroFinishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
+
   const completeTask = useFlowStore((s) => s.completeTask);
   const currentDate = useFlowStore((s) => s.currentDate);
   const task = useTaskById(activeTaskId ?? "");
@@ -68,6 +79,12 @@ function PipTimerContent() {
   const flowDate = activeFlowDate ?? currentDate;
   const flowTasks = useFlowTasksForDate(flowDate);
   const nextTask = flowTasks.find((t) => t.id !== activeTaskId);
+
+  // A pomodoro just hit zero — surface a restart/complete panel so the user
+  // doesn't land on a bare "Up next" screen for the task they were just working on.
+  if (pomodoroFinishedTaskId) {
+    return <PomodoroFinishedPanel />;
+  }
 
   // Idle: surface the next queued task as the new "current" with a Start button.
   if (!activeTaskId || !task) {
@@ -184,6 +201,86 @@ function PipTimerContent() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function PomodoroFinishedPanel() {
+  const finishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
+  const finishedFlowDate = useTimerStore((s) => s.pomodoroFinishedFlowDate);
+  const startPomodoro = useTimerStore((s) => s.startPomodoro);
+  const dismiss = useTimerStore((s) => s.dismissPomodoroFinished);
+  const completeTask = useFlowStore((s) => s.completeTask);
+  const task = useTaskById(finishedTaskId ?? "");
+
+  if (!finishedTaskId || !finishedFlowDate) return null;
+
+  const presets = buildPomodoroPresets(task?.estimatedMins);
+
+  const handleRestart = (mins: number) => {
+    dismiss();
+    void startPomodoro(finishedTaskId, finishedFlowDate, mins * 60);
+  };
+
+  const handleComplete = () => {
+    completeTask(finishedTaskId, finishedFlowDate);
+    dismiss();
+  };
+
+  return (
+    <div className="flex h-full flex-col gap-2 p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1.5">
+          <Check className="h-3.5 w-3.5 text-primary" />
+          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            Pomodoro done
+          </span>
+        </div>
+        <button
+          onClick={dismiss}
+          title="Dismiss"
+          className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <X className="h-3 w-3" />
+        </button>
+      </div>
+
+      <div
+        className="truncate text-sm font-medium text-foreground"
+        title={task?.title ?? ""}
+      >
+        {task?.title ?? "Task"}
+      </div>
+
+      <div className="grid grid-cols-3 gap-1">
+        {presets.map((preset) => (
+          <button
+            key={preset.mins}
+            onClick={() => handleRestart(preset.mins)}
+            title={
+              preset.suggested
+                ? `Restart · matches estimate (${preset.label})`
+                : `Restart ${preset.label}`
+            }
+            className={cn(
+              "rounded-md px-1.5 py-1 text-xs font-medium transition-colors",
+              preset.suggested
+                ? "bg-primary/15 text-primary ring-1 ring-primary/30 hover:bg-primary/25"
+                : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            {preset.label}
+          </button>
+        ))}
+      </div>
+
+      <button
+        onClick={handleComplete}
+        className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-green-500/20 hover:text-green-600"
+      >
+        <Check className="h-3 w-3" />
+        Complete &amp; next
+      </button>
     </div>
   );
 }

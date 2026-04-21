@@ -26,6 +26,7 @@ declare global {
         status: "idle" | "running" | "paused";
         timerMode: "countup" | "pomodoro";
         displaySeconds: number;
+        pomodoroFinishedTaskId: string | null;
       };
       getChimeCount: () => number;
       resetChimeCount: () => void;
@@ -64,6 +65,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
           status: state.status,
           timerMode: state.timerMode,
           displaySeconds: state.displaySeconds,
+          pomodoroFinishedTaskId: state.pomodoroFinishedTaskId,
         };
       },
       getChimeCount: () => _getChimeCount(),

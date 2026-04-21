@@ -134,6 +134,64 @@ test("[UI-014] Pomodoro completion fires a single chime", async ({
   expect(await getChimeCount(page)).toBe(1);
 });
 
+test("[UI-018] Task estimate is offered as the first Pomodoro preset", async ({
+  page,
+  request,
+}) => {
+  // single-flow-task seeds the card with estimatedMins=45.
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+
+  const presets = page.locator('[data-testid="pomodoro-preset"]');
+  await expect(presets.first()).toHaveAttribute("data-suggested", "true");
+  await expect(presets.first()).toHaveText("45m");
+
+  // No duplicate preset — the base 45m entry should be filtered out in favor
+  // of the suggested one so the grid stays at 6 buttons.
+  await expect(presets).toHaveCount(6);
+  await expect(presets.filter({ hasText: /^45m$/ })).toHaveCount(1);
+
+  // The suggested preset must still be functional — clicking it launches a
+  // 45-minute pomodoro like any other preset.
+  await presets.first().click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 45m")).toBeVisible();
+});
+
+test("[UI-019] Pomodoro completion surfaces a finished marker for the pop-out", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+  await page.getByRole("button", { name: "30m", exact: true }).click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 30m")).toBeVisible();
+
+  await setRunningTimerElapsed(page, 30 * 60);
+
+  // Active timer wound down, but the finished marker must capture the task so
+  // the pop-out panel can offer restart/complete instead of a bare idle view.
+  await expect
+    .poll(async () => (await getTimerState(page))?.pomodoroFinishedTaskId ?? null)
+    .toBe("flow-task-1");
+  await expect
+    .poll(async () => (await getTimerState(page))?.activeTaskId ?? null)
+    .toBeNull();
+
+  // Starting a fresh count-up timer must clear the finished marker so the
+  // panel doesn't linger stale.
+  await card.getByRole("button", { name: "Start timer" }).click();
+  await expect(card.getByRole("button", { name: "Pause timer" })).toBeVisible();
+  await expect
+    .poll(async () => (await getTimerState(page))?.pomodoroFinishedTaskId ?? null)
+    .toBeNull();
+});
+
 test("[UI-015] Auto-idle pause backdates the segment to drop the away period", async ({
   page,
   request,

@@ -16,6 +16,9 @@ function resetTimerStore() {
     priorSeconds: 0,
     displaySeconds: 0,
     entryRevision: 0,
+    pomodoroFinishedTaskId: null,
+    pomodoroFinishedFlowDate: null,
+    pomodoroFinishedTargetSeconds: null,
   });
 }
 
@@ -170,6 +173,82 @@ describe("timer store", () => {
     // Idempotence guard: extra ticks after completion must not double-fire.
     await vi.advanceTimersByTimeAsync(3000);
     expect(_getChimeCount()).toBe(1);
+  });
+
+  it("marks the finished-pomodoro slot when the timer hits zero, and clears it on next start", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      if (url.startsWith("/api/entries?taskId=") && method === "GET") {
+        return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url === "/api/entries" && method === "POST") {
+        return new Response(JSON.stringify({ id: "x" }), { status: 201, headers: { "Content-Type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useTimerStore.getState().startPomodoro("task-1", "2026-04-21", 4);
+    await vi.advanceTimersByTimeAsync(4000);
+
+    let state = useTimerStore.getState();
+    // Active timer is gone, but the finished marker captures what just ended so
+    // the pop-out can offer restart/complete instead of a bare idle screen.
+    expect(state.activeTaskId).toBeNull();
+    expect(state.status).toBe("idle");
+    expect(state.pomodoroFinishedTaskId).toBe("task-1");
+    expect(state.pomodoroFinishedFlowDate).toBe("2026-04-21");
+    expect(state.pomodoroFinishedTargetSeconds).toBe(4);
+
+    // Starting a new count-up timer clears the finished marker so the UI
+    // doesn't double-render a stale "pomodoro done" panel.
+    await useTimerStore.getState().startTimer("task-2", "2026-04-21");
+    state = useTimerStore.getState();
+    expect(state.pomodoroFinishedTaskId).toBeNull();
+    expect(state.pomodoroFinishedFlowDate).toBeNull();
+    expect(state.pomodoroFinishedTargetSeconds).toBeNull();
+  });
+
+  it("clears the finished-pomodoro slot on restart via startPomodoro", async () => {
+    const fetchMock = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      if (url.startsWith("/api/entries?taskId=") && method === "GET") {
+        return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+      }
+      if (url === "/api/entries" && method === "POST") {
+        return new Response(JSON.stringify({ id: "x" }), { status: 201, headers: { "Content-Type": "application/json" } });
+      }
+      throw new Error(`Unexpected fetch: ${method} ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    await useTimerStore.getState().startPomodoro("task-1", "2026-04-21", 3);
+    await vi.advanceTimersByTimeAsync(3000);
+    expect(useTimerStore.getState().pomodoroFinishedTaskId).toBe("task-1");
+
+    await useTimerStore.getState().startPomodoro("task-1", "2026-04-21", 60);
+    const state = useTimerStore.getState();
+    expect(state.pomodoroFinishedTaskId).toBeNull();
+    expect(state.activeTaskId).toBe("task-1");
+    expect(state.timerMode).toBe("pomodoro");
+  });
+
+  it("dismissPomodoroFinished clears the marker without touching the active timer", async () => {
+    useTimerStore.setState({
+      pomodoroFinishedTaskId: "task-1",
+      pomodoroFinishedFlowDate: "2026-04-21",
+      pomodoroFinishedTargetSeconds: 60,
+    });
+    useTimerStore.getState().dismissPomodoroFinished();
+    const state = useTimerStore.getState();
+    expect(state.pomodoroFinishedTaskId).toBeNull();
+    expect(state.pomodoroFinishedFlowDate).toBeNull();
+    expect(state.pomodoroFinishedTargetSeconds).toBeNull();
+    // No timer was running — status must remain idle.
+    expect(state.status).toBe("idle");
+    expect(state.activeTaskId).toBeNull();
   });
 
   it("does not chime for count-up timers regardless of elapsed time", async () => {

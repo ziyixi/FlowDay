@@ -24,6 +24,14 @@ interface TimerState {
   // Monotonic counter bumped when entries are persisted
   entryRevision: number;
 
+  // Transient marker set when a pomodoro hits zero so the pop-out can render a
+  // "restart or complete" panel instead of falling back to the generic idle view.
+  // Cleared by any explicit user action (start new timer, restart pomodoro,
+  // complete, or dismiss).
+  pomodoroFinishedTaskId: string | null;
+  pomodoroFinishedFlowDate: string | null;
+  pomodoroFinishedTargetSeconds: number | null;
+
   startTimer: (taskId: string, flowDate: string) => Promise<void>;
   startPomodoro: (
     taskId: string,
@@ -34,6 +42,7 @@ interface TimerState {
   resumeTimer: () => void;
   stopAndSave: () => Promise<void>;
   stopWithoutSaving: () => void;
+  dismissPomodoroFinished: () => void;
   tick: () => void;
 }
 
@@ -142,12 +151,16 @@ async function fetchPriorSeconds(taskId: string): Promise<number> {
 function resetState(): Omit<
   TimerState,
   | "entryRevision"
+  | "pomodoroFinishedTaskId"
+  | "pomodoroFinishedFlowDate"
+  | "pomodoroFinishedTargetSeconds"
   | "startTimer"
   | "startPomodoro"
   | "pauseTimer"
   | "resumeTimer"
   | "stopAndSave"
   | "stopWithoutSaving"
+  | "dismissPomodoroFinished"
   | "tick"
 > {
   return {
@@ -176,6 +189,9 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
   priorSeconds: 0,
   displaySeconds: 0,
   entryRevision: 0,
+  pomodoroFinishedTaskId: null,
+  pomodoroFinishedFlowDate: null,
+  pomodoroFinishedTargetSeconds: null,
 
   startTimer: async (taskId, flowDate) => {
     const state = get();
@@ -206,6 +222,9 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       sessionSavedSeconds: 0,
       priorSeconds: prior,
       displaySeconds: prior,
+      pomodoroFinishedTaskId: null,
+      pomodoroFinishedFlowDate: null,
+      pomodoroFinishedTargetSeconds: null,
     });
 
     startTickInterval(() => get().tick());
@@ -246,9 +265,20 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       sessionSavedSeconds: 0,
       priorSeconds: prior,
       displaySeconds: targetSeconds,
+      pomodoroFinishedTaskId: null,
+      pomodoroFinishedFlowDate: null,
+      pomodoroFinishedTargetSeconds: null,
     });
 
     startTickInterval(() => get().tick());
+  },
+
+  dismissPomodoroFinished: () => {
+    set({
+      pomodoroFinishedTaskId: null,
+      pomodoroFinishedFlowDate: null,
+      pomodoroFinishedTargetSeconds: null,
+    });
   },
 
   pauseTimer: async (effectiveStopMs) => {
@@ -339,6 +369,9 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
           (state.pomodoroTargetSeconds ?? 0) - state.sessionSavedSeconds,
           0
         );
+        const finishedTaskId = state.activeTaskId;
+        const finishedFlowDate = state.activeFlowDate;
+        const finishedTarget = state.pomodoroTargetSeconds;
 
         void (async () => {
           if (segSecondsToSave > 0) {
@@ -349,6 +382,9 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
             ...resetState(),
             entryRevision:
               prev.entryRevision + (segSecondsToSave > 0 ? 1 : 0),
+            pomodoroFinishedTaskId: finishedTaskId,
+            pomodoroFinishedFlowDate: finishedFlowDate,
+            pomodoroFinishedTargetSeconds: finishedTarget,
           }));
         })();
         return;

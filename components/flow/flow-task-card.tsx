@@ -264,7 +264,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               <Play className="h-3.5 w-3.5" />
             )}
           </button>
-          <PomodoroPicker taskId={task.id} flowDate={date} />
+          <PomodoroPicker taskId={task.id} flowDate={date} estimatedMins={task.estimatedMins} />
           <ManualEntry taskId={task.id} flowDate={date} onEntriesChanged={onEntriesChanged} />
           <button
             className={cn(
