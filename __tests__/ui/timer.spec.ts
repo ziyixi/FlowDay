@@ -192,6 +192,43 @@ test("[UI-019] Pomodoro completion surfaces a finished marker for the pop-out", 
     .toBeNull();
 });
 
+test("[UI-020] reload restores running pomodoro", async ({ page, request }) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+  await page.getByRole("button", { name: "30m", exact: true }).click();
+
+  await expect
+    .poll(async () => (await getTimerState(page))?.status ?? null)
+    .toBe("running");
+
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "FlowDay" })).toBeVisible();
+
+  await expect
+    .poll(async () => {
+      const state = await getTimerState(page);
+      if (!state) return null;
+      return {
+        activeTaskId: state.activeTaskId,
+        status: state.status,
+        timerMode: state.timerMode,
+        pomodoroFinishedTaskId: state.pomodoroFinishedTaskId,
+        displaySecondsInRange:
+          state.displaySeconds <= 30 * 60 && state.displaySeconds >= 29 * 60,
+      };
+    })
+    .toEqual({
+      activeTaskId: "flow-task-1",
+      status: "running",
+      timerMode: "pomodoro",
+      pomodoroFinishedTaskId: null,
+      displaySecondsInRange: true,
+    });
+});
+
 test("[UI-015] Auto-idle pause backdates the segment to drop the away period", async ({
   page,
   request,

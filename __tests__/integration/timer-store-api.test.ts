@@ -17,31 +17,52 @@ function resetTimerStore() {
     priorSeconds: 0,
     displaySeconds: 0,
     entryRevision: 0,
+    pomodoroFinishedTaskId: null,
+    pomodoroFinishedFlowDate: null,
+    pomodoroFinishedTargetSeconds: null,
   });
 }
 
-async function dispatchEntriesFetch(input: string | URL | Request, init?: RequestInit) {
-  const mod = await import("@/app/api/entries/route");
+async function dispatchFlowDayFetch(input: string | URL | Request, init?: RequestInit) {
+  const entriesRoute = await import("@/app/api/entries/route");
+  const timerSessionRoute = await import("@/app/api/timer/session/route");
   const rawUrl = typeof input === "string" ? input : input.toString();
   const url = rawUrl.startsWith("http")
     ? rawUrl
     : `http://localhost:3000${rawUrl}`;
   const method = init?.method ?? "GET";
+  const pathname = new URL(url).pathname;
   const request = new Request(url, {
     method,
     headers: init?.headers,
     body: init?.body,
   });
 
-  if (method === "GET") {
-    return mod.GET(request);
+  if (pathname === "/api/entries") {
+    if (method === "GET") {
+      return entriesRoute.GET(request);
+    }
+
+    if (method === "POST") {
+      return entriesRoute.POST(request);
+    }
   }
 
-  if (method === "POST") {
-    return mod.POST(request);
+  if (pathname === "/api/timer/session") {
+    if (method === "GET") {
+      return timerSessionRoute.GET();
+    }
+
+    if (method === "PUT") {
+      return timerSessionRoute.PUT(request);
+    }
+
+    if (method === "DELETE") {
+      return timerSessionRoute.DELETE();
+    }
   }
 
-  throw new Error(`Unsupported method for test fetch: ${method}`);
+  throw new Error(`Unsupported method for test fetch: ${method} ${pathname}`);
 }
 
 describe("timer store -> entries API integration", () => {
@@ -50,7 +71,7 @@ describe("timer store -> entries API integration", () => {
     vi.setSystemTime(new Date("2026-04-13T09:00:00.000Z"));
     resetTimerStore();
     _resetChime();
-    vi.stubGlobal("fetch", dispatchEntriesFetch as typeof fetch);
+    vi.stubGlobal("fetch", dispatchFlowDayFetch as typeof fetch);
   });
 
   afterEach(() => {

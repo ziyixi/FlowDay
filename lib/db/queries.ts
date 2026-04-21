@@ -1,6 +1,6 @@
 import { eq, or, and, sql, isNull, isNotNull, gte, lte, inArray, notInArray, ne } from "drizzle-orm";
 import { getDb } from "./index";
-import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes } from "./schema";
+import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes, activeTimerSession } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
 
 export interface TimeEntryRow {
@@ -484,4 +484,110 @@ export function getTasksByIds(ids: string[]): Task[] {
 export function getAllTimeEntries(): TimeEntryRow[] {
   const db = getDb();
   return db.select().from(timeEntries).all() as TimeEntryRow[];
+}
+
+// Active-timer session — singleton row keyed by id='main'. Persisted so that a
+// running pomodoro (or count-up session) survives page reloads and can be
+// picked up on a different device.
+
+export type TimerSessionStatus = "idle" | "running" | "paused";
+export type TimerSessionMode = "countup" | "pomodoro";
+
+export interface ActiveTimerSession {
+  taskId: string | null;
+  flowDate: string | null;
+  status: TimerSessionStatus;
+  timerMode: TimerSessionMode;
+  pomodoroTargetS: number | null;
+  segmentWallStart: string | null;
+  sessionSavedS: number;
+  pomodoroFinishedTaskId: string | null;
+  pomodoroFinishedFlowDate: string | null;
+  pomodoroFinishedTargetS: number | null;
+  updatedAt: string | null;
+}
+
+const SINGLETON_ID = "main";
+
+// Returns null when the session is effectively empty (idle + no finished marker).
+// Callers treat "no session" the same as "fresh timer state" on hydration.
+export function getActiveTimerSession(): ActiveTimerSession | null {
+  const db = getDb();
+  const row = db
+    .select()
+    .from(activeTimerSession)
+    .where(eq(activeTimerSession.id, SINGLETON_ID))
+    .get();
+  if (!row) return null;
+
+  const session: ActiveTimerSession = {
+    taskId: row.taskId,
+    flowDate: row.flowDate,
+    status: (row.status as TimerSessionStatus) ?? "idle",
+    timerMode: (row.timerMode as TimerSessionMode) ?? "countup",
+    pomodoroTargetS: row.pomodoroTargetS,
+    segmentWallStart: row.segmentWallStart,
+    sessionSavedS: row.sessionSavedS ?? 0,
+    pomodoroFinishedTaskId: row.pomodoroFinishedTaskId,
+    pomodoroFinishedFlowDate: row.pomodoroFinishedFlowDate,
+    pomodoroFinishedTargetS: row.pomodoroFinishedTargetS,
+    updatedAt: row.updatedAt,
+  };
+
+  // Don't leak an empty/idle row to clients — a stale row with no active task
+  // and no finished marker is indistinguishable from "no session" for the UI.
+  if (
+    session.status === "idle" &&
+    !session.pomodoroFinishedTaskId &&
+    !session.taskId
+  ) {
+    return null;
+  }
+  return session;
+}
+
+export function saveActiveTimerSession(
+  s: Omit<ActiveTimerSession, "updatedAt">
+): void {
+  const db = getDb();
+  const now = new Date().toISOString();
+  db.insert(activeTimerSession)
+    .values({
+      id: SINGLETON_ID,
+      taskId: s.taskId,
+      flowDate: s.flowDate,
+      status: s.status,
+      timerMode: s.timerMode,
+      pomodoroTargetS: s.pomodoroTargetS,
+      segmentWallStart: s.segmentWallStart,
+      sessionSavedS: s.sessionSavedS,
+      pomodoroFinishedTaskId: s.pomodoroFinishedTaskId,
+      pomodoroFinishedFlowDate: s.pomodoroFinishedFlowDate,
+      pomodoroFinishedTargetS: s.pomodoroFinishedTargetS,
+      updatedAt: now,
+    })
+    .onConflictDoUpdate({
+      target: activeTimerSession.id,
+      set: {
+        taskId: s.taskId,
+        flowDate: s.flowDate,
+        status: s.status,
+        timerMode: s.timerMode,
+        pomodoroTargetS: s.pomodoroTargetS,
+        segmentWallStart: s.segmentWallStart,
+        sessionSavedS: s.sessionSavedS,
+        pomodoroFinishedTaskId: s.pomodoroFinishedTaskId,
+        pomodoroFinishedFlowDate: s.pomodoroFinishedFlowDate,
+        pomodoroFinishedTargetS: s.pomodoroFinishedTargetS,
+        updatedAt: now,
+      },
+    })
+    .run();
+}
+
+export function clearActiveTimerSession(): void {
+  const db = getDb();
+  db.delete(activeTimerSession)
+    .where(eq(activeTimerSession.id, SINGLETON_ID))
+    .run();
 }

@@ -80,6 +80,21 @@ export function getDb() {
       UNIQUE(task_id, flow_date)
     );
 
+    CREATE TABLE IF NOT EXISTS active_timer_session (
+      id TEXT PRIMARY KEY,
+      task_id TEXT,
+      flow_date TEXT,
+      status TEXT NOT NULL DEFAULT 'idle',
+      timer_mode TEXT NOT NULL DEFAULT 'countup',
+      pomodoro_target_s INTEGER,
+      segment_wall_start TEXT,
+      session_saved_s INTEGER NOT NULL DEFAULT 0,
+      pomodoro_finished_task_id TEXT,
+      pomodoro_finished_flow_date TEXT,
+      pomodoro_finished_target_s INTEGER,
+      updated_at TEXT DEFAULT (datetime('now'))
+    );
+
     CREATE INDEX IF NOT EXISTS idx_time_entries_task_id ON time_entries(task_id);
     CREATE INDEX IF NOT EXISTS idx_time_entries_flow_date ON time_entries(flow_date);
     CREATE INDEX IF NOT EXISTS idx_flow_tasks_flow_date ON flow_tasks(flow_date);

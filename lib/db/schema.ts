@@ -58,3 +58,22 @@ export const flowTaskNotes = sqliteTable("flow_task_notes", {
   content: text("content").notNull().default(""),
   updatedAt: text("updated_at").default(sql`(datetime('now'))`),
 });
+
+// Singleton row (`id = 'main'`) holding whatever timer the user is currently
+// running. Persisted server-side so that starting a pomodoro on one device and
+// switching to another picks up where it left off instead of silently dropping
+// the session.
+export const activeTimerSession = sqliteTable("active_timer_session", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id"),
+  flowDate: text("flow_date"),
+  status: text("status").notNull().default("idle"),
+  timerMode: text("timer_mode").notNull().default("countup"),
+  pomodoroTargetS: integer("pomodoro_target_s"),
+  segmentWallStart: text("segment_wall_start"),
+  sessionSavedS: integer("session_saved_s").notNull().default(0),
+  pomodoroFinishedTaskId: text("pomodoro_finished_task_id"),
+  pomodoroFinishedFlowDate: text("pomodoro_finished_flow_date"),
+  pomodoroFinishedTargetS: integer("pomodoro_finished_target_s"),
+  updatedAt: text("updated_at").default(sql`(datetime('now'))`),
+});

@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useFlowStore } from "@/lib/stores/flow-store";
+import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTodoistStore } from "@/lib/stores/todoist-store";
 
 export function useHydration() {
   const hydrated = useRef(false);
@@ -11,9 +12,25 @@ export function useHydration() {
     if (hydrated.current) return;
     hydrated.current = true;
 
-    Promise.all([
+    void Promise.all([
       useTodoistStore.getState().hydrate(),
       useFlowStore.getState().hydrate(),
+      useTimerStore.getState().hydrateSession(),
     ]);
+  }, []);
+
+  useEffect(() => {
+    const rehydrateTimerSession = () => {
+      if (document.visibilityState === "hidden") return;
+      void useTimerStore.getState().hydrateSession();
+    };
+
+    window.addEventListener("focus", rehydrateTimerSession);
+    document.addEventListener("visibilitychange", rehydrateTimerSession);
+
+    return () => {
+      window.removeEventListener("focus", rehydrateTimerSession);
+      document.removeEventListener("visibilitychange", rehydrateTimerSession);
+    };
   }, []);
 }

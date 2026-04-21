@@ -43,10 +43,20 @@ interface TimerState {
   stopAndSave: () => Promise<void>;
   stopWithoutSaving: () => void;
   dismissPomodoroFinished: () => void;
+  hydrateSession: () => Promise<void>;
   tick: () => void;
 }
 
 let intervalId: ReturnType<typeof setInterval> | null = null;
+
+// Drop a running segment on hydrate if its wall-clock start is this far in the
+// past — 6 hours assumes any single unattended session that old was abandoned
+// (laptop closed, device forgotten) and the auto-idle hook would have paused a
+// live session long before this.
+const STALE_RUNNING_SEGMENT_MS = 6 * 60 * 60 * 1000;
+// Skip hydrating a finished-pomodoro marker older than this. Comes back to
+// "so stale it's noise" territory — user can always restart.
+const STALE_FINISHED_MARKER_MS = 60 * 60 * 1000;
 
 function clearTickInterval() {
   if (intervalId) {
@@ -73,6 +83,38 @@ function pomodoroRemainingSeconds(state: TimerState): number {
   if (state.pomodoroTargetSeconds == null) return 0;
   const elapsed = state.sessionSavedSeconds + currentSegmentSeconds(state);
   return Math.max(state.pomodoroTargetSeconds - elapsed, 0);
+}
+
+// Fire-and-forget write of the current store state to the server so another
+// device picks it up on next load. Failures are silent — the local session is
+// still the source of truth until the next save succeeds.
+function persistCurrentSession() {
+  if (typeof fetch === "undefined") return;
+  const s = useTimerStore.getState();
+  if (
+    s.status === "idle" &&
+    !s.pomodoroFinishedTaskId &&
+    !s.activeTaskId
+  ) {
+    void fetch("/api/timer/session", { method: "DELETE" }).catch(() => {});
+    return;
+  }
+  void fetch("/api/timer/session", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      taskId: s.activeTaskId,
+      flowDate: s.activeFlowDate,
+      status: s.status,
+      timerMode: s.timerMode,
+      pomodoroTargetS: s.pomodoroTargetSeconds,
+      segmentWallStart: s.segmentWallStart,
+      sessionSavedS: s.sessionSavedSeconds,
+      pomodoroFinishedTaskId: s.pomodoroFinishedTaskId,
+      pomodoroFinishedFlowDate: s.pomodoroFinishedFlowDate,
+      pomodoroFinishedTargetS: s.pomodoroFinishedTargetSeconds,
+    }),
+  }).catch(() => {});
 }
 
 async function clearCurrentTimerForStart(
@@ -161,6 +203,7 @@ function resetState(): Omit<
   | "stopAndSave"
   | "stopWithoutSaving"
   | "dismissPomodoroFinished"
+  | "hydrateSession"
   | "tick"
 > {
   return {
@@ -175,6 +218,20 @@ function resetState(): Omit<
     priorSeconds: 0,
     displaySeconds: 0,
   };
+}
+
+interface ServerSessionPayload {
+  taskId: string | null;
+  flowDate: string | null;
+  status: TimerState["status"];
+  timerMode: TimerMode;
+  pomodoroTargetS: number | null;
+  segmentWallStart: string | null;
+  sessionSavedS: number;
+  pomodoroFinishedTaskId: string | null;
+  pomodoroFinishedFlowDate: string | null;
+  pomodoroFinishedTargetS: number | null;
+  updatedAt: string | null;
 }
 
 export const useTimerStore = create<TimerState>()((set, get) => ({
@@ -227,6 +284,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       pomodoroFinishedTargetSeconds: null,
     });
 
+    persistCurrentSession();
     startTickInterval(() => get().tick());
   },
 
@@ -270,6 +328,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       pomodoroFinishedTargetSeconds: null,
     });
 
+    persistCurrentSession();
     startTickInterval(() => get().tick());
   },
 
@@ -279,6 +338,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       pomodoroFinishedFlowDate: null,
       pomodoroFinishedTargetSeconds: null,
     });
+    persistCurrentSession();
   },
 
   pauseTimer: async (effectiveStopMs) => {
@@ -310,6 +370,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       displaySeconds: nextDisplay,
       entryRevision: prev.entryRevision + 1,
     }));
+    persistCurrentSession();
   },
 
   resumeTimer: () => {
@@ -329,6 +390,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
       segmentStartedAt: Date.now(),
     });
 
+    persistCurrentSession();
     startTickInterval(() => get().tick());
   },
 
@@ -349,11 +411,148 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
           ? prev.entryRevision + 1
           : prev.entryRevision,
     }));
+    persistCurrentSession();
   },
 
   stopWithoutSaving: () => {
     clearTickInterval();
     set((prev) => ({ ...resetState(), entryRevision: prev.entryRevision }));
+    persistCurrentSession();
+  },
+
+  hydrateSession: async () => {
+    if (typeof fetch === "undefined") return;
+
+    const clearHydratedSession = () => {
+      clearTickInterval();
+      set((prev) => ({
+        ...resetState(),
+        entryRevision: prev.entryRevision,
+        pomodoroFinishedTaskId: null,
+        pomodoroFinishedFlowDate: null,
+        pomodoroFinishedTargetSeconds: null,
+      }));
+    };
+
+    let payload: { session: ServerSessionPayload | null } | null = null;
+    try {
+      const res = await fetch("/api/timer/session", { cache: "no-store" });
+      if (!res.ok) return;
+      payload = (await res.json()) as { session: ServerSessionPayload | null };
+    } catch {
+      return;
+    }
+    const session = payload?.session;
+    if (!session) {
+      clearHydratedSession();
+      return;
+    }
+
+    const {
+      taskId,
+      flowDate,
+      status,
+      timerMode,
+      pomodoroTargetS,
+      segmentWallStart,
+      sessionSavedS,
+      pomodoroFinishedTaskId,
+      pomodoroFinishedFlowDate,
+      pomodoroFinishedTargetS,
+      updatedAt,
+    } = session;
+
+    clearTickInterval();
+
+    // Idle + finished marker: restore the "pomodoro complete" panel unless it's
+    // so old the user is probably on a different task mentally.
+    if (status === "idle" && pomodoroFinishedTaskId) {
+      if (updatedAt) {
+        const age = Date.now() - Date.parse(updatedAt);
+        if (age > STALE_FINISHED_MARKER_MS) {
+          clearHydratedSession();
+          void fetch("/api/timer/session", { method: "DELETE" }).catch(() => {});
+          return;
+        }
+      }
+      set((prev) => ({
+        ...resetState(),
+        entryRevision: prev.entryRevision,
+        pomodoroFinishedTaskId,
+        pomodoroFinishedFlowDate,
+        pomodoroFinishedTargetSeconds: pomodoroFinishedTargetS,
+      }));
+      return;
+    }
+
+    if (!taskId || !flowDate) {
+      clearHydratedSession();
+      return;
+    }
+
+    // Running session with a stale wall-clock start: treat as abandoned. Fall
+    // back to an empty state rather than blindly resuming — the user was
+    // probably away and the time shouldn't be logged.
+    if (status === "running" && segmentWallStart) {
+      const age = Date.now() - Date.parse(segmentWallStart);
+      if (age > STALE_RUNNING_SEGMENT_MS) {
+        clearHydratedSession();
+        void fetch("/api/timer/session", { method: "DELETE" }).catch(() => {});
+        return;
+      }
+    }
+
+    const prior = await fetchPriorSeconds(taskId);
+
+    if (status === "running" && segmentWallStart) {
+      const segmentStartedAt = Date.parse(segmentWallStart);
+      set({
+        activeTaskId: taskId,
+        activeFlowDate: flowDate,
+        status: "running",
+        timerMode,
+        pomodoroTargetSeconds: pomodoroTargetS,
+        segmentWallStart,
+        segmentStartedAt,
+        sessionSavedSeconds: sessionSavedS,
+        priorSeconds: prior,
+        displaySeconds:
+          timerMode === "pomodoro"
+            ? Math.max((pomodoroTargetS ?? 0) - sessionSavedS, 0)
+            : prior + sessionSavedS,
+        pomodoroFinishedTaskId: null,
+        pomodoroFinishedFlowDate: null,
+        pomodoroFinishedTargetSeconds: null,
+      });
+      // Let tick() compute the correct remaining/elapsed immediately, then
+      // start the 1-second interval. If the pomodoro already elapsed while
+      // the tab was closed, tick() will save the remaining segment and flip
+      // into the finished state.
+      get().tick();
+      startTickInterval(() => get().tick());
+      return;
+    }
+
+    if (status === "paused") {
+      set({
+        activeTaskId: taskId,
+        activeFlowDate: flowDate,
+        status: "paused",
+        timerMode,
+        pomodoroTargetSeconds: pomodoroTargetS,
+        segmentWallStart: null,
+        segmentStartedAt: null,
+        sessionSavedSeconds: sessionSavedS,
+        priorSeconds: prior,
+        displaySeconds:
+          timerMode === "pomodoro"
+            ? Math.max((pomodoroTargetS ?? 0) - sessionSavedS, 0)
+            : prior + sessionSavedS,
+        pomodoroFinishedTaskId: null,
+        pomodoroFinishedFlowDate: null,
+        pomodoroFinishedTargetSeconds: null,
+      });
+    }
   },
 
   tick: () => {
@@ -386,6 +585,7 @@ export const useTimerStore = create<TimerState>()((set, get) => ({
             pomodoroFinishedFlowDate: finishedFlowDate,
             pomodoroFinishedTargetSeconds: finishedTarget,
           }));
+          persistCurrentSession();
         })();
         return;
       }

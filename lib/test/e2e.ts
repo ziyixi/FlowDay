@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { createTimeEntry, setFlowTaskIds, setSetting, upsertNote, upsertTasks } from "@/lib/db/queries";
 import { getDb } from "@/lib/db/index";
 import {
+  activeTimerSession,
   completedFlowTasks,
   flowTaskNotes,
   flowTasks,
@@ -89,6 +90,7 @@ export function clearE2ETestData(): void {
     db.delete(timeEntries).run();
     db.delete(tasks).run();
     db.delete(settings).run();
+    db.delete(activeTimerSession).run();
   });
 
   runTx();
