@@ -223,6 +223,33 @@ test("[UI-023] Future task pool follows the selected planning date", async ({
   await expect(flowCard(page, "Plan for three days later")).toHaveCount(0);
 });
 
+test("[UI-027] Date navigation arrows stay under the cursor across repeated clicks", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "future-dated-pool");
+  await openApp(page);
+
+  const nextDayButton = page.getByRole("button", { name: "Next day" });
+  const buttonBox = await nextDayButton.boundingBox();
+  expect(buttonBox).not.toBeNull();
+
+  const clickX = buttonBox!.x + buttonBox!.width / 2;
+  const clickY = buttonBox!.y + buttonBox!.height / 2;
+
+  await page.mouse.move(clickX, clickY);
+  await page.mouse.click(clickX, clickY);
+  await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
+
+  // Click the same screen coordinates again to catch layout shifts that move
+  // the hit target away from the next-day arrow.
+  await page.mouse.click(clickX, clickY);
+
+  await expect(taskPoolCard(page, "Plan for two days later")).toBeVisible();
+  await expect(taskPoolCard(page, "Plan for three days later")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
+});
+
 test.describe("analytics timezone", () => {
   test.use({ timezoneId: "America/Los_Angeles" });
 

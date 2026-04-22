@@ -30,6 +30,7 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-010 | Deleted-task restore returns a local task to the pool | `shell-empty` | desktop | Soft-deleted local tasks appear in trash and can be restored correctly. | `flow-and-shell.spec.ts` |
 | UI-016 | Todoist-deleted tasks disappear from the sidebar | `todoist-overdue` | desktop | Todoist sync deletions are hidden from the pool without polluting the local trash dialog. | `flow-and-shell.spec.ts` |
 | UI-023 | Future task pool follows the selected planning date | `future-dated-pool` | desktop | Planning for +2 and +3 days uses the selected flow date, not only today/tomorrow. | `flow-and-shell.spec.ts` |
+| UI-027 | Repeated date-nav clicks keep the next/previous hit target stable | `future-dated-pool` | desktop | Leaving today does not shift the arrow button under the cursor onto `Today`, so same-position repeated clicks continue navigating forward/backward. | `flow-and-shell.spec.ts` |
 
 ## Timer And Pomodoro
 

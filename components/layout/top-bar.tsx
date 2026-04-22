@@ -117,14 +117,16 @@ export function TopBar() {
           <ChevronRight className="h-4 w-4" />
         </IconButton>
 
-        {!isToday && (
-          <button
-            onClick={goToToday}
-            className="ml-1 rounded-md border border-border bg-muted/50 px-2 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-xs"
-          >
-            Today
-          </button>
-        )}
+        <div className="ml-1 w-[54px]">
+          {!isToday && (
+            <button
+              onClick={goToToday}
+              className="w-full rounded-md border border-border bg-muted/50 px-2 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-xs"
+            >
+              Today
+            </button>
+          )}
+        </div>
 
         <div className="ml-3 flex items-center rounded-md border border-border bg-muted/50 p-0.5">
           {([1, 3, 5] as ViewMode[]).map((mode) => (
