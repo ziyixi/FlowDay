@@ -80,6 +80,17 @@ interface WeeklyData {
   };
 }
 
+function analyticsUrl(type: "daily" | "weekly" | "stats", date?: string) {
+  const params = new URLSearchParams({ type });
+  if (date) params.set("date", date);
+  const timeZone =
+    typeof Intl !== "undefined"
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone
+      : "";
+  if (timeZone) params.set("tz", timeZone);
+  return `/api/analytics?${params.toString()}`;
+}
+
 export function AnalyticsDashboard({
   open,
   onOpenChange,
@@ -219,10 +230,7 @@ function DailyReview({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(
-      `/api/analytics?type=daily&date=${encodeURIComponent(date)}`,
-      { cache: "no-store" }
-    )
+    fetch(analyticsUrl("daily", date), { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (!cancelled) setData(d); })
       .catch(() => {})
@@ -436,10 +444,7 @@ function WeeklyReview({
 
   useEffect(() => {
     let cancelled = false;
-    fetch(
-      `/api/analytics?type=weekly&date=${encodeURIComponent(date)}`,
-      { cache: "no-store" }
-    )
+    fetch(analyticsUrl("weekly", date), { cache: "no-store" })
       .then((r) => r.json())
       .then((d) => { if (!cancelled) setData(d); })
       .catch(() => {})
@@ -907,7 +912,7 @@ function StatsView() {
   const [mode, setMode] = useState<"frequency" | "duration">("frequency");
 
   useEffect(() => {
-    fetch("/api/analytics?type=stats", { cache: "no-store" })
+    fetch(analyticsUrl("stats"), { cache: "no-store" })
       .then((r) => r.json())
       .then(setData)
       .catch(() => {})

@@ -1,27 +1,54 @@
 # UI Test Plan
 
-| Case ID | Name | Viewport | Seed | Status | Notes |
+This document maps each Playwright UI case to the product area it protects.
+
+## How To Read This
+
+- `Case ID`: Stable ID that must match the Playwright test title.
+- `Seed`: Test fixture loaded before the scenario starts.
+- `Viewport`: `desktop` unless the case specifically targets portrait/mobile behavior.
+- `What It Proves`: The main behavior or regression boundary the test is responsible for.
+
+## Wizard And Day Planning
+
+| Case ID | Scenario | Seed | Viewport | What It Proves | Spec |
 | --- | --- | --- | --- | --- | --- |
-| UI-001 | App shell renders on a clean day | desktop | `shell-empty` | active | Top bar, sidebar, and empty flow state visible with planning already completed for today. |
-| UI-002 | Start Your Day wizard stays open after first add | desktop | `wizard-today-tasks` | active | Regression guard for first `+` click on the add step. |
-| UI-003 | Start Your Day wizard full flow persists plan | desktop | `wizard-today-tasks` | active | Add tasks, review, confirm, and verify resulting flow after reload. |
-| UI-004 | Quick add, search, and drag into today flow | desktop | `shell-empty` | active | Covers local task creation and DnD into empty flow. |
-| UI-005 | Flow card edit behaviors persist | desktop | `single-flow-task` | active | Edit local title, estimate, and notes, then verify after reload. |
-| UI-006 | Count-up timer records entries and updates totals | desktop | `single-flow-task` | active | Start, pause, resume, complete, and verify logged time surfaces. |
-| UI-007 | Pomodoro preset auto-saves and clears active timer | desktop | `single-flow-task` | active | Starts from preset, reaches zero, saves entry, and counts toward totals. |
-| UI-008 | Manual entry CRUD updates time surfaces | desktop | `single-flow-task` | active | Create, edit, and delete a manual entry from the popover/dialog flow. |
-| UI-009 | Task lifecycle actions update flow and sidebar state | desktop | `two-flow-tasks` | active | Skip, complete, undo complete, and return-to-pool. |
-| UI-010 | Deleted-task restore returns task to active pool | desktop | `shell-empty` | active | Local task delete plus deleted-task dialog restore path. |
-| UI-011 | Settings, export, and analytics smoke | desktop | `analytics-seeded` | active | Update capacity, verify warning, open analytics tabs, and trigger export. |
-| UI-012 | Portrait wizard and flow-card usability regression | portrait | `wizard-today-tasks` | active | Verifies wizard flow and portrait-specific readability/tap-target behavior. |
-| UI-013 | Pop-out timer button toggles with timer activity | desktop | `single-flow-task` | active | Pop-out entry point appears only while a timer is active and disappears when the task is completed. |
-| UI-014 | Pomodoro completion fires a single chime | desktop | `single-flow-task` | active | Verifies the gentle completion chime fires exactly once when a pomodoro reaches zero and never for count-up timers. |
-| UI-015 | Auto-idle pause backdates the segment | desktop | `single-flow-task` | active | Verifies that when the auto-idle hook detects the user was away, the resulting pause backdates the segment and the away period is not logged. |
-| UI-016 | Todoist-deleted tasks disappear from sidebar | desktop | `todoist-overdue` | active | Verifies that tasks removed from Todoist (simulated orphan sweep) are hidden from the overdue/today pool on the next sync, while other Todoist tasks are unaffected and the deleted task does NOT surface in the trash dialog (that dialog is reserved for FlowDay-local deletes only). |
-| UI-017 | Wizard add-all button bulk-adds today's tasks | desktop | `wizard-today-tasks` | active | Verifies the add-all shortcut adds every available pool task in one click, hides itself once everything is added, and the resulting plan persists through Review → Start My Day. |
-| UI-018 | Task estimate is offered as the first Pomodoro preset | desktop | `single-flow-task` | active | Verifies a task's estimate is surfaced as the first (highlighted, suggested) preset in the Pomodoro picker and deduplicates against the base list when it matches. |
-| UI-019 | Pomodoro completion surfaces a finished marker for the pop-out | desktop | `single-flow-task` | active | Verifies that when a pomodoro reaches zero the store captures the finished task so the pop-out can render a restart/complete panel, and that the marker is cleared by starting a new timer. |
-| UI-020 | Reload restores a running pomodoro | desktop | `single-flow-task` | active | Verifies that after starting a pomodoro and reloading the page, the timer store hydrates from the shared server session and resumes the same task with a plausible remaining time. |
-| UI-021 | Active pomodoro card still shows cumulative logged time | desktop | `single-flow-task-with-history` | active | Verifies that while a pomodoro is running, the main task card keeps showing previously logged task time and adds the current pomodoro elapsed time on top of it. |
-| UI-022 | Start Your Day does not auto-roll yesterday into today | desktop | `wizard-with-yesterday-incomplete` | active | Verifies the planning wizard no longer surfaces FlowDay carry-forward UI and leaves yesterday's unfinished tasks on yesterday unless Todoist itself is updated. |
-| UI-023 | Future task pool follows the selected planning date | desktop | `future-dated-pool` | active | Verifies the sidebar pool keys off the selected flow date so tasks due in +2 and +3 days can be arranged on those dates without waiting for the real calendar to catch up. |
+| UI-001 | App shell renders on a clean day | `shell-empty` | desktop | The base shell loads with top bar, sidebar, and empty day-flow state. | `wizard.spec.ts` |
+| UI-002 | Start Your Day wizard stays open after first add | `wizard-today-tasks` | desktop | The wizard does not close after the first add action. | `wizard.spec.ts` |
+| UI-003 | Start Your Day completes and persists the plan | `wizard-today-tasks` | desktop | A full wizard flow creates the day plan and survives reload. | `wizard.spec.ts` |
+| UI-017 | Wizard add-all button bulk-adds available tasks | `wizard-today-tasks` | desktop | The add-all shortcut adds every available task once and then disappears. | `wizard.spec.ts` |
+| UI-022 | Start Your Day does not auto-roll yesterday into today | `wizard-with-yesterday-incomplete` | desktop | FlowDay no longer carries unfinished work forward unless Todoist itself is updated. | `wizard.spec.ts` |
+| UI-012 | Portrait wizard and flow-card usability regression | `wizard-today-tasks` | portrait | The wizard and resulting flow cards remain readable and tappable on portrait/mobile layout. | `wizard.spec.ts` |
+
+## Flow And Sidebar
+
+| Case ID | Scenario | Seed | Viewport | What It Proves | Spec |
+| --- | --- | --- | --- | --- | --- |
+| UI-004 | Quick add, search, and drag into today flow | `shell-empty` | desktop | Local task creation, sidebar search, and drag-and-drop into an empty flow all work together. | `flow-and-shell.spec.ts` |
+| UI-005 | Flow card edits persist | `single-flow-task` | desktop | Local title edits, estimate edits, and notes persist through reload. | `flow-and-shell.spec.ts` |
+| UI-009 | Task lifecycle actions update flow and sidebar state | `two-flow-tasks` | desktop | Skip, complete, undo-complete, and return-to-pool all update the right surfaces. | `flow-and-shell.spec.ts` |
+| UI-010 | Deleted-task restore returns a local task to the pool | `shell-empty` | desktop | Soft-deleted local tasks appear in trash and can be restored correctly. | `flow-and-shell.spec.ts` |
+| UI-016 | Todoist-deleted tasks disappear from the sidebar | `todoist-overdue` | desktop | Todoist sync deletions are hidden from the pool without polluting the local trash dialog. | `flow-and-shell.spec.ts` |
+| UI-023 | Future task pool follows the selected planning date | `future-dated-pool` | desktop | Planning for +2 and +3 days uses the selected flow date, not only today/tomorrow. | `flow-and-shell.spec.ts` |
+
+## Timer And Pomodoro
+
+| Case ID | Scenario | Seed | Viewport | What It Proves | Spec |
+| --- | --- | --- | --- | --- | --- |
+| UI-006 | Count-up timer records entries and updates totals | `single-flow-task` | desktop | Start, pause, resume, and complete all persist tracked time correctly. | `timer.spec.ts` |
+| UI-007 | Pomodoro preset auto-saves and clears active timer | `single-flow-task` | desktop | A pomodoro saves its time at zero and returns the UI to idle state. | `timer.spec.ts` |
+| UI-008 | Manual entry CRUD updates time surfaces | `single-flow-task` | desktop | Manual time entries can be created, edited, and deleted through the UI. | `timer.spec.ts` |
+| UI-013 | Pop-out timer button toggles with timer activity | `single-flow-task` | desktop | The PiP entry point appears only when timer activity exists. | `timer.spec.ts` |
+| UI-014 | Pomodoro completion fires a single chime | `single-flow-task` | desktop | Pomodoro completion chimes once, and count-up timers do not chime. | `timer.spec.ts` |
+| UI-015 | Auto-idle pause backdates the segment | `single-flow-task` | desktop | Away time is excluded when auto-idle pause triggers. | `timer.spec.ts` |
+| UI-018 | Task estimate is offered as the first Pomodoro preset | `single-flow-task` | desktop | Task estimate becomes the suggested first pomodoro preset and deduplicates base presets. | `timer.spec.ts` |
+| UI-019 | Pomodoro completion surfaces a finished marker for the pop-out | `single-flow-task` | desktop | The finished-task marker drives the pop-out restart/complete state and clears on next action. | `timer.spec.ts` |
+| UI-020 | Reload restores a running pomodoro | `single-flow-task` | desktop | A server-backed timer session survives page reload and rehydrates correctly. | `timer.spec.ts` |
+| UI-021 | Active pomodoro card still shows cumulative logged time | `single-flow-task-with-history` | desktop | The flow card keeps previously logged time visible while adding current pomodoro elapsed time. | `timer.spec.ts` |
+
+## Settings, Analytics, And Export
+
+| Case ID | Scenario | Seed | Viewport | What It Proves | Spec |
+| --- | --- | --- | --- | --- | --- |
+| UI-011 | Settings, export, and analytics smoke | `analytics-seeded` | desktop | Core settings, export dialog, and analytics tabs are all reachable and functional. | `flow-and-shell.spec.ts` |
+| UI-024 | Analytics stats use browser local timezone | `analytics-timezone-boundary` | desktop | Analytics requests include browser timezone and render a near-midnight UTC session in the correct local bucket. | `flow-and-shell.spec.ts` |

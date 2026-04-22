@@ -222,3 +222,34 @@ test("[UI-023] Future task pool follows the selected planning date", async ({
   await expect(flowCard(page, "Plan for two days later")).toBeVisible();
   await expect(flowCard(page, "Plan for three days later")).toHaveCount(0);
 });
+
+test.describe("analytics timezone", () => {
+  test.use({ timezoneId: "America/Los_Angeles" });
+
+  test("[UI-024] Analytics stats use the browser local timezone", async ({
+    page,
+    request,
+  }) => {
+    await seedAppState(request, "analytics-timezone-boundary");
+    await openApp(page);
+
+    await page.getByRole("button", { name: "Analytics" }).click();
+    await expect(page.getByRole("heading", { name: "Analytics" })).toBeVisible();
+
+    const statsResponsePromise = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/analytics?type=stats") &&
+        response.request().method() === "GET"
+    );
+
+    await page.getByRole("button", { name: "Work Patterns" }).click();
+    const statsResponse = await statsResponsePromise;
+
+    const statsUrl = new URL(statsResponse.url());
+    expect(statsUrl.searchParams.get("tz")).toBe("America/Los_Angeles");
+
+    await expect(page.getByText("Peak Work Hours")).toBeVisible();
+    await expect(page.getByText("Sun 17:00", { exact: true })).toBeVisible();
+    await expect(page.getByText("Mon 0:00", { exact: true })).toHaveCount(0);
+  });
+});

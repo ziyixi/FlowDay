@@ -60,6 +60,7 @@ export type SeedName =
   | "shell-empty"
   | "wizard-today-tasks"
   | "wizard-with-yesterday-incomplete"
+  | "analytics-timezone-boundary"
   | "single-flow-task"
   | "single-flow-task-with-history"
   | "future-dated-pool"
@@ -127,6 +128,29 @@ function buildSeed(name: SeedName): SeedPayload {
           [YESTERDAY]: ["yesterday-task-1"],
         },
         settings: {
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "analytics-timezone-boundary":
+      return {
+        tasks: [
+          localTask("analytics-tz-task", "Late-night deep work", {
+            estimatedMins: 30,
+          }),
+        ],
+        timeEntries: [
+          {
+            taskId: "analytics-tz-task",
+            flowDate: "2026-04-12",
+            startTime: "2026-04-13T00:30:00.000Z",
+            endTime: "2026-04-13T01:00:00.000Z",
+            durationS: 1800,
+            source: "timer",
+          },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
           day_capacity_mins: 360,
         },
       };

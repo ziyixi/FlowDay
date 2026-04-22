@@ -13,9 +13,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const type = searchParams.get("type");
   const date = searchParams.get("date");
+  const timeZone = normalizeTimeZone(searchParams.get("tz"));
 
   if (type === "stats") {
-    return NextResponse.json(computeWorkPatternStats());
+    return NextResponse.json(computeWorkPatternStats(timeZone));
   }
 
   if (!type || !date) {
@@ -23,22 +24,107 @@ export async function GET(request: Request) {
   }
 
   if (type === "daily") {
-    return NextResponse.json(computeDailyAnalytics(date));
+    return NextResponse.json(computeDailyAnalytics(date, timeZone));
   }
 
   if (type === "weekly") {
-    return NextResponse.json(computeWeeklyAnalytics(date));
+    return NextResponse.json(computeWeeklyAnalytics(date, timeZone));
   }
 
   return NextResponse.json({ error: "Invalid type" }, { status: 400 });
 }
 
-function computeDailyAnalytics(date: string) {
+const WEEKDAY_INDEX: Record<string, number> = {
+  Mon: 0,
+  Tue: 1,
+  Wed: 2,
+  Thu: 3,
+  Fri: 4,
+  Sat: 5,
+  Sun: 6,
+};
+
+function normalizeTimeZone(timeZone: string | null): string | undefined {
+  if (!timeZone) return undefined;
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone }).format(0);
+    return timeZone;
+  } catch {
+    return undefined;
+  }
+}
+
+function makeTimeZoneFormatters(timeZone?: string) {
+  const base = timeZone ? { timeZone } : {};
+  return {
+    weekday: new Intl.DateTimeFormat("en-US", { ...base, weekday: "short" }),
+    hour: new Intl.DateTimeFormat("en-US", {
+      ...base,
+      hour: "numeric",
+      hourCycle: "h23",
+    }),
+    date: new Intl.DateTimeFormat("en-CA", {
+      ...base,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }),
+  };
+}
+
+function getDatePart(
+  date: Date,
+  formatter: Intl.DateTimeFormat,
+  part: "year" | "month" | "day" | "weekday" | "hour"
+): string {
+  return (
+    formatter.formatToParts(date).find((item) => item.type === part)?.value ?? ""
+  );
+}
+
+function getZonedHour(date: Date, formatters: ReturnType<typeof makeTimeZoneFormatters>) {
+  return Number(getDatePart(date, formatters.hour, "hour"));
+}
+
+function getZonedDayIdx(date: Date, formatters: ReturnType<typeof makeTimeZoneFormatters>) {
+  return WEEKDAY_INDEX[getDatePart(date, formatters.weekday, "weekday")] ?? 0;
+}
+
+function getZonedDateString(
+  date: Date,
+  formatters: ReturnType<typeof makeTimeZoneFormatters>
+) {
+  const year = getDatePart(date, formatters.date, "year");
+  const month = getDatePart(date, formatters.date, "month");
+  const day = getDatePart(date, formatters.date, "day");
+  return `${year}-${month}-${day}`;
+}
+
+function forEachMinuteSlice(
+  start: Date,
+  end: Date,
+  visit: (sliceStart: Date, secondsInSlice: number) => void
+) {
+  let cursorMs = start.getTime();
+  const endMs = end.getTime();
+
+  while (cursorMs < endMs) {
+    const nextMinuteMs = Math.min(
+      Math.floor(cursorMs / 60_000) * 60_000 + 60_000,
+      endMs
+    );
+    visit(new Date(cursorMs), (nextMinuteMs - cursorMs) / 1000);
+    cursorMs = nextMinuteMs;
+  }
+}
+
+function computeDailyAnalytics(date: string, timeZone?: string) {
   const flowEntries = getFlowTaskIdsInDateRange(date, date);
   const completedEntries = getCompletedTaskIdsInDateRange(date, date);
   const timeEntryRows = getEntriesInDateRange(date, date);
   const capacityStr = getSetting("day_capacity_mins");
   const dayCapacityMins = capacityStr ? parseInt(capacityStr, 10) : 360;
+  const formatters = makeTimeZoneFormatters(timeZone);
 
   const allTaskIds = [
     ...new Set([
@@ -78,18 +164,10 @@ function computeDailyAnalytics(date: string) {
     if (!entry.startTime || !entry.durationS) continue;
     const start = new Date(entry.startTime);
     const endTime = entry.endTime ? new Date(entry.endTime) : new Date(start.getTime() + entry.durationS * 1000);
-    // Distribute seconds across hours
-    let cursor = new Date(start);
-    while (cursor < endTime) {
-      const hour = cursor.getHours();
-      const nextHour = new Date(cursor);
-      nextHour.setMinutes(0, 0, 0);
-      nextHour.setHours(hour + 1);
-      const sliceEnd = nextHour < endTime ? nextHour : endTime;
-      const secsInSlice = (sliceEnd.getTime() - cursor.getTime()) / 1000;
-      hourlyMins[hour] += secsInSlice / 60;
-      cursor = sliceEnd;
-    }
+    forEachMinuteSlice(start, endTime, (sliceStart, secondsInSlice) => {
+      const hour = getZonedHour(sliceStart, formatters);
+      hourlyMins[hour] += secondsInSlice / 60;
+    });
   }
 
   return {
@@ -104,12 +182,13 @@ function computeDailyAnalytics(date: string) {
   };
 }
 
-function computeWeeklyAnalytics(date: string) {
+function computeWeeklyAnalytics(date: string, timeZone?: string) {
   const targetDate = parseISO(date);
   const weekStart = startOfWeek(targetDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(targetDate, { weekStartsOn: 1 });
   const startStr = format(weekStart, "yyyy-MM-dd");
   const endStr = format(weekEnd, "yyyy-MM-dd");
+  const formatters = makeTimeZoneFormatters(timeZone);
 
   const allFlowEntries = getFlowTaskIdsInDateRange(startStr, endStr);
   const allCompletedEntries = getCompletedTaskIdsInDateRange(startStr, endStr);
@@ -238,20 +317,11 @@ function computeWeeklyAnalytics(date: string) {
     if (!entry.startTime || !entry.durationS) continue;
     const start = new Date(entry.startTime);
     const endTime = entry.endTime ? new Date(entry.endTime) : new Date(start.getTime() + entry.durationS * 1000);
-    // day index: 0=Mon, 6=Sun
-    let cursor = new Date(start);
-    while (cursor < endTime) {
-      const jsDay = cursor.getDay(); // 0=Sun
-      const dayIdx = jsDay === 0 ? 6 : jsDay - 1; // convert to 0=Mon
-      const hour = cursor.getHours();
-      const nextHour = new Date(cursor);
-      nextHour.setMinutes(0, 0, 0);
-      nextHour.setHours(hour + 1);
-      const sliceEnd = nextHour < endTime ? nextHour : endTime;
-      const secsInSlice = (sliceEnd.getTime() - cursor.getTime()) / 1000;
-      heatmap[dayIdx][hour] += secsInSlice / 60;
-      cursor = sliceEnd;
-    }
+    forEachMinuteSlice(start, endTime, (sliceStart, secondsInSlice) => {
+      const dayIdx = getZonedDayIdx(sliceStart, formatters);
+      const hour = getZonedHour(sliceStart, formatters);
+      heatmap[dayIdx][hour] += secondsInSlice / 60;
+    });
   }
 
   // --- Totals ---
@@ -279,8 +349,9 @@ function computeWeeklyAnalytics(date: string) {
   };
 }
 
-function computeWorkPatternStats() {
+function computeWorkPatternStats(timeZone?: string) {
   const allEntries = getAllTimeEntries();
+  const formatters = makeTimeZoneFormatters(timeZone);
 
   // Count how many distinct weeks had work in each (dayOfWeek, hour) slot
   // heatmap[dayIdx][hour] = number of weeks with work in that slot
@@ -296,33 +367,19 @@ function computeWorkPatternStats() {
     const endTime = entry.endTime
       ? new Date(entry.endTime)
       : new Date(start.getTime() + entry.durationS * 1000);
-
-    // Week key from flowDate to group by week
-    const weekKey = entry.flowDate.slice(0, 10); // yyyy-mm-dd
-    const weekStart = format(
-      startOfWeek(parseISO(weekKey), { weekStartsOn: 1 }),
-      "yyyy-MM-dd"
-    );
-
-    let cursor = new Date(start);
-    while (cursor < endTime) {
-      const jsDay = cursor.getDay();
-      const dayIdx = jsDay === 0 ? 6 : jsDay - 1;
-      const hour = cursor.getHours();
-
-      const nextHour = new Date(cursor);
-      nextHour.setMinutes(0, 0, 0);
-      nextHour.setHours(hour + 1);
-      const sliceEnd = nextHour < endTime ? nextHour : endTime;
-      const secsInSlice = (sliceEnd.getTime() - cursor.getTime()) / 1000;
-
+    forEachMinuteSlice(start, endTime, (sliceStart, secondsInSlice) => {
+      const dayIdx = getZonedDayIdx(sliceStart, formatters);
+      const hour = getZonedHour(sliceStart, formatters);
+      const localDate = getZonedDateString(sliceStart, formatters);
+      const weekStart = format(
+        startOfWeek(parseISO(localDate), { weekStartsOn: 1 }),
+        "yyyy-MM-dd"
+      );
       const slotKey = `${dayIdx}-${hour}`;
       if (!weekSlotSets.has(slotKey)) weekSlotSets.set(slotKey, new Set());
       weekSlotSets.get(slotKey)!.add(weekStart);
-      totalMins[dayIdx][hour] += secsInSlice / 60;
-
-      cursor = sliceEnd;
-    }
+      totalMins[dayIdx][hour] += secondsInSlice / 60;
+    });
   }
 
   // Build count grid (how many weeks had work in this slot)

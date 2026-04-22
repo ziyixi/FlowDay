@@ -72,6 +72,33 @@ async function callAnalytics(params: string) {
   return response.json();
 }
 
+function getHourInTimeZone(iso: string, timeZone: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-US", {
+      timeZone,
+      hour: "numeric",
+      hourCycle: "h23",
+    }).format(new Date(iso))
+  );
+}
+
+function getDayIndexInTimeZone(iso: string, timeZone: string): number {
+  const weekday = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    weekday: "short",
+  }).format(new Date(iso));
+  const index: Record<string, number> = {
+    Mon: 0,
+    Tue: 1,
+    Wed: 2,
+    Thu: 3,
+    Fri: 4,
+    Sat: 5,
+    Sun: 6,
+  };
+  return index[weekday] ?? 0;
+}
+
 describe("GET /api/analytics — daily", () => {
   beforeEach(() => {
     seedDay("2026-04-13");
@@ -119,6 +146,27 @@ describe("GET /api/analytics — daily", () => {
     expect(data.tasksPlanned).toBe(0);
     expect(data.totalLoggedMins).toBe(0);
     expect(data.tasks).toHaveLength(0);
+  });
+
+  it("uses the requested timezone for hourly bucketing", async () => {
+    upsertTasks([makeTask({ id: "tz-daily", title: "Timezone Daily" })]);
+    setFlowTaskIds("2026-04-12", ["tz-daily"]);
+    createTimeEntry({
+      id: "tz-daily-entry",
+      taskId: "tz-daily",
+      flowDate: "2026-04-12",
+      startTime: "2026-04-13T00:30:00.000Z",
+      endTime: "2026-04-13T01:00:00.000Z",
+      durationS: 1800,
+      source: "timer",
+    });
+
+    const timeZone = "America/Los_Angeles";
+    const data = await callAnalytics(
+      `type=daily&date=2026-04-12&tz=${encodeURIComponent(timeZone)}`
+    );
+    const hour = getHourInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
+    expect(data.hourlyMins[hour]).toBe(30);
   });
 });
 
@@ -175,6 +223,28 @@ describe("GET /api/analytics — weekly", () => {
     expect(data.heatmap[0][localHour9]).toBeGreaterThan(0);
   });
 
+  it("uses the requested timezone for weekly heatmap bucketing", async () => {
+    upsertTasks([makeTask({ id: "tz-weekly", title: "Timezone Weekly" })]);
+    setFlowTaskIds("2026-04-12", ["tz-weekly"]);
+    createTimeEntry({
+      id: "tz-weekly-entry",
+      taskId: "tz-weekly",
+      flowDate: "2026-04-12",
+      startTime: "2026-04-13T00:30:00.000Z",
+      endTime: "2026-04-13T01:00:00.000Z",
+      durationS: 1800,
+      source: "timer",
+    });
+
+    const timeZone = "America/Los_Angeles";
+    const data = await callAnalytics(
+      `type=weekly&date=2026-04-12&tz=${encodeURIComponent(timeZone)}`
+    );
+    const dayIdx = getDayIndexInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
+    const hour = getHourInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
+    expect(data.heatmap[dayIdx][hour]).toBeGreaterThan(0);
+  });
+
   it("detects estimation accuracy", async () => {
     const data = await callAnalytics("type=weekly&date=2026-04-13");
     // t1 completed with est=30, actual=25. t3 completed with est=15, actual=20
@@ -205,6 +275,27 @@ describe("GET /api/analytics — stats", () => {
     expect(data.weekCount[localDay][localHour9]).toBe(1);
     expect(data.weekCount[localDay][localHour10]).toBe(1);
     expect(data.totalMins[localDay][localHour9]).toBeGreaterThan(0);
+  });
+
+  it("uses the requested timezone for stats day and hour grouping", async () => {
+    createTimeEntry({
+      id: "tz-stats-entry",
+      taskId: "t1",
+      flowDate: "2026-04-12",
+      startTime: "2026-04-13T00:30:00.000Z",
+      endTime: "2026-04-13T01:00:00.000Z",
+      durationS: 1800,
+      source: "timer",
+    });
+
+    const timeZone = "America/Los_Angeles";
+    const data = await callAnalytics(
+      `type=stats&tz=${encodeURIComponent(timeZone)}`
+    );
+    const dayIdx = getDayIndexInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
+    const hour = getHourInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
+    expect(data.weekCount[dayIdx][hour]).toBeGreaterThan(0);
+    expect(data.totalMins[dayIdx][hour]).toBeGreaterThan(0);
   });
 });
 
