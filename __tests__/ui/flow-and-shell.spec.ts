@@ -295,6 +295,36 @@ test("[UI-030] Analytics daily and weekly review include misc time", async ({
   await expect(analyticsDialog.getByText("Misc", { exact: true })).toBeVisible();
 });
 
+test("[UI-038] Analytics task breakdown uses 30m chunks and caps long bars", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "analytics-long-estimate");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Analytics" }).click();
+  const analyticsDialog = page.getByRole("dialog", { name: "Analytics" });
+  await expect(analyticsDialog).toBeVisible();
+  await expect(analyticsDialog.getByText("30m chunks · capped at 4h")).toBeVisible();
+  await expect(
+    analyticsDialog.getByTestId("analytics-task-overflow-analytics-task-long")
+  ).toHaveText("+1h");
+
+  const longEstimate = analyticsDialog.getByTestId(
+    "analytics-task-estimate-fill-analytics-task-long"
+  );
+  const shortEstimate = analyticsDialog.getByTestId(
+    "analytics-task-estimate-fill-analytics-task-short"
+  );
+
+  const longBox = await longEstimate.boundingBox();
+  const shortBox = await shortEstimate.boundingBox();
+
+  expect(longBox).not.toBeNull();
+  expect(shortBox).not.toBeNull();
+  expect(longBox!.width).toBeGreaterThan(shortBox!.width * 6);
+});
+
 test.describe("analytics timezone", () => {
   test.use({ timezoneId: "America/Los_Angeles" });
 

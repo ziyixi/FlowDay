@@ -62,6 +62,7 @@ export type SeedName =
   | "wizard-today-tasks"
   | "wizard-with-yesterday-incomplete"
   | "analytics-timezone-boundary"
+  | "analytics-long-estimate"
   | "analytics-seeded-with-misc"
   | "single-flow-task"
   | "single-flow-task-with-history"
@@ -151,6 +152,26 @@ function buildSeed(name: SeedName): SeedPayload {
             source: "timer",
           },
         ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "analytics-long-estimate":
+      return {
+        tasks: [
+          localTask("analytics-task-long", "Quarterly planning block", {
+            estimatedMins: 300,
+            priority: 3,
+          }),
+          localTask("analytics-task-short", "Reply to inbox", {
+            estimatedMins: 30,
+          }),
+        ],
+        flows: {
+          [TODAY]: ["analytics-task-long", "analytics-task-short"],
+        },
         settings: {
           [`planning_completed:${TODAY}`]: true,
           day_capacity_mins: 360,

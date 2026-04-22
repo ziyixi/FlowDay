@@ -55,6 +55,7 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-035 | Top bar shows total misc time logged today | `single-flow-task` | desktop | After misc time is saved, the misc trigger surfaces today's accumulated misc total at a glance. | `timer.spec.ts` |
 | UI-036 | Pop-out survives the PiP-open / start-pomodoro race | `single-flow-task` | desktop | Priming the pop-out window before the pomodoro starts does not trigger the centralized auto-close — the user shouldn't see the PiP window blink shut on start. | `timer.spec.ts` |
 | UI-037 | Misc total badge shows even for sub-minute segments | `single-flow-task` | desktop | A few seconds of misc tracking surfaces a `<1m` badge so short pomodoro/timer tests aren't confused for silent drops. | `timer.spec.ts` |
+| UI-038 | Analytics task breakdown uses fixed 30m effort chunks | `analytics-long-estimate` | desktop | Daily Review task bars use a fixed 30m scale and cap the visible rail, so longer estimates read longer without stretching the layout. | `flow-and-shell.spec.ts` |
 | UI-031 | Suggested pomodoro subtracts already-logged time | `single-flow-task-with-history` | desktop | The first/suggested pomodoro preset reflects `estimate − already-logged` so repeated rounds don't re-offer the full estimate. | `timer.spec.ts` |
 | UI-032 | Custom pomodoro input launches arbitrary minutes | `single-flow-task` | desktop | The picker accepts a free-form custom minute value and starts the pomodoro at that target. | `timer.spec.ts` |
 

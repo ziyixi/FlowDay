@@ -80,6 +80,18 @@ interface WeeklyData {
   };
 }
 
+const TASK_BREAKDOWN_CHUNK_MINS = 30;
+const TASK_BREAKDOWN_VISIBLE_CHUNKS = 8;
+const TASK_BREAKDOWN_VISIBLE_MINS =
+  TASK_BREAKDOWN_CHUNK_MINS * TASK_BREAKDOWN_VISIBLE_CHUNKS;
+const TASK_BREAKDOWN_SCALE_LABEL = `${formatDuration(
+  TASK_BREAKDOWN_CHUNK_MINS
+)} chunks · capped at ${formatDuration(TASK_BREAKDOWN_VISIBLE_MINS)}`;
+const TASK_BREAKDOWN_SEGMENTS = Array.from(
+  { length: TASK_BREAKDOWN_VISIBLE_CHUNKS },
+  (_, index) => index
+);
+
 function analyticsUrl(type: "daily" | "weekly" | "stats", date?: string) {
   const params = new URLSearchParams({ type });
   if (date) params.set("date", date);
@@ -335,17 +347,16 @@ function DailyReview({
       {/* Per-task breakdown */}
       {data.tasks.length > 0 ? (
         <div>
-          <h3 className="mb-3 text-sm font-medium">Task Breakdown</h3>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-sm font-medium">Task Breakdown</h3>
+            <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground/70">
+              {TASK_BREAKDOWN_SCALE_LABEL}
+            </span>
+          </div>
           <div className="space-y-3">
-            {data.tasks.map((task) => {
-              const maxMins = Math.max(
-                ...data.tasks.map((t) =>
-                  Math.max(t.estimatedMins ?? 0, t.loggedMins)
-                ),
-                1
-              );
-              return <TaskBar key={task.id} task={task} maxMins={maxMins} />;
-            })}
+            {data.tasks.map((task) => (
+              <TaskBar key={task.id} task={task} />
+            ))}
           </div>
         </div>
       ) : (
@@ -725,9 +736,18 @@ function StatCard({
   );
 }
 
-function TaskBar({ task, maxMins }: { task: DailyTaskData; maxMins: number }) {
+function getTaskBreakdownPercent(mins: number) {
+  if (mins <= 0) return 0;
+  return Math.min((mins / TASK_BREAKDOWN_VISIBLE_MINS) * 100, 100);
+}
+
+function TaskBar({ task }: { task: DailyTaskData }) {
   const estimated = task.estimatedMins ?? 0;
   const logged = task.loggedMins;
+  const overflowMins = Math.max(
+    Math.max(estimated, logged) - TASK_BREAKDOWN_VISIBLE_MINS,
+    0
+  );
 
   return (
     <div className="space-y-1">
@@ -746,18 +766,44 @@ function TaskBar({ task, maxMins }: { task: DailyTaskData; maxMins: number }) {
           )}
           {task.title}
         </span>
-        <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
-          {estimated > 0 && <span>{formatDuration(estimated)} est</span>}
-          {estimated > 0 && logged > 0 && <span className="mx-1">→</span>}
-          {logged > 0 && <span>{formatDuration(logged)}</span>}
-        </span>
+        <div className="flex shrink-0 items-center gap-2">
+          {overflowMins > 0 && (
+            <span
+              data-testid={`analytics-task-overflow-${task.id}`}
+              className="rounded-full border border-border/60 bg-background px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground"
+              title={`Beyond the visible ${formatDuration(TASK_BREAKDOWN_VISIBLE_MINS)} cap`}
+            >
+              +{formatDuration(overflowMins)}
+            </span>
+          )}
+          <span className="text-[10px] tabular-nums text-muted-foreground">
+            {estimated > 0 && <span>{formatDuration(estimated)} est</span>}
+            {estimated > 0 && logged > 0 && <span className="mx-1">→</span>}
+            {logged > 0 && <span>{formatDuration(logged)}</span>}
+          </span>
+        </div>
       </div>
-      {/* Estimated bar (lighter, background) */}
-      <div className="relative h-2 overflow-hidden rounded-full bg-muted">
+      {/* Fixed 30m scale so bar lengths represent effort consistently across days. */}
+      <div
+        className="relative h-2 overflow-hidden rounded-full"
+        data-testid={`analytics-task-track-${task.id}`}
+      >
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 grid gap-px"
+          style={{
+            gridTemplateColumns: `repeat(${TASK_BREAKDOWN_VISIBLE_CHUNKS}, minmax(0, 1fr))`,
+          }}
+        >
+          {TASK_BREAKDOWN_SEGMENTS.map((segment) => (
+            <span key={segment} className="bg-muted" />
+          ))}
+        </div>
         {estimated > 0 && (
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-muted-foreground/15"
-            style={{ width: `${(estimated / maxMins) * 100}%` }}
+            data-testid={`analytics-task-estimate-fill-${task.id}`}
+            style={{ width: `${getTaskBreakdownPercent(estimated)}%` }}
           />
         )}
         {logged > 0 && (
@@ -766,7 +812,8 @@ function TaskBar({ task, maxMins }: { task: DailyTaskData; maxMins: number }) {
               "absolute inset-y-0 left-0 rounded-full",
               task.completed ? "bg-primary/70" : "bg-amber-500/70"
             )}
-            style={{ width: `${(logged / maxMins) * 100}%` }}
+            data-testid={`analytics-task-actual-fill-${task.id}`}
+            style={{ width: `${getTaskBreakdownPercent(logged)}%` }}
           />
         )}
       </div>
