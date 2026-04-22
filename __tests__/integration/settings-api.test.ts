@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { getSetting, setSetting } from "@/lib/db/queries";
 
 /**
  * Integration tests for the settings API routes.
@@ -29,6 +30,13 @@ describe("GET /api/settings", () => {
     expect(data.has_api_key).toBe(false);
     expect(data.day_capacity_mins).toBe(360);
     expect(data.planning_completed_today).toBe(false);
+  });
+
+  it("exposes last_sync_at when present", async () => {
+    setSetting("last_sync_at", "2026-04-13T12:00:00.000Z");
+    const res = await callSettings("GET");
+    const data = await res.json();
+    expect(data.last_sync_at).toBe("2026-04-13T12:00:00.000Z");
   });
 });
 
@@ -91,5 +99,29 @@ describe("PUT /api/settings — planning_completed_date", () => {
     const getRes = await callSettings("GET", undefined, `?today=${today}`);
     const getData = await getRes.json();
     expect(getData.planning_completed_today).toBe(true);
+  });
+
+  it("accepts combined updates in one request", async () => {
+    const date = "2026-04-13";
+    const res = await callSettings("PUT", {
+      todoist_api_key: "combo-secret",
+      day_capacity_mins: 480,
+      planning_completed_date: date,
+    });
+    expect(res.status).toBe(200);
+
+    const getRes = await callSettings("GET", undefined, `?today=${date}`);
+    const data = await getRes.json();
+    expect(data.has_api_key).toBe(true);
+    expect(data.day_capacity_mins).toBe(480);
+    expect(data.planning_completed_today).toBe(true);
+  });
+
+  it("ignores invalid planning dates without failing the request", async () => {
+    const res = await callSettings("PUT", {
+      planning_completed_date: "2026/04/13",
+    });
+    expect(res.status).toBe(200);
+    expect(getSetting("planning_completed:2026/04/13")).toBeNull();
   });
 });

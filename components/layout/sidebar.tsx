@@ -78,23 +78,27 @@ function SidebarTimer() {
   );
 }
 
-export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export function Sidebar({
+  collapsed,
+  onCollapsedChange,
+}: {
+  collapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
+}) {
   const [trashOpen, setTrashOpen] = useState(false);
   const searchQuery = useTodoistStore((s) => s.searchQuery);
   const setSearchQuery = useTodoistStore((s) => s.setSearchQuery);
   const isSyncing = useTodoistStore((s) => s.isSyncing);
   const sync = useTodoistStore((s) => s.sync);
 
-  return (
-    <>
-      {/* Expand button when collapsed */}
-      {collapsed && (
+  if (collapsed) {
+    return (
+      <>
         <div className="relative shrink-0">
           <Tooltip>
             <TooltipTrigger
               className="absolute left-1 top-1 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
-              onClick={() => setCollapsed(false)}
+              onClick={() => onCollapsedChange(false)}
               aria-label="Expand sidebar"
               title="Expand sidebar"
             >
@@ -103,12 +107,17 @@ export function Sidebar() {
             <TooltipContent side="right">Expand sidebar</TooltipContent>
           </Tooltip>
         </div>
-      )}
 
+        <DeletedTasksDialog open={trashOpen} onOpenChange={setTrashOpen} />
+      </>
+    );
+  }
+
+  return (
+    <>
       <aside
         className={cn(
-          "relative flex h-full shrink-0 flex-col bg-sidebar transition-all duration-200 ease-in-out",
-          collapsed ? "w-0 overflow-hidden" : "w-[280px] shadow-[1px_0_4px_-2px_oklch(0_0_0/0.08)]"
+          "relative flex h-full w-[280px] shrink-0 flex-col bg-sidebar shadow-[1px_0_4px_-2px_oklch(0_0_0/0.08)]"
         )}
       >
         {/* Sidebar header */}
@@ -142,7 +151,7 @@ export function Sidebar() {
             <Tooltip>
               <TooltipTrigger
                 className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
-                onClick={() => setCollapsed(true)}
+                onClick={() => onCollapsedChange(true)}
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
               >

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, addDays } from "date-fns";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { isSortable } from "@dnd-kit/react/sortable";
@@ -45,6 +45,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
   useHydration();
   useAutoSync();
   useAutoIdlePause();
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const currentDateStr = useFlowStore((s) => s.currentDate);
   const viewMode = useFlowStore((s) => s.viewMode);
@@ -130,6 +131,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
 
   return (
     <DragDropProvider
+      key={sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded"}
       onDragEnd={(event) => {
         if (event.canceled) return;
 
@@ -169,7 +171,10 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
       <div className="flex h-screen flex-col">
         <TopBar />
         <div className="flex flex-1 overflow-hidden">
-          <Sidebar />
+          <Sidebar
+            collapsed={sidebarCollapsed}
+            onCollapsedChange={setSidebarCollapsed}
+          />
           <main className="flex flex-1 overflow-hidden bg-background">
             {viewMode === 1 ? (
               <div className="flex flex-1 flex-col overflow-y-auto">
@@ -178,7 +183,12 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
             ) : (
               <div className="flex flex-1 divide-x divide-border overflow-hidden">
                 {dates.map((date) => (
-                  <div key={date} className="flex flex-1 flex-col overflow-hidden min-w-0">
+                  <div
+                    key={date}
+                    data-testid="day-column"
+                    data-date={date}
+                    className="flex flex-1 flex-col overflow-hidden min-w-0"
+                  >
                     <div className="shrink-0 border-b border-border px-3 py-2 text-center">
                       <p className="text-sm font-medium text-muted-foreground sm:text-xs">
                         {format(new Date(date + "T00:00:00"), "EEE")}

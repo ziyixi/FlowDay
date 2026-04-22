@@ -101,6 +101,21 @@ describe("PUT /api/flows — setFlow", () => {
     const data = await res.json();
     expect(data.error).toBeDefined();
   });
+
+  it("clears a flow when given an empty array", async () => {
+    upsertTasks([makeTask({ id: "t1" })]);
+    setFlowTaskIds("2026-04-13", ["t1"]);
+
+    const res = await callFlows("PUT", {
+      action: "setFlow",
+      date: "2026-04-13",
+      taskIds: [],
+    });
+    expect(res.status).toBe(200);
+
+    const flows = getAllFlows();
+    expect(flows["2026-04-13"]).toBeUndefined();
+  });
 });
 
 describe("PUT /api/flows — addCompleted", () => {
@@ -178,6 +193,45 @@ describe("PUT /api/flows — rollover", () => {
     // t1 was completed, should remain in source
     expect(flows["2026-04-13"]).toContain("t1");
   });
+
+  it("deduplicates tasks that already exist on the target date", async () => {
+    upsertTasks([
+      makeTask({ id: "t1", title: "Done Task" }),
+      makeTask({ id: "t2", title: "Carry once" }),
+    ]);
+    setFlowTaskIds("2026-04-13", ["t1", "t2"]);
+    setFlowTaskIds("2026-04-14", ["t2"]);
+    addCompletedFlowTask("2026-04-13", "t1");
+
+    const res = await callFlows("PUT", {
+      action: "rollover",
+      date: "2026-04-13",
+      fromDate: "2026-04-13",
+      toDate: "2026-04-14",
+    });
+    expect(res.status).toBe(200);
+
+    const flows = getAllFlows();
+    expect(flows["2026-04-14"]).toEqual(["t2"]);
+  });
+
+  it("is a no-op when there are no incomplete tasks to move", async () => {
+    upsertTasks([makeTask({ id: "t1", title: "Done Task" })]);
+    setFlowTaskIds("2026-04-13", ["t1"]);
+    addCompletedFlowTask("2026-04-13", "t1");
+
+    const res = await callFlows("PUT", {
+      action: "rollover",
+      date: "2026-04-13",
+      fromDate: "2026-04-13",
+      toDate: "2026-04-14",
+    });
+    expect(res.status).toBe(200);
+
+    const flows = getAllFlows();
+    expect(flows["2026-04-13"]).toEqual(["t1"]);
+    expect(flows["2026-04-14"]).toBeUndefined();
+  });
 });
 
 describe("PUT /api/flows — rolloverSelected", () => {
@@ -207,6 +261,24 @@ describe("PUT /api/flows — rolloverSelected", () => {
     // t1 and t3 should be gone from source
     expect(flows["2026-04-13"]).not.toContain("t1");
     expect(flows["2026-04-13"]).not.toContain("t3");
+  });
+
+  it("is a no-op when none of the selected task IDs are in the source flow", async () => {
+    upsertTasks([makeTask({ id: "t1", title: "Task A" })]);
+    setFlowTaskIds("2026-04-13", ["t1"]);
+
+    const res = await callFlows("PUT", {
+      action: "rolloverSelected",
+      date: "2026-04-13",
+      fromDate: "2026-04-13",
+      toDate: "2026-04-14",
+      taskIds: ["missing-task"],
+    });
+    expect(res.status).toBe(200);
+
+    const flows = getAllFlows();
+    expect(flows["2026-04-13"]).toEqual(["t1"]);
+    expect(flows["2026-04-14"]).toBeUndefined();
   });
 });
 

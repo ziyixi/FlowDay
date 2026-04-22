@@ -17,12 +17,15 @@ const inTwoDaysDate = new Date(todayDate);
 inTwoDaysDate.setDate(inTwoDaysDate.getDate() + 2);
 const inThreeDaysDate = new Date(todayDate);
 inThreeDaysDate.setDate(inThreeDaysDate.getDate() + 3);
+const inOneWeekDate = new Date(todayDate);
+inOneWeekDate.setDate(inOneWeekDate.getDate() + 7);
 
 export const TODAY = formatDate(todayDate);
 export const YESTERDAY = formatDate(yesterdayDate);
 export const TOMORROW = formatDate(tomorrowDate);
 export const IN_TWO_DAYS = formatDate(inTwoDaysDate);
 export const IN_THREE_DAYS = formatDate(inThreeDaysDate);
+export const IN_ONE_WEEK = formatDate(inOneWeekDate);
 export const FIXED_TIME_ISO = `${TODAY}T09:00:00.000Z`;
 
 interface SeedPayload {
@@ -69,7 +72,13 @@ export type SeedName =
   | "future-dated-pool"
   | "two-flow-tasks"
   | "analytics-seeded"
-  | "todoist-overdue";
+  | "todoist-overdue"
+  | "wizard-over-capacity"
+  | "multi-day-readonly"
+  | "sidebar-section-state"
+  | "tooltip-rich-task"
+  | "settings-saved-key"
+  | "analytics-multi-date";
 
 function localTask(
   id: string,
@@ -132,6 +141,23 @@ function buildSeed(name: SeedName): SeedPayload {
         },
         settings: {
           day_capacity_mins: 360,
+        },
+      };
+
+    case "wizard-over-capacity":
+      return {
+        tasks: [
+          localTask("wizard-cap-task-1", "Ship the release branch", {
+            estimatedMins: 30,
+            priority: 3,
+          }),
+          localTask("wizard-cap-task-2", "Write the migration notes", {
+            estimatedMins: 45,
+            labels: ["docs"],
+          }),
+        ],
+        settings: {
+          day_capacity_mins: 90,
         },
       };
 
@@ -258,6 +284,118 @@ function buildSeed(name: SeedName): SeedPayload {
         },
       };
 
+    case "multi-day-readonly":
+      return {
+        tasks: [
+          localTask("readonly-today", "Today writing block", {
+            estimatedMins: 60,
+            labels: ["writing"],
+          }),
+          localTask("readonly-tomorrow-done", "Tomorrow shipped task", {
+            dueDate: TOMORROW,
+            estimatedMins: 30,
+          }),
+          localTask("readonly-two-days", "Two-day planning pass", {
+            dueDate: IN_TWO_DAYS,
+            estimatedMins: 45,
+          }),
+          localTask("readonly-three-days", "Three-day research queue", {
+            dueDate: IN_THREE_DAYS,
+            estimatedMins: 90,
+          }),
+        ],
+        flows: {
+          [TODAY]: ["readonly-today"],
+          [IN_TWO_DAYS]: ["readonly-two-days"],
+          [IN_THREE_DAYS]: ["readonly-three-days"],
+        },
+        completedTasks: {
+          [TOMORROW]: ["readonly-tomorrow-done"],
+        },
+        notes: [
+          {
+            taskId: "readonly-today",
+            flowDate: TODAY,
+            content: "Today note stays in today.",
+          },
+          {
+            taskId: "readonly-tomorrow-done",
+            flowDate: TOMORROW,
+            content: "Tomorrow done note.",
+          },
+          {
+            taskId: "readonly-two-days",
+            flowDate: IN_TWO_DAYS,
+            content: "Two-day note stays put.",
+          },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "sidebar-section-state":
+      return {
+        tasks: [
+          localTask("sidebar-task-a", "Inbox zero", {
+            estimatedMins: 20,
+          }),
+          localTask("sidebar-task-b", "Implement feature", {
+            estimatedMins: 90,
+            priority: 3,
+          }),
+          localTask("sidebar-task-c", "Closed out task", {
+            estimatedMins: 30,
+          }),
+        ],
+        flows: {
+          [TODAY]: ["sidebar-task-a", "sidebar-task-b"],
+        },
+        completedTasks: {
+          [TODAY]: ["sidebar-task-c"],
+        },
+        timeEntries: [
+          {
+            taskId: "sidebar-task-c",
+            flowDate: TODAY,
+            startTime: `${TODAY}T08:00:00.000Z`,
+            endTime: `${TODAY}T08:25:00.000Z`,
+            durationS: 1500,
+            source: "timer",
+          },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "tooltip-rich-task":
+      return {
+        tasks: [
+          localTask("tooltip-task", "Rich tooltip task", {
+            description:
+              "A markdown tooltip.\n\n- Bullet alpha\n- Bullet beta\n\nUse `npm test` before merging.",
+            labels: ["urgent", "docs"],
+          }),
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "settings-saved-key":
+      return {
+        settings: {
+          todoist_api_key: "saved-secret-key",
+          last_sync_at: `${TODAY}T12:00:00.000Z`,
+          day_capacity_mins: 210,
+          [`planning_completed:${TODAY}`]: true,
+        },
+      };
+
     case "analytics-seeded":
       return {
         tasks: [
@@ -321,6 +459,51 @@ function buildSeed(name: SeedName): SeedPayload {
             flowDate: TODAY,
             startTime: `${TODAY}T09:00:00.000Z`,
             endTime: `${TODAY}T09:20:00.000Z`,
+            durationS: 1200,
+            source: "timer",
+          },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "analytics-multi-date":
+      return {
+        tasks: [
+          localTask("analytics-multi-today", "Today review block", {
+            estimatedMins: 60,
+            projectName: "Today Project",
+          }),
+          localTask("analytics-multi-next-week", "Next week planning block", {
+            dueDate: IN_ONE_WEEK,
+            estimatedMins: 30,
+            projectName: "Next Week Project",
+          }),
+        ],
+        flows: {
+          [TODAY]: ["analytics-multi-today"],
+          [IN_ONE_WEEK]: ["analytics-multi-next-week"],
+        },
+        completedTasks: {
+          [TODAY]: ["analytics-multi-today"],
+          [IN_ONE_WEEK]: ["analytics-multi-next-week"],
+        },
+        timeEntries: [
+          {
+            taskId: "analytics-multi-today",
+            flowDate: TODAY,
+            startTime: `${TODAY}T09:00:00.000Z`,
+            endTime: `${TODAY}T09:30:00.000Z`,
+            durationS: 1800,
+            source: "timer",
+          },
+          {
+            taskId: "analytics-multi-next-week",
+            flowDate: IN_ONE_WEEK,
+            startTime: `${IN_ONE_WEEK}T10:00:00.000Z`,
+            endTime: `${IN_ONE_WEEK}T10:20:00.000Z`,
             durationS: 1200,
             source: "timer",
           },
@@ -467,14 +650,46 @@ export async function dragTaskToEmptyFlow(page: Page, title: string) {
   }
 
   await page.mouse.move(
+    sourceBox.x + 28,
+    sourceBox.y + sourceBox.height / 2
+  );
+  await page.mouse.down();
+  await page.mouse.move(
+    sourceBox.x + 64,
+    sourceBox.y + sourceBox.height / 2 + 8,
+    { steps: 6 }
+  );
+  await page.mouse.move(
+    targetBox.x + targetBox.width * 0.35,
+    targetBox.y + targetBox.height * 0.28,
+    { steps: 16 }
+  );
+  await page.mouse.up();
+}
+
+export async function dragFlowCardToFlowCard(
+  page: Page,
+  sourceTaskId: string,
+  targetTaskId: string
+) {
+  const source = flowCardById(page, sourceTaskId);
+  const target = flowCardById(page, targetTaskId);
+  const sourceBox = await source.boundingBox();
+  const targetBox = await target.boundingBox();
+
+  if (!sourceBox || !targetBox) {
+    throw new Error("Unable to resolve flow card drag bounds");
+  }
+
+  await page.mouse.move(
     sourceBox.x + sourceBox.width / 2,
     sourceBox.y + sourceBox.height / 2
   );
   await page.mouse.down();
   await page.mouse.move(
     targetBox.x + targetBox.width / 2,
-    targetBox.y + targetBox.height / 2,
-    { steps: 12 }
+    targetBox.y + targetBox.height / 3,
+    { steps: 16 }
   );
   await page.mouse.up();
 }

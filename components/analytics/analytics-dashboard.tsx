@@ -189,28 +189,40 @@ function DateNav({
   onPrev,
   onNext,
   onToday,
+  previousLabel = "Previous analytics period",
+  nextLabel = "Next analytics period",
+  todayLabel = "Jump to current analytics period",
 }: {
   label: string;
   onPrev: () => void;
   onNext: () => void;
   onToday: () => void;
+  previousLabel?: string;
+  nextLabel?: string;
+  todayLabel?: string;
 }) {
   return (
     <div className="flex items-center gap-2">
       <button
         onClick={onPrev}
+        aria-label={previousLabel}
+        title={previousLabel}
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
       >
         <ChevronLeft className="h-4 w-4" />
       </button>
       <button
         onClick={onToday}
+        aria-label={todayLabel}
+        title={todayLabel}
         className="min-w-[180px] text-center text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
       >
         {label}
       </button>
       <button
         onClick={onNext}
+        aria-label={nextLabel}
+        title={nextLabel}
         className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
       >
         <ChevronRight className="h-4 w-4" />

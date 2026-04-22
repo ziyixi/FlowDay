@@ -156,6 +156,8 @@ function ReadOnlyTaskRow({
 
   return (
     <div
+      data-testid="read-only-flow-task-row"
+      data-task-id={task.id}
       className={cn(
         "flex flex-col gap-1 rounded-md border bg-card px-2.5 py-1.5 shadow-[0_1px_2px_oklch(0_0_0/0.04)]",
         isNext
@@ -184,7 +186,11 @@ function ReadOnlyTaskRow({
 
 function ReadOnlyCompletedRow({ task, noteText }: { task: Task; noteText: string }) {
   return (
-    <div className="rounded-md bg-muted/30 px-2.5 py-1">
+    <div
+      data-testid="read-only-completed-task-row"
+      data-task-id={task.id}
+      className="rounded-md bg-muted/30 px-2.5 py-1"
+    >
       <div className="flex items-center gap-2">
         <Check className="h-2.5 w-2.5 shrink-0 text-green-500" />
         <p className="truncate text-sm text-muted-foreground line-through decoration-muted-foreground/40 sm:text-[11px]">{task.title}</p>

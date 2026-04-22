@@ -80,6 +80,8 @@ export function PlanningWizard({ date, onDismiss, onComplete }: PlanningWizardPr
           </div>
           <button
             onClick={handleDismiss}
+            aria-label="Dismiss planning wizard"
+            title="Dismiss planning wizard"
             className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
           >
             <X className="h-4 w-4" />
@@ -296,6 +298,7 @@ function StepReview({
             return (
               <div
                 key={task.id}
+                data-testid={`planning-review-row-${task.id}`}
                 className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2"
               >
                 <span className="w-4 text-right text-xs tabular-nums text-muted-foreground/50">

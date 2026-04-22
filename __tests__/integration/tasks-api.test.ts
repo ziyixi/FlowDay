@@ -129,6 +129,21 @@ describe("PATCH /api/tasks", () => {
     expect(task.title).toBe("Renamed Task");
   });
 
+  it("trims title updates and accepts stringified numeric estimates", async () => {
+    const res = await callTasks("PATCH", {
+      taskId: "t1",
+      title: "  Renamed Task  ",
+      estimatedMins: "75",
+    });
+    expect(res.status).toBe(200);
+
+    const getRes = await callTasks("GET");
+    const tasks = await getRes.json();
+    const task = tasks.find((t: { id: string }) => t.id === "t1");
+    expect(task.title).toBe("Renamed Task");
+    expect(task.estimatedMins).toBe(75);
+  });
+
   it("returns 400 for empty title", async () => {
     const res = await callTasks("PATCH", {
       taskId: "t1",
@@ -203,5 +218,24 @@ describe("POST /api/tasks (quick add)", () => {
     const res = await callTasks("GET");
     const tasks = await res.json();
     expect(tasks.some((t: { title: string }) => t.title === "Visible task")).toBe(true);
+  });
+
+  it("trims the title and preserves optional fields", async () => {
+    const res = await callTasks("POST", {
+      title: "  Planned task  ",
+      priority: 3,
+      dueDate: "2026-04-20",
+      estimatedMins: 45,
+      labels: ["docs", "review"],
+      description: "Needs commas, quotes, and detail",
+    });
+    expect(res.status).toBe(201);
+    const task = await res.json();
+    expect(task.title).toBe("Planned task");
+    expect(task.priority).toBe(3);
+    expect(task.dueDate).toBe("2026-04-20");
+    expect(task.estimatedMins).toBe(45);
+    expect(task.labels).toEqual(["docs", "review"]);
+    expect(task.description).toBe("Needs commas, quotes, and detail");
   });
 });

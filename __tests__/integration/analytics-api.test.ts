@@ -170,6 +170,30 @@ describe("GET /api/analytics — daily", () => {
     expect(data.hourlyMins[hour]).toBe(30);
   });
 
+  it("falls back to the default formatter when the timezone is invalid", async () => {
+    const baseline = await callAnalytics("type=daily&date=2026-04-13");
+    const invalid = await callAnalytics("type=daily&date=2026-04-13&tz=Invalid%2FZone");
+    expect(invalid.hourlyMins).toEqual(baseline.hourlyMins);
+  });
+
+  it("splits minutes across hour boundaries", async () => {
+    upsertTasks([makeTask({ id: "hour-split-task", title: "Hour Split" })]);
+    setFlowTaskIds("2026-04-13", ["hour-split-task"]);
+    createTimeEntry({
+      id: "hour-split-entry",
+      taskId: "hour-split-task",
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T00:59:00.000Z",
+      endTime: "2026-04-13T01:01:00.000Z",
+      durationS: 120,
+      source: "timer",
+    });
+
+    const data = await callAnalytics("type=daily&date=2026-04-13&tz=UTC");
+    expect(data.hourlyMins[0]).toBe(1);
+    expect(data.hourlyMins[1]).toBe(1);
+  });
+
   it("includes misc-only time in daily review without inflating planned task counts", async () => {
     createTimeEntry({
       id: "misc-daily-entry",
@@ -344,6 +368,24 @@ describe("GET /api/analytics — stats", () => {
     const hour = getHourInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
     expect(data.weekCount[dayIdx][hour]).toBeGreaterThan(0);
     expect(data.totalMins[dayIdx][hour]).toBeGreaterThan(0);
+  });
+
+  it("splits work-pattern minutes across day boundaries", async () => {
+    createTimeEntry({
+      id: "stats-midnight-entry",
+      taskId: "t1",
+      flowDate: "2026-04-13",
+      startTime: "2026-04-19T23:59:00.000Z",
+      endTime: "2026-04-20T00:01:00.000Z",
+      durationS: 120,
+      source: "timer",
+    });
+
+    const data = await callAnalytics("type=stats&tz=UTC");
+    expect(data.weekCount[6][23]).toBeGreaterThan(0);
+    expect(data.weekCount[0][0]).toBeGreaterThan(0);
+    expect(data.totalMins[6][23]).toBe(1);
+    expect(data.totalMins[0][0]).toBe(1);
   });
 });
 

@@ -1,6 +1,7 @@
 import { test, expect } from "@playwright/test";
 import {
   flowCard,
+  flowCardById,
   openApp,
   resetAppState,
   seedAppState,
@@ -127,4 +128,53 @@ test("[UI-022] Start Your Day no longer rolls yesterday into today automatically
 
   await page.getByRole("button", { name: "Previous day" }).click();
   await expect(flowCard(page, "Yesterday carryover")).toBeVisible();
+});
+
+test("[UI-039] Dismissing the wizard prevents auto-reopen until it is launched manually", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "wizard-today-tasks");
+  await openApp(page);
+
+  await expect(page.getByText("Start Your Day")).toBeVisible();
+  await page.getByRole("button", { name: "Dismiss planning wizard" }).click();
+
+  await expect(page.getByText("Start Your Day")).toHaveCount(0);
+  await expect(page.getByTestId("day-flow-empty-state")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText("Start Your Day")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Plan My Day" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Plan My Day" }).click();
+  await expect(page.getByText("Start Your Day")).toBeVisible();
+});
+
+test("[UI-040] Wizard estimate edits can push the plan over capacity before finish", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "wizard-over-capacity");
+  await openApp(page);
+
+  await page.getByTestId("planning-add-task-wizard-cap-task-1").click();
+  await page.getByTestId("planning-add-task-wizard-cap-task-2").click();
+  await page.getByRole("button", { name: "Continue" }).click();
+
+  const reviewRow = page.getByTestId("planning-review-row-wizard-cap-task-2");
+  await reviewRow.getByTitle("Click to edit estimate").click();
+  await page.getByRole("button", { name: "1.5h" }).click();
+
+  await page.getByRole("button", { name: "Continue" }).click();
+  await expect(page.getByText("You've planned ~2h for a 1h 30m day")).toBeVisible();
+
+  await page.getByRole("button", { name: "Start My Day" }).click();
+  await expect(flowCardById(page, "wizard-cap-task-1")).toBeVisible();
+  await expect(flowCardById(page, "wizard-cap-task-2")).toBeVisible();
+
+  await page.reload();
+  await expect(page.getByText("Start Your Day")).toHaveCount(0);
+  await expect(flowCardById(page, "wizard-cap-task-1")).toBeVisible();
+  await expect(flowCardById(page, "wizard-cap-task-2")).toBeVisible();
 });

@@ -18,6 +18,8 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-003 | Start Your Day completes and persists the plan | `wizard-today-tasks` | desktop | A full wizard flow creates the day plan and survives reload. | `wizard.spec.ts` |
 | UI-017 | Wizard add-all button bulk-adds available tasks | `wizard-today-tasks` | desktop | The add-all shortcut adds every available task once and then disappears. | `wizard.spec.ts` |
 | UI-022 | Start Your Day does not auto-roll yesterday into today | `wizard-with-yesterday-incomplete` | desktop | FlowDay no longer carries unfinished work forward unless Todoist itself is updated. | `wizard.spec.ts` |
+| UI-039 | Dismissing the wizard prevents auto-reopen until it is launched manually | `wizard-today-tasks` | desktop | Closing the wizard marks planning complete for today, prevents auto-open after reload, and still allows a manual reopen from the empty-state CTA. | `wizard.spec.ts` |
+| UI-040 | Wizard estimate edits can push the plan over capacity before finish | `wizard-over-capacity` | desktop | Review-step estimate edits feed into the confirm step, surface the over-capacity warning, and the finished plan survives reload. | `wizard.spec.ts` |
 | UI-012 | Portrait wizard and flow-card usability regression | `wizard-today-tasks` | portrait | The wizard and resulting flow cards remain readable and tappable on portrait/mobile layout. | `wizard.spec.ts` |
 
 ## Flow And Sidebar
@@ -32,6 +34,11 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-023 | Future task pool follows the selected planning date | `future-dated-pool` | desktop | Planning for +2 and +3 days uses the selected flow date, not only today/tomorrow. | `flow-and-shell.spec.ts` |
 | UI-027 | Repeated date-nav clicks keep the next/previous hit target stable | `future-dated-pool` | desktop | Leaving today does not shift the arrow button under the cursor onto `Today`, so same-position repeated clicks continue navigating forward/backward. | `flow-and-shell.spec.ts` |
 | UI-033 | Custom estimate input commits when the popover closes | `single-flow-task` | desktop | Typing a custom estimate and clicking outside the popover persists the value — no need to press Enter to avoid losing the edit. | `flow-and-shell.spec.ts` |
+| UI-041 | Dragging flow cards into a new order persists after reload | `two-flow-tasks` | desktop | Reordering cards within the flow writes the new order through to SQLite and survives refresh. | `flow-and-shell.spec.ts` |
+| UI-042 | Multi-day read-only columns keep tasks, notes, and done markers on the correct date | `multi-day-readonly` | desktop | The 3-day and 5-day views render each date's tasks, notes, and completed markers only in the owning column. | `flow-and-shell.spec.ts` |
+| UI-043 | Sidebar arranged and completed sections follow live flow changes | `sidebar-section-state` | desktop | Sidebar counts and rows update immediately as tasks move between arranged and completed, and completed rows keep logged-time context. | `flow-and-shell.spec.ts` |
+| UI-044 | Task pool tooltips render labels and markdown descriptions | `tooltip-rich-task` | desktop | Pool-card tooltips show labels plus markdown-formatted description content. | `flow-and-shell.spec.ts` |
+| UI-048 | Collapsing and reopening the sidebar keeps the pool usable | `shell-empty` | desktop | Sidebar collapse state does not break quick add, search visibility, or drag-to-flow after reopening. | `flow-and-shell.spec.ts` |
 
 ## Timer And Pomodoro
 
@@ -66,3 +73,6 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-011 | Settings, export, and analytics smoke | `analytics-seeded` | desktop | Core settings, export dialog, and analytics tabs are all reachable and functional. | `flow-and-shell.spec.ts` |
 | UI-024 | Analytics stats use browser local timezone | `analytics-timezone-boundary` | desktop | Analytics requests include browser timezone and render a near-midnight UTC session in the correct local bucket. | `flow-and-shell.spec.ts` |
 | UI-030 | Analytics review tabs include misc tracked time | `analytics-seeded-with-misc` | desktop | Misc sentinel entries appear in Daily Review task breakdown and Weekly Review project summaries, not only in Work Patterns. | `flow-and-shell.spec.ts` |
+| UI-045 | Settings keep sync disabled until a key exists and preserve saved capacity | `shell-empty` | desktop | Sync stays disabled until an API key is saved, the saved-key state is masked on reopen, and capacity changes persist. | `flow-and-shell.spec.ts` |
+| UI-046 | Export dialog uses the selected type, format, and date range for downloads | `analytics-seeded` | desktop | Export downloads honor the chosen data type, format, and date window and generate the expected filename. | `flow-and-shell.spec.ts` |
+| UI-047 | Analytics navigation updates the rendered review window and empty states | `analytics-multi-date` | desktop | Daily and weekly analytics navigation changes the rendered review window and shows the empty-state copy when a period has no data. | `flow-and-shell.spec.ts` |

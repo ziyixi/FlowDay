@@ -192,23 +192,20 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 ### 4.7 — Daily Planning Ritual ("Start My Day") ✅ Implemented
 
-**What it does:** A guided multi-step wizard when opening FlowDay each morning to set up the day's plan.
+**What it does:** A guided 3-step wizard when opening FlowDay each morning to set up the day's plan.
 
 - Triggered automatically when today's flow is empty and planning not yet completed (waits for store hydration)
 - Also available via "Plan My Day" button in the empty day-flow state (always visible for today)
-- Dynamic step count based on whether yesterday has incomplete tasks:
-  - Step 1 (conditional): Select roll-over candidates with checkboxes (all checked by default), "Roll Over N Tasks" or "Skip"
-  - Step 2: Add tasks from Todoist pool — shows overdue + today tasks with "+" buttons, live task count in footer
-  - Step 3: Review plan — numbered task list with inline estimate editors and remove buttons
-  - Step 4: Confirm — capacity summary with progress bar, over-capacity warning, "Start My Day" button
+- Step 1: Add tasks from the Todoist pool — shows overdue + selected-date tasks with "+" buttons, plus an add-all shortcut when multiple tasks are available
+- Step 2: Review plan — numbered task list with inline estimate editors and remove buttons
+- Step 3: Confirm — capacity summary with progress bar, over-capacity warning, and the "Start My Day" action
 - Dismissable at any step via "×" button — sets planning as completed to prevent re-triggering
-- Roll-over in wizard is selective (per-task checkboxes) vs. the standalone rollover prompt which is all-or-nothing
-- Rollover prompt is suppressed when planning is completed for the date
 - Stores `planning_completed:<date>` flag in SQLite settings table, loaded during hydration
+- Rollover support still exists at the API/store layer (`rollover` and `rolloverSelected`) for future UI use, but the current shipped wizard does not expose a rollover step
 
 **Implementation notes:**
-- New component: `planning-wizard.tsx` — 4 sub-components (StepRollover, StepAddTasks, StepReview, StepConfirm)
-- `PUT /api/flows` supports `rolloverSelected` action: moves only specified task IDs from source to target
+- New component: `planning-wizard.tsx` — 3 sub-components (StepAddTasks, StepReview, StepConfirm)
+- `PUT /api/flows` supports both `rollover` and `rolloverSelected` actions for store/API-level task carryover flows
 - `GET /api/settings?today=YYYY-MM-DD` returns `planning_completed_today: boolean` — client passes its local date to avoid server timezone mismatch
 - `PUT /api/settings` accepts `planning_completed_date` to persist the flag
 - Flow store additions: `hydrated: boolean`, `planningCompletedDates: Record<string, boolean>`, `setPlanningCompleted(date)`, `rolloverSelectedTasks(from, to, ids)`
@@ -298,7 +295,8 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 | Layer | Choice | Notes |
 |-------|--------|-------|
 | **Test Runner** | **Vitest 3.2** | Fast, ESM-native, shared Vite config |
-| **Test Structure** | Unit + Integration | `__tests__/unit/` and `__tests__/integration/` |
+| **Test Structure** | Unit + Integration + UI | `__tests__/unit/`, `__tests__/integration/`, and `__tests__/ui/` |
+| **UI Harness** | **Playwright** | Seeded via `/api/test/*`, run under `TZ=UTC`, and kept in sync with `PRD/UI_TEST_PLAN.md` by a unit test |
 | **DB Isolation** | Fresh SQLite per test | `beforeEach` closes connection + wipes DB file |
 
 ### Deployment
@@ -359,7 +357,6 @@ flowday/
 │   │   ├── day-flow.tsx           # Editable + read-only day flow views
 │   │   ├── flow-task-card.tsx     # Full task card with timer + actions
 │   │   ├── progress-bar.tsx       # Day progress + capacity warning
-│   │   ├── rollover-prompt.tsx    # Yesterday's incomplete tasks prompt
 │   │   └── planning-wizard.tsx    # Daily planning ritual wizard
 │   ├── timer/
 │   │   ├── timer-display.tsx      # Top bar timer component
@@ -407,20 +404,9 @@ flowday/
 │   └── utils.ts                   # cn() utility
 ├── __tests__/
 │   ├── setup.ts                   # Per-test DB isolation (close + wipe)
-│   ├── unit/
-│   │   ├── time.test.ts           # formatDuration, formatElapsed
-│   │   ├── queries-core.test.ts   # Settings, tasks, flows, completed flows
-│   │   ├── queries-time-entries.test.ts # Time entry CRUD + range queries
-│   │   └── sync-logic.test.ts     # Sync dueDate updates, task section categorisation
-│   └── integration/
-│       ├── analytics-api.test.ts  # Analytics route handler (daily/weekly/stats)
-│       ├── entries-api.test.ts    # Entries route handler (CRUD)
-│       ├── export-api.test.ts     # Export route handler (CSV/JSON)
-│       ├── flows-api.test.ts      # Flows route handler (CRUD + rollover)
-│       ├── notes-api.test.ts      # Notes route handler (GET/PUT)
-│       ├── settings-api.test.ts   # Settings route handler (GET/PUT)
-│       ├── tasks-api.test.ts      # Tasks route handler (GET/POST/PATCH/DELETE)
-│       └── tasks-deleted-api.test.ts # Deleted tasks route (GET/POST restore)
+│   ├── unit/                      # Query helpers, timers, stores, Todoist client/sync, docs sync guards
+│   ├── integration/               # Route handlers: entries, flows, notes, settings, sync, export, analytics, timers
+│   └── ui/                        # Playwright specs + seeded helpers for wizard, shell/flow, and timer journeys
 ├── .github/
 │   └── workflows/
 │       └── ci.yml                 # CI/CD: lint → test → build → Docker push
@@ -615,23 +601,20 @@ CREATE TABLE time_entries (
 - New API endpoints: `DELETE /api/tasks` (soft-delete), `GET /api/tasks/deleted` (list), `POST /api/tasks/deleted` (restore)
 
 ### Session 8 — Roll-over & Day Capacity ✅
-- Roll-over prompt: shown when yesterday has incomplete tasks, with "Roll over to today" and "Dismiss" buttons
-- Roll-over moves incomplete tasks from yesterday to top of today's flow (deduped), removes from source
+- Roll-over logic exists in `PUT /api/flows` and the flow store for moving incomplete tasks between dates with deduping
 - `PUT /api/flows` `rollover` action handles server-side logic
 - Day capacity: configurable hours in Settings dialog (default 6h), stored as `day_capacity_mins`
 - Progress bar shows capacity (`/ 6h cap`) and amber warning when overcommitted
 - Capacity stored reactively in flow store `dayCapacityMins` — updates instantly on save without page refresh
 - `PUT /api/settings` extended to accept `day_capacity_mins` alongside API key
-- New component: `rollover-prompt.tsx`
 
 ### Session 9 — Daily Planning Ritual ✅
-- "Start My Day" multi-step wizard: selective roll-over → add tasks → review estimates → capacity check → confirm
+- "Start My Day" multi-step wizard: add tasks → review estimates → capacity check → confirm
 - Auto-triggered when today's flow is empty and planning not completed; also available via "Plan My Day" button
-- Dynamic step count: 3 steps (no rollover needed) or 4 steps (rollover candidates present)
+- Three visible steps in the current UI: Add, Review, Ready
 - Per-date `planning_completed:<date>` flag stored in SQLite settings table
-- `PUT /api/flows` `rolloverSelected` action for selective task rollover
+- `PUT /api/flows` `rollover` and `rolloverSelected` actions remain available at the API/store layer for future UI use
 - Flow store `hydrated` flag ensures wizard doesn't trigger before data loads
-- Rollover prompt suppressed when planning completed for the date
 - New component: `planning-wizard.tsx`
 
 ### Session 10 — Task Notes & Session Log ✅ Implemented
@@ -658,8 +641,9 @@ CREATE TABLE time_entries (
 ### Session 12 — Testing & Docker Deployment ✅ Implemented
 - **Vitest** test runner with `@` path alias and serial execution (`fileParallelism: false`)
 - Per-test DB isolation: `beforeEach` closes SQLite connection via `globalThis.__flowdaySqlite` and wipes DB files
-- **Unit tests** (3 files, 33 tests): `formatDuration`/`formatElapsed`, settings/task/flow CRUD queries, time entry CRUD + range queries
-- **Integration tests** (2 files, 25 tests): analytics route handler (daily/weekly/stats computations, error handling), entries route handler (POST/GET/PUT/DELETE via direct handler invocation)
+- **Unit tests**: utility logic, database query helpers, timer behavior, Zustand stores, Todoist API pagination, sync transforms, and documentation sync guards
+- **Integration tests**: route handlers for analytics, entries, export, flows, notes, settings, sync, tasks, deleted tasks, and timer persistence
+- **Playwright UI tests**: seeded browser coverage for the wizard, flow/shell journeys, timers, settings, export, analytics, and multi-day read-only behavior
 - **Docker**: multi-stage build (Node 20 Alpine) — deps → build → standalone runner, non-root `nextjs` user, `/app/db` directory with correct permissions
 - **GitHub Actions CI/CD**: lint + unit tests + integration tests + build (parallel), then Docker build & push to GHCR on main push or release
 - Docker metadata: tags by branch, semver, and SHA; GHA build cache for fast rebuilds

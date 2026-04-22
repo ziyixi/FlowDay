@@ -153,13 +153,14 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </p>
             <div className="flex gap-2">
               <Input
+                data-testid="settings-api-key-input"
                 type="password"
                 placeholder={hasExistingKey ? "••••••••  (key saved)" : "Enter your API key"}
                 value={apiKey}
                 onChange={(e) => setApiKey(e.target.value)}
                 className="flex-1"
               />
-              <Button onClick={handleSave} disabled={saving}>
+              <Button data-testid="settings-save-api-key" onClick={handleSave} disabled={saving}>
                 Save
               </Button>
             </div>
@@ -172,6 +173,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                 Todoist Sync
               </label>
               <Button
+                data-testid="settings-sync-now"
                 variant="outline"
                 size="sm"
                 onClick={handleSync}

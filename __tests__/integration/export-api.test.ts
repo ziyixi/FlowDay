@@ -83,6 +83,33 @@ describe("GET /api/export", () => {
     expect(text).toContain("Design");
   });
 
+  it("quotes CSV fields that contain commas or quotes in entries exports", async () => {
+    upsertTasks([
+      makeTask({
+        id: "csv-entries-task",
+        title: 'Roadmap, "Q2"',
+        projectName: 'Docs, "Team"',
+      }),
+    ]);
+    createTimeEntry({
+      id: "csv-entries-entry",
+      taskId: "csv-entries-task",
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T09:45:00Z",
+      endTime: "2026-04-13T10:15:00Z",
+      durationS: 1800,
+      source: "manual",
+    });
+
+    const res = await callExport("type=entries&format=csv&start=2026-04-13&end=2026-04-13");
+    expect(res.headers.get("content-disposition")).toContain(
+      'flowday-entries-2026-04-13-to-2026-04-13.csv'
+    );
+    const text = await res.text();
+    expect(text).toContain('"Roadmap, ""Q2"""');
+    expect(text).toContain('"Docs, ""Team"""');
+  });
+
   it("exports flows as JSON", async () => {
     const res = await callExport("type=flows&format=json&start=2026-04-13&end=2026-04-13");
     expect(res.status).toBe(200);
@@ -99,6 +126,25 @@ describe("GET /api/export", () => {
     const text = await res.text();
     expect(text).toContain("date,taskId,taskTitle");
     expect(text).toContain("true");
+  });
+
+  it("quotes CSV fields and uses the expected filename for flow exports", async () => {
+    upsertTasks([
+      makeTask({
+        id: "csv-flow-task",
+        title: 'Review, "Launch"',
+        projectName: 'Ops, "Team"',
+      }),
+    ]);
+    setFlowTaskIds("2026-04-13", ["csv-flow-task"]);
+
+    const res = await callExport("type=flows&format=csv&start=2026-04-13&end=2026-04-13");
+    expect(res.headers.get("content-disposition")).toContain(
+      'flowday-flows-2026-04-13-to-2026-04-13.csv'
+    );
+    const text = await res.text();
+    expect(text).toContain('"Review, ""Launch"""');
+    expect(text).toContain('"Ops, ""Team"""');
   });
 
   it("returns empty array for date range with no data", async () => {

@@ -100,6 +100,14 @@ describe("GET /api/entries", () => {
     expect(data).toHaveLength(2);
   });
 
+  it("retrieves by taskId and date together", async () => {
+    const res = await callEntries("GET", "taskId=t1&date=2026-04-13");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data).toHaveLength(1);
+    expect(data[0].id).toBe("e1");
+  });
+
   it("returns 400 with no params", async () => {
     const res = await callEntries("GET");
     expect(res.status).toBe(400);
@@ -127,6 +135,16 @@ describe("PUT /api/entries/:id", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.durationS).toBe(3600);
+  });
+
+  it("recalculates duration from the provided timestamps", async () => {
+    const res = await callEntryById("PUT", "e1", {
+      startTime: "2026-04-13T10:07:00Z",
+      endTime: "2026-04-13T11:22:00Z",
+    });
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    expect(data.durationS).toBe(4500);
   });
 
   it("returns 404 for non-existent entry", async () => {

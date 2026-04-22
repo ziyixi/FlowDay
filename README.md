@@ -53,7 +53,7 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 - **Auto-idle pause** — long-running timers automatically pause when you lock your screen or step away (≥10 min idle). Uses the precise `IdleDetector` API when permission is granted (one-time on-entry prompt), otherwise falls back to a Page Visibility heuristic.
 - **Data export** — CSV/JSON export of time entries and flow history with date range picker.
 - **Multi-day view** — 1, 3, or 5 day horizon for planning context.
-- **Daily planning ritual** — guided "Start My Day" wizard with task rollover from yesterday.
+- **Daily planning ritual** — guided 3-step "Start My Day" wizard for add, review, and confirm.
 - **Task notes** — per-task-per-day session log for capturing context while working.
 - **Day capacity** — configurable work-hours budget with overcommitment warnings.
 - **Analytics** — daily review, weekly review with heatmaps, estimation accuracy tracking.
@@ -82,19 +82,28 @@ docker run -p 3000:3000 -v flowday-data:/app/db ghcr.io/<owner>/flowday:main
 | `npm test` | Run all tests |
 | `npm run test:unit` | Unit tests only |
 | `npm run test:integration` | Integration tests only |
-| `npm run test:ui` | Playwright UI tests (run in CI; can hang on some local setups) |
+| `npm run test:ui` | Playwright UI tests (`TZ=UTC`, seeded via `/api/test/*`) |
 | `npm run test:watch` | Watch mode |
 
 ## Testing
 
 Tests use a fresh SQLite database per test case (no mocks for DB layer).
 
-- **Unit tests** (`__tests__/unit/`): utility functions, database query helpers, store logic
-- **Integration tests** (`__tests__/integration/`): API route handlers end-to-end
-- **UI tests** (`__tests__/ui/`): Playwright end-to-end specs against the production build, seeded via `/api/test/*` routes. The catalogue lives in [PRD/UI_TEST_PLAN.md](PRD/UI_TEST_PLAN.md) and a unit test enforces that every plan entry has a matching `[UI-NNN]` spec.
+- **Unit tests** (`__tests__/unit/`): utility functions, database query helpers, Zustand stores, Todoist API client logic, and sync transforms
+- **Integration tests** (`__tests__/integration/`): API route handlers end-to-end, including sync, export, analytics, settings, tasks, entries, and flows branches
+- **UI tests** (`__tests__/ui/`): Playwright end-to-end specs against the production build, seeded via `/api/test/*` routes. Coverage includes the planning wizard, flow and sidebar interactions, timer flows, settings, export, and analytics. The catalogue lives in [PRD/UI_TEST_PLAN.md](PRD/UI_TEST_PLAN.md) and a unit test enforces that every plan entry has a matching `[UI-NNN]` spec.
 
 ```bash
 npm test
+```
+
+For the full local safety sweep used before large refactors:
+
+```bash
+npm run lint
+npm test
+npm run test:ui
+npm run build
 ```
 
 ## CI/CD

@@ -1,14 +1,19 @@
 import { test, expect } from "@playwright/test";
 import {
   completedRow,
+  dragFlowCardToFlowCard,
   dragTaskToEmptyFlow,
   flowCard,
   flowCardById,
+  IN_THREE_DAYS,
+  IN_TWO_DAYS,
   openApp,
   resetAppState,
   seedAppState,
   simulateTodoistOrphanSweep,
   taskPoolCard,
+  TODAY,
+  TOMORROW,
 } from "./helpers/e2e";
 
 test.beforeEach(async ({ request }) => {
@@ -250,6 +255,37 @@ test("[UI-023] Future task pool follows the selected planning date", async ({
   await expect(flowCard(page, "Plan for three days later")).toHaveCount(0);
 });
 
+test("[UI-041] Dragging flow cards into a new order persists after reload", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "two-flow-tasks");
+  await openApp(page);
+
+  await dragFlowCardToFlowCard(page, "flow-task-b", "flow-task-a");
+
+  await expect
+    .poll(async () =>
+      page
+        .locator('[data-testid="flow-task-card"]')
+        .evaluateAll((cards) =>
+          cards.map((card) => card.getAttribute("data-task-id"))
+        )
+    )
+    .toEqual(["flow-task-b", "flow-task-a"]);
+
+  await page.reload();
+  await expect
+    .poll(async () =>
+      page
+        .locator('[data-testid="flow-task-card"]')
+        .evaluateAll((cards) =>
+          cards.map((card) => card.getAttribute("data-task-id"))
+        )
+    )
+    .toEqual(["flow-task-b", "flow-task-a"]);
+});
+
 test("[UI-027] Date navigation arrows stay under the cursor across repeated clicks", async ({
   page,
   request,
@@ -275,6 +311,203 @@ test("[UI-027] Date navigation arrows stay under the cursor across repeated clic
   await expect(taskPoolCard(page, "Plan for two days later")).toBeVisible();
   await expect(taskPoolCard(page, "Plan for three days later")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
+});
+
+test("[UI-042] Multi-day read-only columns keep tasks, notes, and done markers on the correct date", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "multi-day-readonly");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "3" }).click();
+
+  const todayColumn = page.locator(
+    `[data-testid="day-column"][data-date="${TODAY}"]`
+  );
+  const tomorrowColumn = page.locator(
+    `[data-testid="day-column"][data-date="${TOMORROW}"]`
+  );
+  const inTwoDaysColumn = page.locator(
+    `[data-testid="day-column"][data-date="${IN_TWO_DAYS}"]`
+  );
+
+  await expect(
+    todayColumn.getByTestId("read-only-flow-task-row").filter({
+      hasText: "Today writing block",
+    })
+  ).toBeVisible();
+  await expect(todayColumn.getByText("Today note stays in today.")).toBeVisible();
+  await expect(todayColumn.getByText("Tomorrow shipped task")).toHaveCount(0);
+
+  await expect(
+    tomorrowColumn.getByTestId("read-only-completed-task-row").filter({
+      hasText: "Tomorrow shipped task",
+    })
+  ).toBeVisible();
+  await expect(tomorrowColumn.getByText("Tomorrow done note.")).toBeVisible();
+  await expect(tomorrowColumn.getByText("Today writing block")).toHaveCount(0);
+
+  await expect(
+    inTwoDaysColumn.getByTestId("read-only-flow-task-row").filter({
+      hasText: "Two-day planning pass",
+    })
+  ).toBeVisible();
+  await expect(inTwoDaysColumn.getByText("Two-day note stays put.")).toBeVisible();
+  await expect(inTwoDaysColumn.getByText("Tomorrow shipped task")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "5" }).click();
+  const inThreeDaysColumn = page.locator(
+    `[data-testid="day-column"][data-date="${IN_THREE_DAYS}"]`
+  );
+  await expect(
+    inThreeDaysColumn.getByTestId("read-only-flow-task-row").filter({
+      hasText: "Three-day research queue",
+    })
+  ).toBeVisible();
+  await expect(inThreeDaysColumn.getByText("Today writing block")).toHaveCount(0);
+});
+
+test("[UI-043] Sidebar arranged and completed sections follow live flow changes", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "sidebar-section-state");
+  await openApp(page);
+
+  await expect(page.getByRole("button", { name: /Arranged\s*2/ })).toBeVisible();
+  const completedSection = page.getByRole("button", { name: /Completed\s*1/ });
+  await completedSection.click();
+
+  const completedRowInSidebar = page
+    .locator("div")
+    .filter({ hasText: "Closed out task" })
+    .filter({ hasText: "25:00" })
+    .filter({ hasText: "30m" })
+    .first();
+  await expect(completedRowInSidebar).toBeVisible();
+
+  await flowCard(page, "Inbox zero").getByRole("button", { name: "Complete task" }).click();
+
+  await expect(page.getByRole("button", { name: /Arranged\s*1/ })).toBeVisible();
+  await expect(page.getByRole("button", { name: /Completed\s*2/ })).toBeVisible();
+  await expect(page.getByRole("complementary").getByText("Inbox zero")).toBeVisible();
+});
+
+test("[UI-044] Task pool tooltips render labels and markdown descriptions", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "tooltip-rich-task");
+  await openApp(page);
+
+  await taskPoolCard(page, "Rich tooltip task").hover();
+  await expect(page.getByText("urgent", { exact: true })).toBeVisible();
+  await expect(page.getByText("docs", { exact: true })).toBeVisible();
+  await expect(page.getByText("Bullet alpha")).toBeVisible();
+  await expect(page.getByText("Bullet beta")).toBeVisible();
+  await expect(page.getByText("npm test")).toBeVisible();
+});
+
+test("[UI-045] Settings keep sync disabled until a key exists and preserve saved capacity", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "shell-empty");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByRole("heading", { name: "Settings" })).toBeVisible();
+  await expect(page.getByTestId("settings-sync-now")).toBeDisabled();
+
+  await page.getByTestId("settings-api-key-input").fill("todoist-test-key");
+  await page.getByTestId("settings-save-api-key").click();
+  await expect(page.getByTestId("settings-sync-now")).toBeEnabled();
+
+  await page.getByTestId("capacity-input").fill("4.5");
+  await page.getByTestId("capacity-save").click();
+  await page.keyboard.press("Escape");
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await expect(page.getByTestId("settings-api-key-input")).toHaveAttribute(
+    "placeholder",
+    /key saved/
+  );
+  await expect(page.getByTestId("settings-sync-now")).toBeEnabled();
+  await expect(page.getByTestId("capacity-input")).toHaveValue("4.5");
+});
+
+test("[UI-046] Export dialog uses the selected type, format, and date range for downloads", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "analytics-seeded");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Settings" }).click();
+  await page.getByTestId("open-export-dialog").click();
+
+  await page.getByRole("button", { name: "Flow History" }).click();
+  await page.getByRole("button", { name: "JSON" }).click();
+  await page.getByTestId("export-start-date").fill(TODAY);
+  await page.getByTestId("export-end-date").fill(TODAY);
+
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByTestId("download-export").click();
+  const download = await downloadPromise;
+  expect(download.suggestedFilename()).toBe(
+    `flowday-flows-${TODAY}-to-${TODAY}.json`
+  );
+});
+
+test("[UI-047] Analytics navigation updates the rendered review window and empty states", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "analytics-multi-date");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Analytics" }).click();
+  const analyticsDialog = page.getByRole("dialog", { name: "Analytics" });
+  await expect(
+    analyticsDialog.getByRole("cell", { name: "Today review block" })
+  ).toBeVisible();
+
+  await analyticsDialog
+    .getByRole("button", { name: "Next analytics period" })
+    .first()
+    .click();
+  await expect(analyticsDialog.getByText("No tasks planned for this day")).toBeVisible();
+
+  await page.getByRole("button", { name: "Weekly Review" }).click();
+  await expect(analyticsDialog.getByText("Today Project")).toBeVisible();
+
+  await analyticsDialog
+    .getByRole("button", { name: "Next analytics period" })
+    .first()
+    .click();
+  await expect(analyticsDialog.getByText("Next Week Project")).toBeVisible();
+  await expect(analyticsDialog.getByText("Today Project")).toHaveCount(0);
+});
+
+test("[UI-048] Collapsing and reopening the sidebar keeps the pool usable", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "shell-empty");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Collapse sidebar" }).click();
+  await expect(page.getByRole("button", { name: "Expand sidebar" })).toBeVisible();
+  await page.getByRole("button", { name: "Expand sidebar" }).click();
+
+  await expect(page.getByPlaceholder("Search tasks...")).toBeVisible();
+  await page.getByTestId("quick-add-input").fill("After collapse");
+  await page.getByTestId("quick-add-submit").click();
+  await expect(taskPoolCard(page, "After collapse")).toBeVisible();
+  await page.waitForTimeout(250);
+  await dragTaskToEmptyFlow(page, "After collapse");
+  await expect(flowCard(page, "After collapse")).toBeVisible();
 });
 
 test("[UI-030] Analytics daily and weekly review include misc time", async ({
