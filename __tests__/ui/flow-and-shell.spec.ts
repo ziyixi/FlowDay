@@ -60,6 +60,33 @@ test("[UI-005] Flow card title, estimate, and note edits persist across reload",
   await expect(page.getByText("Remember edge cases")).toBeVisible();
 });
 
+test("[UI-033] Custom estimate input commits when the popover closes", async ({
+  page,
+  request,
+}) => {
+  // single-flow-task seeds the card with estimatedMins=45.
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCardById(page, "flow-task-1");
+  await card.getByText("45m est").click();
+
+  // Type a custom value, then click outside the popover instead of pressing Enter.
+  // The value must still persist — losing typed input on click-away is the
+  // unfriendly behaviour this test guards against.
+  await page.getByTestId("estimate-custom-input").fill("75");
+  // Click on the card title area, which is outside the popover.
+  await page.getByText("Deep work block").first().click();
+
+  await expect(card.getByRole("button", { name: "1h 15m est" })).toBeVisible();
+
+  // Reload to confirm it actually persisted to the server, not just to local state.
+  await page.reload();
+  await expect(
+    flowCardById(page, "flow-task-1").getByRole("button", { name: "1h 15m est" })
+  ).toBeVisible();
+});
+
 test("[UI-009] Skip, complete, undo, and return-to-pool update flow state", async ({
   page,
   request,

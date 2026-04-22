@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useRef, useState } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatDuration } from "@/lib/utils/time";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
@@ -26,16 +26,15 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
   const [open, setOpen] = useState(false);
   const [customValue, setCustomValue] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // Tracks whether the close path was driven by an explicit commit (preset
+  // click, Clear, Enter, or Escape). Without this, the auto-flush below would
+  // fight preset clicks (blur saves the typed value before the click lands)
+  // and would also undo a deliberate Escape cancel.
+  const committedRef = useRef(false);
   const updateEstimate = useTodoistStore((s) => s.updateEstimate);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (nextOpen) {
-      setCustomValue(task.estimatedMins?.toString() ?? "");
-    }
-    setOpen(nextOpen);
-  };
-
   const commit = (mins: number | null) => {
+    committedRef.current = true;
     if (mins !== task.estimatedMins) {
       updateEstimate(task.id, mins);
     }
@@ -49,8 +48,24 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
       return;
     }
     const mins = parseInt(trimmed, 10);
-    if (isNaN(mins) || mins < 0) return;
+    if (isNaN(mins) || mins < 0) {
+      committedRef.current = true;
+      setOpen(false);
+      return;
+    }
     commit(mins);
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (nextOpen) {
+      setCustomValue(task.estimatedMins?.toString() ?? "");
+      committedRef.current = false;
+    } else if (!committedRef.current) {
+      // Closed by clicking outside — flush the typed value so the user
+      // doesn't have to remember to press Enter to save it.
+      commitCustom();
+    }
+    setOpen(nextOpen);
   };
 
   const displayText =
@@ -107,13 +122,17 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
         <div className="mt-2 flex items-center gap-1.5">
           <input
             ref={inputRef}
+            data-testid="estimate-custom-input"
             type="number"
             min="0"
             value={customValue}
             onChange={(e) => setCustomValue(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") commitCustom();
-              if (e.key === "Escape") setOpen(false);
+              if (e.key === "Escape") {
+                committedRef.current = true;
+                setOpen(false);
+              }
             }}
             onClick={(e) => e.stopPropagation()}
             className="w-16 rounded border border-border bg-background px-2 py-1 text-xs tabular-nums text-foreground outline-none focus:ring-1 focus:ring-primary"
