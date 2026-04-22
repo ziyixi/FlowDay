@@ -398,12 +398,19 @@ export async function simulateIdleAway(page: Page, secondsAgo: number) {
 }
 
 export async function openApp(page: Page) {
+  // Idle-permission banner is `position: fixed` over the header and renders
+  // after an async permissions.query, so a post-load dismiss races the banner
+  // and leaves it intercepting clicks on the date-nav arrows. Pre-seed the
+  // "already asked" flag so the banner never mounts.
+  await page.addInitScript(() => {
+    try {
+      localStorage.setItem("flowday.idleDetectionAsked", "true");
+    } catch {
+      // ignore — Safari private mode etc.
+    }
+  });
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "FlowDay" })).toBeVisible();
-  const idlePromptDismiss = page.getByTitle("Not now");
-  if (await idlePromptDismiss.count()) {
-    await idlePromptDismiss.click();
-  }
 }
 
 export function flowCard(page: Page, title: string): Locator {
