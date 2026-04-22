@@ -5,6 +5,7 @@ import { Check, Clock3, Hourglass, Pause, Play } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
+import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { formatDuration, formatElapsed, formatLocalDate } from "@/lib/utils/time";
 import { buildMiscTaskId, getMiscTaskDate, isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
@@ -34,6 +35,19 @@ export function MiscTimeButton() {
   const todayMiscTaskId = buildMiscTaskId(today);
   const isActiveMisc = isMiscTaskId(activeTaskId);
   const isFinishedMisc = isMiscTaskId(pomodoroFinishedTaskId);
+  // Surface today's accumulated misc time on the trigger so the user can see
+  // it at a glance without opening Analytics. Refetched whenever the timer
+  // commits a segment (entryRevision bumps on every save). We show `<1m` for
+  // sub-minute totals so that short pomodoro/timer tests don't look like the
+  // feature silently swallowed the time.
+  const entryRevision = useTimerStore((s) => s.entryRevision);
+  const miscTodaySeconds = useTaskLoggedSeconds(todayMiscTaskId, entryRevision);
+  const miscTodayLabel =
+    miscTodaySeconds <= 0
+      ? null
+      : miscTodaySeconds < 60
+        ? "<1m"
+        : formatDuration(Math.floor(miscTodaySeconds / 60));
   const isPomodoro = isActiveMisc && timerMode === "pomodoro";
   const pomodoroLabel =
     pomodoroTargetSeconds != null
@@ -101,12 +115,24 @@ export function MiscTimeButton() {
             ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
             : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
-        title="Track misc time"
+        title={
+          miscTodayLabel != null
+            ? `Misc time today: ${miscTodayLabel}`
+            : "Track misc time"
+        }
         aria-label="Track misc time"
         data-testid="misc-time-trigger"
       >
         <Clock3 className="h-3.5 w-3.5" />
         <span>Misc</span>
+        {miscTodayLabel != null && (
+          <span
+            data-testid="misc-time-today-total"
+            className="rounded bg-primary/10 px-1 text-[10px] font-medium text-primary tabular-nums"
+          >
+            {miscTodayLabel}
+          </span>
+        )}
       </PopoverTrigger>
       <PopoverContent align="end" className="w-64 p-3">
         {isFinishedMisc ? (

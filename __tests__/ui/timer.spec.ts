@@ -296,6 +296,100 @@ test("[UI-021] Active pomodoro card keeps showing cumulative logged time", async
   await expect(card.getByText("4:00 logged", { exact: true })).toBeVisible();
 });
 
+test("[UI-034] Pop-out window auto-closes when no work is left", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByRole("button", { name: "Start timer" }).click();
+  await expect(card.getByRole("button", { name: "Pause timer" })).toBeVisible();
+
+  await primeFakePopOutWindow(page);
+  await expect.poll(async () => (await getPopOutState(page))?.isOpen).toBe(true);
+
+  // Completing the only remaining task drops both the active timer and the
+  // finished marker, so the pop-out's centralized auto-close should fire and
+  // shut the window — no more "blank pane" left hanging.
+  await card.getByRole("button", { name: "Complete task" }).click();
+  await expect(completedRow(page, "Deep work block")).toBeVisible();
+
+  await expect
+    .poll(async () => await getPopOutState(page))
+    .toEqual({ isOpen: false, fakeClosed: true });
+});
+
+test("[UI-036] Pop-out stays open when the PiP window lands before the timer starts", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  // Prime the pop-out BEFORE the pomodoro starts. This mirrors the real-world
+  // race where the picker calls openPopOut() synchronously (to preserve the
+  // user gesture) and the PiP window resolves a frame or two before
+  // startPomodoro finishes setting activeTaskId. Without the hadActivity
+  // guard the centralized auto-close would see "window open + nothing active"
+  // and slam the PiP shut — a blink the user sees instead of the timer.
+  await primeFakePopOutWindow(page);
+  await expect.poll(async () => (await getPopOutState(page))?.isOpen).toBe(true);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+  await page.getByRole("button", { name: "30m", exact: true }).click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 30m")).toBeVisible();
+
+  // Pop-out must still be open — the intermediate "no activity yet" render
+  // should NOT have closed it.
+  await expect
+    .poll(async () => await getPopOutState(page))
+    .toEqual({ isOpen: true, fakeClosed: false });
+});
+
+test("[UI-037] Misc total badge shows even for sub-minute segments", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  // A few seconds of misc tracking should still produce a visible marker,
+  // otherwise short tests / quick spot checks look like the feature is broken.
+  await page.getByTestId("misc-time-trigger").click();
+  await page.getByTestId("misc-start-timer").click();
+  await expect(page.getByRole("banner").getByText("Misc time", { exact: true })).toBeVisible();
+  await setRunningTimerElapsed(page, 15);
+  await page.getByRole("button", { name: "Save misc time" }).click();
+
+  await expect(page.getByTestId("misc-time-today-total")).toHaveText("<1m");
+});
+
+test("[UI-035] Top bar surfaces total misc time logged today", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const trigger = page.getByTestId("misc-time-trigger");
+  // No misc time yet -> the today total badge must be absent so we don't
+  // confuse "0m" with "logged but rounded down".
+  await expect(page.getByTestId("misc-time-today-total")).toHaveCount(0);
+
+  await trigger.click();
+  await page.getByTestId("misc-start-timer").click();
+  await expect(page.getByRole("banner").getByText("Misc time", { exact: true })).toBeVisible();
+  await setRunningTimerElapsed(page, 90);
+  await page.getByRole("button", { name: "Save misc time" }).click();
+
+  // After the segment lands in the DB the trigger should show today's total.
+  // 90s rounds down to 1m via formatDuration.
+  await expect(page.getByTestId("misc-time-today-total")).toHaveText("1m");
+});
+
 test("[UI-028] Misc timer saves tracked time without becoming a flow task", async ({
   page,
   request,

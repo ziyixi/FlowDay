@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import { useTimerStore } from "@/lib/stores/timer-store";
@@ -17,6 +17,7 @@ export function PopOutTimerButton() {
   const pipWindow = usePopOutStore((s) => s.pipWindow);
   const container = usePopOutStore((s) => s.container);
   const open = usePopOutStore((s) => s.open);
+  const closePopOut = usePopOutStore((s) => s.close);
   const activeTaskId = useTimerStore((s) => s.activeTaskId);
   const pomodoroFinishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
 
@@ -39,10 +40,36 @@ export function PopOutTimerButton() {
     return () => observer.disconnect();
   }, [pipWindow]);
 
+  const hasActivity = Boolean(activeTaskId) || Boolean(pomodoroFinishedTaskId);
+
+  // Auto-close the pop-out once the user has nothing left to act on. Without
+  // this the portal unmounts (no activity) but the PiP window stays open and
+  // shows an empty white pane — the user described it as a "blank page".
+  //
+  // `hadActivityRef` guards against the open-race: the pomodoro picker calls
+  // openPopOut() first (to preserve the user gesture), then startPomodoro().
+  // If openPopOut resolves before startPomodoro sets activeTaskId, this effect
+  // would see "window open + no activity" and close the window on the spot.
+  // We only treat "no activity" as a close signal after we've observed
+  // activity for this pop-out session.
+  const hadActivityRef = useRef(false);
+  useEffect(() => {
+    if (!pipWindow) {
+      hadActivityRef.current = false;
+      return;
+    }
+    if (hasActivity) {
+      hadActivityRef.current = true;
+      return;
+    }
+    if (hadActivityRef.current) {
+      closePopOut();
+    }
+  }, [pipWindow, hasActivity, closePopOut]);
+
   if (!supported) return null;
   // Keep the portal mounted while a pomodoro-finished marker is set so the
   // "restart or complete" panel stays visible after the timer drops to idle.
-  const hasActivity = Boolean(activeTaskId) || Boolean(pomodoroFinishedTaskId);
   if (!hasActivity) return null;
 
   return (

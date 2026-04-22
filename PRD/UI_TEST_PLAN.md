@@ -51,6 +51,10 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-026 | Manual entry still supports exact minute edits | `single-flow-task` | desktop | Manual entry add/edit still supports arbitrary minute values like `09:13` and `10:17`, not only `:00` or `:30`. | `timer.spec.ts` |
 | UI-028 | Misc count-up tracking stays outside the normal task UI | `single-flow-task` | desktop | Starting misc time from the top bar saves a real timer entry without creating a visible pool card or flow card. | `timer.spec.ts` |
 | UI-029 | Misc pomodoro ends in a restart-or-done state | `single-flow-task` | desktop | A misc pomodoro auto-saves, keeps its finished marker, and offers `Done` instead of task completion. | `timer.spec.ts` |
+| UI-034 | Pop-out window auto-closes when no work is left | `single-flow-task` | desktop | Completing the last queued task with the pop-out open shuts the PiP window instead of leaving a blank pane. | `timer.spec.ts` |
+| UI-035 | Top bar shows total misc time logged today | `single-flow-task` | desktop | After misc time is saved, the misc trigger surfaces today's accumulated misc total at a glance. | `timer.spec.ts` |
+| UI-036 | Pop-out survives the PiP-open / start-pomodoro race | `single-flow-task` | desktop | Priming the pop-out window before the pomodoro starts does not trigger the centralized auto-close — the user shouldn't see the PiP window blink shut on start. | `timer.spec.ts` |
+| UI-037 | Misc total badge shows even for sub-minute segments | `single-flow-task` | desktop | A few seconds of misc tracking surfaces a `<1m` badge so short pomodoro/timer tests aren't confused for silent drops. | `timer.spec.ts` |
 | UI-031 | Suggested pomodoro subtracts already-logged time | `single-flow-task-with-history` | desktop | The first/suggested pomodoro preset reflects `estimate − already-logged` so repeated rounds don't re-offer the full estimate. | `timer.spec.ts` |
 | UI-032 | Custom pomodoro input launches arbitrary minutes | `single-flow-task` | desktop | The picker accepts a free-form custom minute value and starts the pomodoro at that target. | `timer.spec.ts` |
 
