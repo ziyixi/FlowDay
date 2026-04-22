@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useId, useMemo } from "react";
 import { format } from "date-fns";
 import { Clock, Pencil, Trash2, Plus } from "lucide-react";
 import {
@@ -17,6 +17,12 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  buildTimeOptions,
+  combineLocalDateAndTime,
+  defaultManualEntryRange,
+  toLocalDateTimeParts,
+} from "@/lib/utils/manual-entry-time";
 
 interface TimeEntry {
   id: string;
@@ -26,13 +32,6 @@ interface TimeEntry {
   endTime: string | null;
   durationS: number | null;
   source: string;
-}
-
-function toLocalDatetime(iso: string): string {
-  const d = new Date(iso);
-  const offset = d.getTimezoneOffset();
-  const local = new Date(d.getTime() - offset * 60 * 1000);
-  return local.toISOString().slice(0, 16);
 }
 
 function formatTimeRange(start: string, end: string | null): string {
@@ -53,6 +52,113 @@ function formatDurationShort(seconds: number | null): string {
   return rem > 0 ? `${h}h ${rem}m` : `${h}h`;
 }
 
+function TimeInput({
+  value,
+  onChange,
+  options,
+  testId,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: string[];
+  testId?: string;
+}) {
+  const listId = useId();
+  return (
+    <>
+      <Input
+        type="time"
+        step={60}
+        list={listId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="text-sm"
+        data-testid={testId}
+      />
+      <datalist id={listId}>
+        {options.map((option) => (
+          <option key={option} value={option} />
+        ))}
+      </datalist>
+    </>
+  );
+}
+
+function DateTimeFieldRow({
+  label,
+  dateValue,
+  onDateChange,
+  timeValue,
+  onTimeChange,
+  timeOptions,
+  dateTestId,
+  timeTestId,
+}: {
+  label: string;
+  dateValue: string;
+  onDateChange: (value: string) => void;
+  timeValue: string;
+  onTimeChange: (value: string) => void;
+  timeOptions: string[];
+  dateTestId?: string;
+  timeTestId?: string;
+}) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+      <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="grid grid-cols-[1.2fr_1fr] gap-2">
+        <Input
+          type="date"
+          value={dateValue}
+          onChange={(e) => onDateChange(e.target.value)}
+          className="text-sm"
+          data-testid={dateTestId}
+        />
+        <TimeInput
+          value={timeValue}
+          onChange={onTimeChange}
+          options={timeOptions}
+          testId={timeTestId}
+        />
+      </div>
+    </div>
+  );
+}
+
+function DurationPreview({
+  startDate,
+  startTime,
+  endDate,
+  endTime,
+}: {
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+}) {
+  let content = "Set a valid range";
+
+  if (startDate && startTime && endDate && endTime) {
+    const start = new Date(`${startDate}T${startTime}`);
+    const end = new Date(`${endDate}T${endTime}`);
+    const durationS = Math.floor((end.getTime() - start.getTime()) / 1000);
+    if (durationS > 0) {
+      content = formatDurationShort(durationS);
+    }
+  }
+
+  return (
+    <div className="flex items-center justify-between rounded-lg border border-border/60 bg-background px-3 py-2">
+      <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Duration
+      </span>
+      <span className="text-sm font-medium tabular-nums text-primary">{content}</span>
+    </div>
+  );
+}
+
 // --- Edit Dialog ---
 
 function EditEntryDialog({
@@ -66,26 +172,36 @@ function EditEntryDialog({
   onOpenChange: (open: boolean) => void;
   onSaved: () => void;
 }) {
+  const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const timeOptions = useMemo(
+    () => buildTimeOptions([startTime, endTime]),
+    [startTime, endTime]
+  );
 
   useEffect(() => {
     if (open) {
-      setStartTime(toLocalDatetime(entry.startTime));
-      setEndTime(entry.endTime ? toLocalDatetime(entry.endTime) : "");
+      const start = toLocalDateTimeParts(entry.startTime);
+      const end = entry.endTime ? toLocalDateTimeParts(entry.endTime) : start;
+      setStartDate(start.dateValue);
+      setStartTime(start.timeValue);
+      setEndDate(end.dateValue);
+      setEndTime(end.timeValue);
       setError("");
     }
   }, [open, entry]);
 
   async function handleSave() {
-    if (!startTime || !endTime) {
+    if (!startDate || !startTime || !endDate || !endTime) {
       setError("Both times required");
       return;
     }
-    const start = new Date(startTime).toISOString();
-    const end = new Date(endTime).toISOString();
+    const start = combineLocalDateAndTime(startDate, startTime);
+    const end = combineLocalDateAndTime(endDate, endTime);
     if (new Date(end) <= new Date(start)) {
       setError("End must be after start");
       return;
@@ -113,29 +229,33 @@ function EditEntryDialog({
         <DialogHeader>
           <DialogTitle>Edit Time Entry</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Start
-            </label>
-            <Input
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              End
-            </label>
-            <Input
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="text-sm"
-            />
-          </div>
+        <div className="space-y-3">
+          <DateTimeFieldRow
+            label="Start"
+            dateValue={startDate}
+            onDateChange={setStartDate}
+            timeValue={startTime}
+            onTimeChange={setStartTime}
+            timeOptions={timeOptions}
+            dateTestId="edit-entry-start-date"
+            timeTestId="edit-entry-start-time"
+          />
+          <DateTimeFieldRow
+            label="End"
+            dateValue={endDate}
+            onDateChange={setEndDate}
+            timeValue={endTime}
+            onTimeChange={setEndTime}
+            timeOptions={timeOptions}
+            dateTestId="edit-entry-end-date"
+            timeTestId="edit-entry-end-time"
+          />
+          <DurationPreview
+            startDate={startDate}
+            startTime={startTime}
+            endDate={endDate}
+            endTime={endTime}
+          />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <DialogFooter>
@@ -166,27 +286,35 @@ function AddEntryDialog({
   onOpenChange: (open: boolean) => void;
   onCreated: () => void;
 }) {
+  const [startDate, setStartDate] = useState("");
   const [startTime, setStartTime] = useState("");
+  const [endDate, setEndDate] = useState("");
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const timeOptions = useMemo(
+    () => buildTimeOptions([startTime, endTime]),
+    [startTime, endTime]
+  );
 
   useEffect(() => {
     if (open) {
-      const now = toLocalDatetime(new Date().toISOString());
-      setStartTime(now.slice(0, 11) + "09:00");
-      setEndTime(now);
+      const range = defaultManualEntryRange(new Date());
+      setStartDate(range.start.dateValue);
+      setStartTime(range.start.timeValue);
+      setEndDate(range.end.dateValue);
+      setEndTime(range.end.timeValue);
       setError("");
     }
   }, [open]);
 
   async function handleSubmit() {
-    if (!startTime || !endTime) {
+    if (!startDate || !startTime || !endDate || !endTime) {
       setError("Both times required");
       return;
     }
-    const start = new Date(startTime);
-    const end = new Date(endTime);
+    const start = new Date(`${startDate}T${startTime}`);
+    const end = new Date(`${endDate}T${endTime}`);
     if (end <= start) {
       setError("End must be after start");
       return;
@@ -224,29 +352,33 @@ function AddEntryDialog({
         <DialogHeader>
           <DialogTitle>Add Time Entry</DialogTitle>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              Start
-            </label>
-            <Input
-              type="datetime-local"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              className="text-sm"
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">
-              End
-            </label>
-            <Input
-              type="datetime-local"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              className="text-sm"
-            />
-          </div>
+        <div className="space-y-3">
+          <DateTimeFieldRow
+            label="Start"
+            dateValue={startDate}
+            onDateChange={setStartDate}
+            timeValue={startTime}
+            onTimeChange={setStartTime}
+            timeOptions={timeOptions}
+            dateTestId="add-entry-start-date"
+            timeTestId="add-entry-start-time"
+          />
+          <DateTimeFieldRow
+            label="End"
+            dateValue={endDate}
+            onDateChange={setEndDate}
+            timeValue={endTime}
+            onTimeChange={setEndTime}
+            timeOptions={timeOptions}
+            dateTestId="add-entry-end-date"
+            timeTestId="add-entry-end-time"
+          />
+          <DurationPreview
+            startDate={startDate}
+            startTime={startTime}
+            endDate={endDate}
+            endTime={endTime}
+          />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
         <DialogFooter>

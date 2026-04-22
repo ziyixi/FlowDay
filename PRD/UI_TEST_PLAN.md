@@ -45,6 +45,8 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-019 | Pomodoro completion surfaces a finished marker for the pop-out | `single-flow-task` | desktop | The finished-task marker drives the pop-out restart/complete state and clears on next action. | `timer.spec.ts` |
 | UI-020 | Reload restores a running pomodoro | `single-flow-task` | desktop | A server-backed timer session survives page reload and rehydrates correctly. | `timer.spec.ts` |
 | UI-021 | Active pomodoro card still shows cumulative logged time | `single-flow-task-with-history` | desktop | The flow card keeps previously logged time visible while adding current pomodoro elapsed time. | `timer.spec.ts` |
+| UI-025 | Manual entry defaults to the nearest 30-minute block | `single-flow-task` | desktop | The add-manual-entry dialog now defaults start and end to the nearest 30-minute block instead of hard-coding 9:00. | `timer.spec.ts` |
+| UI-026 | Manual entry still supports exact minute edits | `single-flow-task` | desktop | Manual entry add/edit still supports arbitrary minute values like `09:13` and `10:17`, not only `:00` or `:30`. | `timer.spec.ts` |
 
 ## Settings, Analytics, And Export
 

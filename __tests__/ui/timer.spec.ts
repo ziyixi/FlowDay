@@ -292,8 +292,10 @@ test("[UI-008] Manual entry CRUD updates time entry surfaces", async ({
   await page.getByRole("button", { name: "Add time entry" }).click();
 
   const addDialog = page.getByRole("dialog", { name: "Add Time Entry" });
-  await addDialog.locator('input[type="datetime-local"]').nth(0).fill(`${TODAY}T09:00`);
-  await addDialog.locator('input[type="datetime-local"]').nth(1).fill(`${TODAY}T10:00`);
+  await addDialog.getByTestId("add-entry-start-date").fill(TODAY);
+  await addDialog.getByTestId("add-entry-start-time").fill("09:00");
+  await addDialog.getByTestId("add-entry-end-date").fill(TODAY);
+  await addDialog.getByTestId("add-entry-end-time").fill("10:00");
   await addDialog.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog", { name: "Add Time Entry" })).toHaveCount(0);
 
@@ -307,19 +309,65 @@ test("[UI-008] Manual entry CRUD updates time entry surfaces", async ({
   await firstEntry.getByRole("button", { name: "Edit time entry" }).click({ force: true });
 
   const editDialog = page.getByRole("dialog", { name: "Edit Time Entry" });
-  await editDialog.locator('input[type="datetime-local"]').nth(1).fill(`${TODAY}T10:30`);
+  await editDialog.getByTestId("edit-entry-end-date").fill(TODAY);
+  await editDialog.getByTestId("edit-entry-end-time").fill("10:17");
   await editDialog.getByRole("button", { name: "Save" }).click();
   await expect(page.getByRole("dialog", { name: "Edit Time Entry" })).toHaveCount(0);
 
   await card.getByTitle("Time entries").click();
-  await expect(page.getByText(/Total: 1h 30m/)).toBeVisible();
+  await expect(page.getByText(/Total: 1h 17m/)).toBeVisible();
 
   const updatedEntry = page
     .locator('[data-testid="time-entry-row"]')
-    .filter({ has: page.getByText("09:00 – 10:30") })
+    .filter({ has: page.getByText("09:00 – 10:17") })
     .first();
   await updatedEntry.getByRole("button", { name: "Delete time entry" }).click({ force: true });
 
   await card.getByTitle("Time entries").click();
   await expect(page.getByText("No entries yet")).toBeVisible();
+});
+
+test("[UI-025] Manual entry defaults to the nearest 30-minute block", async ({
+  page,
+  request,
+}) => {
+  await page.clock.install({ time: new Date(`${TODAY}T09:43:00.000Z`) });
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Time entries").click();
+  await page.getByRole("button", { name: "Add time entry" }).click();
+
+  const addDialog = page.getByRole("dialog", { name: "Add Time Entry" });
+  await expect(addDialog.getByTestId("add-entry-start-date")).toHaveValue(TODAY);
+  await expect(addDialog.getByTestId("add-entry-start-time")).toHaveValue("09:30");
+  await expect(addDialog.getByTestId("add-entry-end-date")).toHaveValue(TODAY);
+  await expect(addDialog.getByTestId("add-entry-end-time")).toHaveValue("10:00");
+  await expect(addDialog.getByText("Duration")).toBeVisible();
+  await expect(addDialog.getByText("30m", { exact: true })).toBeVisible();
+});
+
+test("[UI-026] Manual entry still supports exact minute edits", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Time entries").click();
+  await page.getByRole("button", { name: "Add time entry" }).click();
+
+  const addDialog = page.getByRole("dialog", { name: "Add Time Entry" });
+  await addDialog.getByTestId("add-entry-start-date").fill(TODAY);
+  await addDialog.getByTestId("add-entry-start-time").fill("09:13");
+  await addDialog.getByTestId("add-entry-end-date").fill(TODAY);
+  await addDialog.getByTestId("add-entry-end-time").fill("09:47");
+  await addDialog.getByRole("button", { name: "Save" }).click();
+  await expect(addDialog).toHaveCount(0);
+
+  await card.getByTitle("Time entries").click();
+  await expect(page.getByText("09:13 – 09:47")).toBeVisible();
+  await expect(page.getByText("Total: 34m", { exact: true })).toBeVisible();
 });
