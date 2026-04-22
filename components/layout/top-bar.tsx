@@ -19,6 +19,7 @@ import {
 } from "@/components/ui/tooltip";
 import { useTheme } from "@/components/theme-provider";
 import { useFlowStore, type ViewMode } from "@/lib/stores/flow-store";
+import { MiscTimeButton } from "@/components/timer/misc-time-button";
 import { TimerDisplay } from "@/components/timer/timer-display";
 import { PopOutTimerButton } from "@/components/timer/pop-out-timer";
 import { SettingsDialog } from "@/components/settings/settings-dialog";
@@ -144,6 +145,7 @@ export function TopBar() {
 
       {/* Right: Timer + Theme toggle + Settings */}
       <div className="flex items-center gap-2">
+        <MiscTimeButton />
         <TimerDisplay />
         <PopOutTimerButton />
 

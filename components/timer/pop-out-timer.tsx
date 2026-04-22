@@ -9,6 +9,7 @@ import { useTaskById } from "@/lib/stores/todoist-store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
 import { cn } from "@/lib/utils";
 
 export function PopOutTimerButton() {
@@ -71,6 +72,7 @@ function PipTimerContent() {
   const stopAndSave = useTimerStore((s) => s.stopAndSave);
   const startTimer = useTimerStore((s) => s.startTimer);
   const pomodoroFinishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
+  const closePopOut = usePopOutStore((s) => s.close);
 
   const completeTask = useFlowStore((s) => s.completeTask);
   const currentDate = useFlowStore((s) => s.currentDate);
@@ -120,6 +122,7 @@ function PipTimerContent() {
       </div>
     );
   }
+  const isMiscTask = isMiscTaskId(activeTaskId);
 
   const isPomodoro = timerMode === "pomodoro";
   const pomodoroLabel =
@@ -131,7 +134,9 @@ function PipTimerContent() {
     const date = activeFlowDate;
     const taskId = activeTaskId;
     await stopAndSave();
-    if (date && taskId) {
+    if (isMiscTask) {
+      closePopOut();
+    } else if (date && taskId) {
       completeTask(taskId, date);
     }
   };
@@ -150,7 +155,7 @@ function PipTimerContent() {
           />
         </div>
         <span className="truncate text-sm font-medium" title={task.title}>
-          {task.title}
+          {isMiscTask ? MISC_TASK_TITLE : task.title}
         </span>
         {isPomodoro && (
           <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
@@ -182,7 +187,7 @@ function PipTimerContent() {
         </button>
         <button
           onClick={handleComplete}
-          title="Complete task"
+          title={isMiscTask ? "Save misc time" : "Complete task"}
           className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-green-500/20 hover:text-green-600"
         >
           <Check className="h-4 w-4" />
@@ -211,9 +216,11 @@ function PomodoroFinishedPanel() {
   const startPomodoro = useTimerStore((s) => s.startPomodoro);
   const dismiss = useTimerStore((s) => s.dismissPomodoroFinished);
   const completeTask = useFlowStore((s) => s.completeTask);
+  const closePopOut = usePopOutStore((s) => s.close);
   const task = useTaskById(finishedTaskId ?? "");
 
   if (!finishedTaskId || !finishedFlowDate) return null;
+  const isMiscTask = isMiscTaskId(finishedTaskId);
 
   const presets = buildPomodoroPresets(task?.estimatedMins);
 
@@ -223,7 +230,11 @@ function PomodoroFinishedPanel() {
   };
 
   const handleComplete = () => {
-    completeTask(finishedTaskId, finishedFlowDate);
+    if (!isMiscTask) {
+      completeTask(finishedTaskId, finishedFlowDate);
+    } else {
+      closePopOut();
+    }
     dismiss();
   };
 
@@ -237,7 +248,12 @@ function PomodoroFinishedPanel() {
           </span>
         </div>
         <button
-          onClick={dismiss}
+          onClick={() => {
+            if (isMiscTask) {
+              closePopOut();
+            }
+            dismiss();
+          }}
           title="Dismiss"
           className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
@@ -249,7 +265,7 @@ function PomodoroFinishedPanel() {
         className="truncate text-sm font-medium text-foreground"
         title={task?.title ?? ""}
       >
-        {task?.title ?? "Task"}
+        {isMiscTask ? MISC_TASK_TITLE : task?.title ?? "Task"}
       </div>
 
       <div className="grid grid-cols-3 gap-1">
@@ -279,7 +295,7 @@ function PomodoroFinishedPanel() {
         className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-green-500/20 hover:text-green-600"
       >
         <Check className="h-3 w-3" />
-        Complete &amp; next
+        {isMiscTask ? "Done" : "Complete & next"}
       </button>
     </div>
   );

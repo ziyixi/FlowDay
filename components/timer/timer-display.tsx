@@ -4,7 +4,9 @@ import { useEffect } from "react";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
+import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
 import { Pause, Play, Check } from "lucide-react";
 
 function useAppBadge() {
@@ -36,10 +38,12 @@ function TimerContent() {
   const pauseTimer = useTimerStore((s) => s.pauseTimer);
   const resumeTimer = useTimerStore((s) => s.resumeTimer);
   const stopAndSave = useTimerStore((s) => s.stopAndSave);
+  const closePopOut = usePopOutStore((s) => s.close);
   const completeTask = useFlowStore((s) => s.completeTask);
   const task = useTaskById(activeTaskId ?? "");
 
   if (!activeTaskId || !task) return null;
+  const isMiscTask = isMiscTaskId(activeTaskId);
 
   const isPomodoro = timerMode === "pomodoro";
   const pomodoroLabel =
@@ -51,7 +55,9 @@ function TimerContent() {
     const date = activeFlowDate;
     const taskId = activeTaskId;
     await stopAndSave();
-    if (date && taskId) {
+    if (isMiscTask) {
+      closePopOut();
+    } else if (date && taskId) {
       completeTask(taskId, date);
     }
   };
@@ -70,7 +76,7 @@ function TimerContent() {
       </div>
 
       <span className="max-w-[120px] truncate text-sm font-medium text-foreground sm:text-xs">
-        {task.title}
+        {isMiscTask ? MISC_TASK_TITLE : task.title}
       </span>
 
       {isPomodoro && (
@@ -98,6 +104,8 @@ function TimerContent() {
         </button>
         <button
           onClick={handleComplete}
+          aria-label={isMiscTask ? "Save misc time" : "Complete task"}
+          title={isMiscTask ? "Save misc time" : "Complete task"}
           className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-green-500/20 hover:text-green-600 sm:h-6 sm:w-6"
         >
           <Check className="h-3 w-3" />

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 interface EntryPostBody {
   taskId: string;
@@ -251,5 +252,26 @@ describe("timer store", () => {
     await useTimerStore.getState().stopAndSave();
 
     expect(_getChimeCount()).toBe(0);
+  });
+
+  it("saves misc timer entries under the daily sentinel id", async () => {
+    const posts: EntryPostBody[] = [];
+    const fetchMock = createTimerFetchMock({
+      onEntryPost: (body) => posts.push(body),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const miscTaskId = buildMiscTaskId("2026-04-13");
+    await useTimerStore.getState().startTimer(miscTaskId, "2026-04-13");
+    await vi.advanceTimersByTimeAsync(5000);
+    await useTimerStore.getState().stopAndSave();
+
+    expect(posts).toHaveLength(1);
+    expect(posts[0]).toMatchObject({
+      taskId: miscTaskId,
+      flowDate: "2026-04-13",
+      durationS: 5,
+      source: "timer",
+    });
   });
 });

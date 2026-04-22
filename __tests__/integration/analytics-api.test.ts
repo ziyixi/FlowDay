@@ -7,6 +7,7 @@ import {
   setSetting,
 } from "@/lib/db/queries";
 import type { Task } from "@/lib/types/task";
+import { buildMiscTaskId, buildMiscTaskTitle } from "@/lib/utils/misc-task";
 
 /**
  * Integration tests for the analytics computation logic.
@@ -168,6 +169,30 @@ describe("GET /api/analytics — daily", () => {
     const hour = getHourInTimeZone("2026-04-13T00:30:00.000Z", timeZone);
     expect(data.hourlyMins[hour]).toBe(30);
   });
+
+  it("includes misc-only time in daily review without inflating planned task counts", async () => {
+    createTimeEntry({
+      id: "misc-daily-entry",
+      taskId: buildMiscTaskId("2026-04-13"),
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T11:00:00.000Z",
+      endTime: "2026-04-13T11:20:00.000Z",
+      durationS: 1200,
+      source: "timer",
+    });
+
+    const data = await callAnalytics("type=daily&date=2026-04-13");
+    expect(data.tasksPlanned).toBe(2);
+    expect(data.totalLoggedMins).toBe(90);
+    expect(
+      data.tasks.find((task: { id: string }) => task.id === buildMiscTaskId("2026-04-13"))
+    ).toMatchObject({
+      title: buildMiscTaskTitle("2026-04-13"),
+      projectName: "Misc",
+      loggedMins: 20,
+      completed: false,
+    });
+  });
 });
 
 describe("GET /api/analytics — weekly", () => {
@@ -249,6 +274,29 @@ describe("GET /api/analytics — weekly", () => {
     const data = await callAnalytics("type=weekly&date=2026-04-13");
     // t1 completed with est=30, actual=25. t3 completed with est=15, actual=20
     expect(data.estimationAccuracy.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("includes misc-only time in weekly review project breakdown", async () => {
+    createTimeEntry({
+      id: "misc-weekly-entry",
+      taskId: buildMiscTaskId("2026-04-15"),
+      flowDate: "2026-04-15",
+      startTime: "2026-04-15T15:00:00.000Z",
+      endTime: "2026-04-15T15:30:00.000Z",
+      durationS: 1800,
+      source: "timer",
+    });
+
+    const data = await callAnalytics("type=weekly&date=2026-04-13");
+    const miscProject = data.byProject.find(
+      (project: { projectName: string }) => project.projectName === "Misc"
+    );
+    expect(miscProject).toMatchObject({
+      projectName: "Misc",
+      loggedMins: 30,
+      tasksCompleted: 0,
+    });
+    expect(data.totals.totalLoggedMins).toBe(120);
   });
 });
 

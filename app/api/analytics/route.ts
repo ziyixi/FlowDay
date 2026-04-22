@@ -126,11 +126,14 @@ function computeDailyAnalytics(date: string, timeZone?: string) {
   const dayCapacityMins = capacityStr ? parseInt(capacityStr, 10) : 360;
   const formatters = makeTimeZoneFormatters(timeZone);
 
-  const allTaskIds = [
+  const plannedTaskIds = [
     ...new Set([
       ...flowEntries.map((r) => r.taskId),
       ...completedEntries.map((r) => r.taskId),
     ]),
+  ];
+  const allTaskIds = [
+    ...new Set([...plannedTaskIds, ...timeEntryRows.map((entry) => entry.taskId)]),
   ];
   const taskMap = new Map(getTasksByIds(allTaskIds).map((t) => [t.id, t]));
   const completedSet = new Set(completedEntries.map((r) => r.taskId));
@@ -156,7 +159,9 @@ function computeDailyAnalytics(date: string, timeZone?: string) {
   });
 
   const totalEstimatedMins = tasks.reduce((s, t) => s + (t.estimatedMins ?? 0), 0);
-  const totalLoggedMins = tasks.reduce((s, t) => s + t.loggedMins, 0);
+  const totalLoggedMins = Math.round(
+    timeEntryRows.reduce((sum, entry) => sum + (entry.durationS ?? 0), 0) / 60
+  );
 
   // Hourly distribution for this day (0-23)
   const hourlyMins = new Array(24).fill(0);
@@ -172,7 +177,7 @@ function computeDailyAnalytics(date: string, timeZone?: string) {
 
   return {
     date,
-    tasksPlanned: allTaskIds.length,
+    tasksPlanned: plannedTaskIds.length,
     tasksCompleted: completedSet.size,
     totalEstimatedMins,
     totalLoggedMins,
@@ -198,6 +203,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string) {
     ...new Set([
       ...allFlowEntries.map((r) => r.taskId),
       ...allCompletedEntries.map((r) => r.taskId),
+      ...allTimeEntries.map((entry) => entry.taskId),
     ]),
   ];
   const taskMap = new Map(getTasksByIds(allTaskIds).map((t) => [t.id, t]));

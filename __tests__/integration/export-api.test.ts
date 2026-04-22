@@ -6,6 +6,7 @@ import {
   addCompletedFlowTask,
 } from "@/lib/db/queries";
 import type { Task } from "@/lib/types/task";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -105,5 +106,30 @@ describe("GET /api/export", () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data).toHaveLength(0);
+  });
+
+  it("exports misc sentinel entries with a readable synthetic task title", async () => {
+    createTimeEntry({
+      id: "misc-entry-1",
+      taskId: buildMiscTaskId("2026-04-13"),
+      flowDate: "2026-04-13",
+      startTime: "2026-04-13T10:00:00Z",
+      endTime: "2026-04-13T10:15:00Z",
+      durationS: 900,
+      source: "timer",
+    });
+
+    const res = await callExport("type=entries&format=json&start=2026-04-13&end=2026-04-13");
+    expect(res.status).toBe(200);
+    const data = await res.json();
+    const miscEntry = data.find((entry: { taskId: string }) =>
+      entry.taskId === buildMiscTaskId("2026-04-13")
+    );
+
+    expect(miscEntry).toMatchObject({
+      taskTitle: "Misc time · 2026-04-13",
+      project: "Misc",
+      durationMins: 15,
+    });
   });
 });

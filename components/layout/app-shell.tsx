@@ -14,6 +14,7 @@ import { useHydration } from "@/lib/hooks/use-hydration";
 import { useAutoSync } from "@/lib/hooks/use-auto-sync";
 import { useAutoIdlePause } from "@/lib/hooks/use-auto-idle-pause";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 import type { Task } from "@/lib/types/task";
 
@@ -31,6 +32,11 @@ declare global {
       getChimeCount: () => number;
       resetChimeCount: () => void;
       simulateIdleAway: (secondsAgo: number) => void;
+      primeFakePopOutWindow: () => void;
+      getPopOutState: () => {
+        isOpen: boolean;
+        fakeClosed: boolean;
+      };
     };
   }
 }
@@ -45,6 +51,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
 
   useEffect(() => {
     if (!e2eEnabled || typeof window === "undefined") return;
+    let fakePopOutClosed = false;
 
     window.__FLOWDAY_E2E__ = {
       setRunningTimerElapsed: (seconds: number) => {
@@ -77,9 +84,39 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
         }
         void state.pauseTimer(Date.now() - secondsAgo * 1000);
       },
+      primeFakePopOutWindow: () => {
+        fakePopOutClosed = false;
+        const fakeDocument = {
+          visibilityState: "visible",
+          addEventListener() {},
+          removeEventListener() {},
+          documentElement: {
+            classList: {
+              toggle() {},
+            },
+          },
+        };
+        usePopOutStore.setState({
+          pipWindow: {
+            document: fakeDocument,
+            close() {
+              fakePopOutClosed = true;
+            },
+          } as unknown as Window,
+          container: null,
+        });
+      },
+      getPopOutState: () => {
+        const state = usePopOutStore.getState();
+        return {
+          isOpen: Boolean(state.pipWindow),
+          fakeClosed: fakePopOutClosed,
+        };
+      },
     };
 
     return () => {
+      usePopOutStore.getState().close();
       delete window.__FLOWDAY_E2E__;
     };
   }, [e2eEnabled]);

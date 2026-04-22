@@ -250,6 +250,24 @@ test("[UI-027] Date navigation arrows stay under the cursor across repeated clic
   await expect(page.getByRole("button", { name: "Today" })).toBeVisible();
 });
 
+test("[UI-030] Analytics daily and weekly review include misc time", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "analytics-seeded-with-misc");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Analytics" }).click();
+  const analyticsDialog = page.getByRole("dialog", { name: "Analytics" });
+  await expect(analyticsDialog).toBeVisible();
+
+  await expect(analyticsDialog.getByText(/Misc time/)).toBeVisible();
+
+  await page.getByRole("button", { name: "Weekly Review" }).click();
+  await expect(analyticsDialog.getByText("Time by Project")).toBeVisible();
+  await expect(analyticsDialog.getByText("Misc", { exact: true })).toBeVisible();
+});
+
 test.describe("analytics timezone", () => {
   test.use({ timezoneId: "America/Los_Angeles" });
 

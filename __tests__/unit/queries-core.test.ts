@@ -14,8 +14,10 @@ import {
   addCompletedFlowTask,
   removeCompletedFlowTask,
   getAllCompletedFlowTasks,
+  getTasksByIds,
 } from "@/lib/db/queries";
 import type { Task } from "@/lib/types/task";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 describe("settings queries", () => {
   it("returns null for missing setting", () => {
@@ -139,6 +141,20 @@ describe("task queries", () => {
     updateTaskEstimate("t1", null);
     const tasks = getAllTasks();
     expect(tasks[0].estimatedMins).toBeNull();
+  });
+
+  it("returns synthetic misc tasks by sentinel id without polluting normal tasks", () => {
+    const miscTaskId = buildMiscTaskId("2026-04-21");
+
+    const tasks = getTasksByIds([miscTaskId]);
+    expect(tasks).toHaveLength(1);
+    expect(tasks[0]).toMatchObject({
+      id: miscTaskId,
+      dueDate: "2026-04-21",
+      projectName: "Misc",
+    });
+
+    expect(getAllTasks().map((task) => task.id)).not.toContain(miscTaskId);
   });
 });
 

@@ -2,16 +2,20 @@ import { test, expect } from "@playwright/test";
 import {
   completedRow,
   flowCard,
+  getPopOutState,
   TODAY,
   getChimeCount,
   getTimerState,
   openApp,
+  primeFakePopOutWindow,
   resetAppState,
   resetChimeCount,
   setRunningTimerElapsed,
   seedAppState,
   simulateIdleAway,
+  taskPoolCard,
 } from "./helpers/e2e";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 test.beforeEach(async ({ request }) => {
   await resetAppState(request);
@@ -248,6 +252,90 @@ test("[UI-021] Active pomodoro card keeps showing cumulative logged time", async
 
   await expect(card.getByText("28:00 left", { exact: true })).toBeVisible();
   await expect(card.getByText("4:00 logged", { exact: true })).toBeVisible();
+});
+
+test("[UI-028] Misc timer saves tracked time without becoming a flow task", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  await page.getByTestId("misc-time-trigger").click();
+  await page.getByTestId("misc-start-timer").click();
+
+  await expect(page.getByRole("banner").getByText("Misc time", { exact: true })).toBeVisible();
+  await setRunningTimerElapsed(page, 90);
+  await page.getByRole("button", { name: "Save misc time" }).click();
+
+  await expect(page.getByRole("banner").getByText("Misc time", { exact: true })).toHaveCount(0);
+  await expect(flowCard(page, "Misc time")).toHaveCount(0);
+  await expect(taskPoolCard(page, "Misc time")).toHaveCount(0);
+
+  const miscTaskId = buildMiscTaskId(TODAY);
+  await expect
+    .poll(async () => {
+      const response = await request.get(
+        `/api/entries?taskId=${encodeURIComponent(miscTaskId)}`
+      );
+      const entries = (await response.json()) as Array<{
+        durationS: number | null;
+        flowDate: string;
+      }>;
+      if (entries.length === 0) return null;
+      return {
+        flowDate: entries[0]?.flowDate ?? null,
+        durationS: entries[0]?.durationS ?? null,
+      };
+    })
+    .toEqual({
+      flowDate: TODAY,
+      durationS: 90,
+    });
+});
+
+test("[UI-029] Misc pomodoro finishes into a restart-or-done state", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  await page.getByTestId("misc-time-trigger").click();
+  await page
+    .getByTestId("misc-pomodoro-preset")
+    .filter({ hasText: /^30m$/ })
+    .click();
+  await primeFakePopOutWindow(page);
+
+  await expect(page.getByRole("banner").getByText("Misc time", { exact: true })).toBeVisible();
+  await expect(page.getByRole("banner").getByText("Pomodoro 30m", { exact: true })).toBeVisible();
+
+  await setRunningTimerElapsed(page, 30 * 60);
+
+  const miscTaskId = buildMiscTaskId(TODAY);
+  await expect
+    .poll(async () => (await getTimerState(page))?.pomodoroFinishedTaskId ?? null)
+    .toBe(miscTaskId);
+  await expect(flowCard(page, "Misc time")).toHaveCount(0);
+  await expect(taskPoolCard(page, "Misc time")).toHaveCount(0);
+
+  await page.getByTestId("misc-time-trigger").click();
+  await expect(page.getByRole("button", { name: "Done" })).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+  await expect
+    .poll(async () => await getPopOutState(page))
+    .toEqual({ isOpen: false, fakeClosed: true });
+
+  await expect
+    .poll(async () => {
+      const response = await request.get(
+        `/api/entries?taskId=${encodeURIComponent(miscTaskId)}`
+      );
+      const entries = (await response.json()) as Array<{ durationS: number | null }>;
+      return entries.some((entry) => entry.durationS === 1800);
+    })
+    .toBe(true);
 });
 
 test("[UI-015] Auto-idle pause backdates the segment to drop the away period", async ({

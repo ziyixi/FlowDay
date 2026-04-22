@@ -12,6 +12,7 @@ import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
 import { TaskPool } from "@/components/todoist/task-pool";
 import { QuickAdd } from "@/components/todoist/quick-add";
 import { DeletedTasksDialog } from "@/components/todoist/deleted-tasks-dialog";
@@ -27,6 +28,7 @@ function SidebarTimer() {
   const task = useTaskById(activeTaskId ?? "");
 
   if (!activeTaskId || !task) return null;
+  const isMiscTask = isMiscTaskId(activeTaskId);
 
   const isPomodoro = timerMode === "pomodoro";
   const pomodoroLabel =
@@ -49,7 +51,7 @@ function SidebarTimer() {
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-foreground sm:text-xs">
-          {task.title}
+          {isMiscTask ? MISC_TASK_TITLE : task.title}
         </p>
         {isPomodoro && (
           <p className="truncate text-xs text-primary/80 sm:text-[10px]">

@@ -2,6 +2,7 @@ import { eq, or, and, sql, isNull, isNotNull, gte, lte, inArray, notInArray, ne 
 import { getDb } from "./index";
 import { timeEntries, tasks, settings, flowTasks, completedFlowTasks, flowTaskNotes, activeTimerSession } from "./schema";
 import type { Task, TaskPriority } from "@/lib/types/task";
+import { buildMiscTask, isMiscTaskId } from "@/lib/utils/misc-task";
 
 export interface TimeEntryRow {
   id: string;
@@ -478,7 +479,13 @@ export function getTasksByIds(ids: string[]): Task[] {
   if (ids.length === 0) return [];
   const db = getDb();
   const rows = db.select().from(tasks).where(inArray(tasks.id, ids)).all();
-  return rows.map(rowToTask);
+  const persisted = rows.map(rowToTask);
+  const persistedIds = new Set(persisted.map((task) => task.id));
+  const syntheticMisc = ids
+    .filter((id) => isMiscTaskId(id) && !persistedIds.has(id))
+    .map((id) => buildMiscTask(id))
+    .filter((task): task is Task => task != null);
+  return [...persisted, ...syntheticMisc];
 }
 
 export function getAllTimeEntries(): TimeEntryRow[] {

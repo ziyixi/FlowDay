@@ -48,6 +48,8 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-021 | Active pomodoro card still shows cumulative logged time | `single-flow-task-with-history` | desktop | The flow card keeps previously logged time visible while adding current pomodoro elapsed time. | `timer.spec.ts` |
 | UI-025 | Manual entry defaults to the nearest 30-minute block | `single-flow-task` | desktop | The add-manual-entry dialog now defaults start and end to the nearest 30-minute block instead of hard-coding 9:00. | `timer.spec.ts` |
 | UI-026 | Manual entry still supports exact minute edits | `single-flow-task` | desktop | Manual entry add/edit still supports arbitrary minute values like `09:13` and `10:17`, not only `:00` or `:30`. | `timer.spec.ts` |
+| UI-028 | Misc count-up tracking stays outside the normal task UI | `single-flow-task` | desktop | Starting misc time from the top bar saves a real timer entry without creating a visible pool card or flow card. | `timer.spec.ts` |
+| UI-029 | Misc pomodoro ends in a restart-or-done state | `single-flow-task` | desktop | A misc pomodoro auto-saves, keeps its finished marker, and offers `Done` instead of task completion. | `timer.spec.ts` |
 
 ## Settings, Analytics, And Export
 
@@ -55,3 +57,4 @@ This document maps each Playwright UI case to the product area it protects.
 | --- | --- | --- | --- | --- | --- |
 | UI-011 | Settings, export, and analytics smoke | `analytics-seeded` | desktop | Core settings, export dialog, and analytics tabs are all reachable and functional. | `flow-and-shell.spec.ts` |
 | UI-024 | Analytics stats use browser local timezone | `analytics-timezone-boundary` | desktop | Analytics requests include browser timezone and render a near-midnight UTC session in the correct local bucket. | `flow-and-shell.spec.ts` |
+| UI-030 | Analytics review tabs include misc tracked time | `analytics-seeded-with-misc` | desktop | Misc sentinel entries appear in Daily Review task breakdown and Weekly Review project summaries, not only in Work Patterns. | `flow-and-shell.spec.ts` |

@@ -3,6 +3,7 @@ import { createTimeEntry, getEntriesByTask } from "@/lib/db/queries";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 function resetTimerStore() {
   useTimerStore.getState().stopWithoutSaving();
@@ -181,5 +182,23 @@ describe("timer store -> entries API integration", () => {
         state.displaySeconds
       )
     ).toBe(240);
+  });
+
+  it("persists misc pomodoro entries under the daily sentinel id", async () => {
+    const miscTaskId = buildMiscTaskId("2026-04-13");
+
+    await useTimerStore.getState().startPomodoro(miscTaskId, "2026-04-13", 3);
+    await vi.advanceTimersByTimeAsync(3000);
+
+    const entries = getEntriesByTask(miscTaskId);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]).toMatchObject({
+      taskId: miscTaskId,
+      flowDate: "2026-04-13",
+      durationS: 3,
+      source: "timer",
+    });
+
+    expect(useTimerStore.getState().pomodoroFinishedTaskId).toBe(miscTaskId);
   });
 });

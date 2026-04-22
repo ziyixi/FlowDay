@@ -1,4 +1,5 @@
 import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
+import { buildMiscTaskId } from "@/lib/utils/misc-task";
 
 function formatDate(date: Date): string {
   const year = date.getFullYear();
@@ -61,6 +62,7 @@ export type SeedName =
   | "wizard-today-tasks"
   | "wizard-with-yesterday-incomplete"
   | "analytics-timezone-boundary"
+  | "analytics-seeded-with-misc"
   | "single-flow-task"
   | "single-flow-task-with-history"
   | "future-dated-pool"
@@ -267,6 +269,46 @@ function buildSeed(name: SeedName): SeedPayload {
           day_capacity_mins: 360,
         },
       };
+    case "analytics-seeded-with-misc":
+      return {
+        tasks: [
+          localTask("analytics-task-1", "Write proposal", {
+            estimatedMins: 180,
+            priority: 3,
+          }),
+          localTask("analytics-task-2", "Review plan", {
+            estimatedMins: 30,
+          }),
+        ],
+        flows: {
+          [TODAY]: ["analytics-task-1", "analytics-task-2"],
+        },
+        completedTasks: {
+          [TODAY]: ["analytics-task-2"],
+        },
+        timeEntries: [
+          {
+            taskId: "analytics-task-2",
+            flowDate: TODAY,
+            startTime: `${TODAY}T08:00:00.000Z`,
+            endTime: `${TODAY}T08:25:00.000Z`,
+            durationS: 1500,
+            source: "timer",
+          },
+          {
+            taskId: buildMiscTaskId(TODAY),
+            flowDate: TODAY,
+            startTime: `${TODAY}T09:00:00.000Z`,
+            endTime: `${TODAY}T09:20:00.000Z`,
+            durationS: 1200,
+            source: "timer",
+          },
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
     case "todoist-overdue":
       // Two Todoist-sourced overdue tasks. The UI test deletes one in
       // Todoist (simulated via /api/test/sync-orphans) and verifies it
@@ -330,6 +372,14 @@ export async function setRunningTimerElapsed(page: Page, seconds: number) {
 
 export async function getTimerState(page: Page) {
   return page.evaluate(() => window.__FLOWDAY_E2E__?.getTimerState() ?? null);
+}
+
+export async function primeFakePopOutWindow(page: Page) {
+  await page.evaluate(() => window.__FLOWDAY_E2E__?.primeFakePopOutWindow());
+}
+
+export async function getPopOutState(page: Page) {
+  return page.evaluate(() => window.__FLOWDAY_E2E__?.getPopOutState() ?? null);
 }
 
 export async function getChimeCount(page: Page): Promise<number> {

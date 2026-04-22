@@ -4,6 +4,7 @@ import { useFlowStore } from "./flow-store";
 import { useTimerStore } from "./timer-store";
 import { formatLocalDate } from "@/lib/utils/time";
 import { partitionTasksByDueDate } from "@/lib/utils/task-sections";
+import { buildMiscTask } from "@/lib/utils/misc-task";
 
 interface TodoistState {
   tasks: Task[];
@@ -212,5 +213,6 @@ export function useTaskSections(date?: string): TaskSections {
 }
 
 export function useTaskById(id: string): Task | undefined {
-  return useTodoistStore((s) => s.tasks.find((t) => t.id === id));
+  const task = useTodoistStore((s) => s.tasks.find((t) => t.id === id));
+  return task ?? buildMiscTask(id) ?? undefined;
 }
