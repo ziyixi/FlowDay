@@ -164,6 +164,48 @@ test("[UI-018] Task estimate is offered as the first Pomodoro preset", async ({
   await expect(page.getByRole("banner").getByText("Pomodoro 45m")).toBeVisible();
 });
 
+test("[UI-031] Suggested Pomodoro preset subtracts already-logged time", async ({
+  page,
+  request,
+}) => {
+  // single-flow-task-with-history seeds a 45m estimate with 2m already logged,
+  // so the suggested preset should drop to 43m for the remaining work.
+  await seedAppState(request, "single-flow-task-with-history");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+
+  const presets = page.locator('[data-testid="pomodoro-preset"]');
+  await expect(presets.first()).toHaveAttribute("data-suggested", "true");
+  await expect(presets.first()).toHaveText("43m");
+  // 43m is not in the base list, so it gets prepended without dedup -> 7 items.
+  await expect(presets).toHaveCount(7);
+
+  await presets.first().click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 43m")).toBeVisible();
+});
+
+test("[UI-032] Custom Pomodoro input launches an arbitrary minute target", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+
+  const customInput = page.getByTestId("pomodoro-custom-input");
+  await customInput.fill("17");
+  await page.getByTestId("pomodoro-custom-start").click();
+
+  await expect(page.getByRole("banner").getByText("Pomodoro 17m")).toBeVisible();
+  await expect
+    .poll(async () => (await getTimerState(page))?.timerMode ?? null)
+    .toBe("pomodoro");
+});
+
 test("[UI-019] Pomodoro completion surfaces a finished marker for the pop-out", async ({
   page,
   request,

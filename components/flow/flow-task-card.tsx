@@ -10,6 +10,7 @@ import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { useFlowStore } from "@/lib/stores/flow-store";
 import { useTodoistStore } from "@/lib/stores/todoist-store";
 import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { ManualEntry } from "@/components/timer/manual-entry";
 import { PomodoroPicker } from "@/components/timer/pomodoro-picker";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
@@ -21,27 +22,6 @@ interface FlowTaskCardProps {
   index: number;
   isNext: boolean;
   date: string;
-}
-
-function useTaskLoggedSeconds(taskId: string, revision: number): number {
-  const [seconds, setSeconds] = useState(0);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/entries?taskId=${encodeURIComponent(taskId)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: { durationS: number | null }[]) => {
-        if (!cancelled) {
-          setSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
-        }
-      })
-      .catch(() => {});
-    return () => {
-      cancelled = true;
-    };
-  }, [taskId, revision]);
-
-  return seconds;
 }
 
 function useTaskNote(taskId: string, flowDate: string) {
@@ -284,7 +264,12 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               <Play className="h-3.5 w-3.5" />
             )}
           </button>
-          <PomodoroPicker taskId={task.id} flowDate={date} estimatedMins={task.estimatedMins} />
+          <PomodoroPicker
+            taskId={task.id}
+            flowDate={date}
+            estimatedMins={task.estimatedMins}
+            loggedMins={Math.floor(loggedSeconds / 60)}
+          />
           <ManualEntry taskId={task.id} flowDate={date} onEntriesChanged={onEntriesChanged} />
           <button
             className={cn(

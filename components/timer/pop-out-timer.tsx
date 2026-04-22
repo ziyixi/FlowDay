@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import { useTimerStore } from "@/lib/stores/timer-store";
 import { useFlowStore, useFlowTasksForDate } from "@/lib/stores/flow-store";
 import { useTaskById } from "@/lib/stores/todoist-store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
+import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
@@ -213,20 +214,34 @@ function PipTimerContent() {
 function PomodoroFinishedPanel() {
   const finishedTaskId = useTimerStore((s) => s.pomodoroFinishedTaskId);
   const finishedFlowDate = useTimerStore((s) => s.pomodoroFinishedFlowDate);
+  const entryRevision = useTimerStore((s) => s.entryRevision);
   const startPomodoro = useTimerStore((s) => s.startPomodoro);
   const dismiss = useTimerStore((s) => s.dismissPomodoroFinished);
   const completeTask = useFlowStore((s) => s.completeTask);
   const closePopOut = usePopOutStore((s) => s.close);
   const task = useTaskById(finishedTaskId ?? "");
+  const loggedSeconds = useTaskLoggedSeconds(finishedTaskId ?? "", entryRevision);
+  const [customMins, setCustomMins] = useState("");
 
   if (!finishedTaskId || !finishedFlowDate) return null;
   const isMiscTask = isMiscTaskId(finishedTaskId);
 
-  const presets = buildPomodoroPresets(task?.estimatedMins);
+  const presets = buildPomodoroPresets(
+    task?.estimatedMins,
+    Math.floor(loggedSeconds / 60)
+  );
 
   const handleRestart = (mins: number) => {
+    if (!Number.isFinite(mins) || mins <= 0) return;
     dismiss();
     void startPomodoro(finishedTaskId, finishedFlowDate, mins * 60);
+    setCustomMins("");
+  };
+
+  const submitCustom = () => {
+    const mins = Number.parseInt(customMins, 10);
+    if (!Number.isFinite(mins) || mins <= 0) return;
+    handleRestart(mins);
   };
 
   const handleComplete = () => {
@@ -272,10 +287,13 @@ function PomodoroFinishedPanel() {
         {presets.map((preset) => (
           <button
             key={preset.mins}
+            data-testid="pomodoro-finished-preset"
+            data-mins={preset.mins}
+            data-suggested={preset.suggested ? "true" : undefined}
             onClick={() => handleRestart(preset.mins)}
             title={
               preset.suggested
-                ? `Restart · matches estimate (${preset.label})`
+                ? `Restart · matches remaining estimate (${preset.label})`
                 : `Restart ${preset.label}`
             }
             className={cn(
@@ -289,6 +307,37 @@ function PomodoroFinishedPanel() {
           </button>
         ))}
       </div>
+
+      <form
+        className="flex items-center gap-1 border-t border-border/50 pt-2"
+        onSubmit={(e) => {
+          e.preventDefault();
+          submitCustom();
+        }}
+      >
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={600}
+          value={customMins}
+          onChange={(e) => setCustomMins(e.target.value)}
+          placeholder="Custom"
+          data-testid="pomodoro-finished-custom-input"
+          aria-label="Custom Pomodoro minutes"
+          className="w-16 rounded-md border border-border bg-background px-1.5 py-1 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+        />
+        <span className="text-xs text-muted-foreground">min</span>
+        <button
+          type="submit"
+          data-testid="pomodoro-finished-custom-start"
+          disabled={!customMins || Number.parseInt(customMins, 10) <= 0}
+          className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          title="Start custom Pomodoro"
+        >
+          <Play className="h-3 w-3" />
+        </button>
+      </form>
 
       <button
         onClick={handleComplete}
