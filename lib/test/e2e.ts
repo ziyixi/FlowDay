@@ -1,5 +1,9 @@
 import { eq } from "drizzle-orm";
-import { createTimeEntry, setFlowTaskIds, setSetting, upsertNote, upsertTasks } from "@/lib/db/queries";
+import { createTimeEntry } from "@/lib/db/queries/entries";
+import { setFlowTaskIds } from "@/lib/db/queries/flows";
+import { upsertNote } from "@/lib/db/queries/notes";
+import { setSetting } from "@/lib/db/queries/settings";
+import { upsertTasks } from "@/lib/db/queries/tasks";
 import { getDb } from "@/lib/db/index";
 import {
   activeTimerSession,

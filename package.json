@@ -14,6 +14,7 @@
     "test:integration": "vitest run __tests__/integration",
     "test:ui": "TZ=UTC playwright test",
     "test:ui:headed": "TZ=UTC playwright test --headed",
+    "test:imports": "bash scripts/check-refactor-imports.sh",
     "test:watch": "vitest",
     "prepare": "husky"
   },

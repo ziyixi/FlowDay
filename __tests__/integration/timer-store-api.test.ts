@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createTimeEntry, getEntriesByTask } from "@/lib/db/queries";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { createTimeEntry, getEntriesByTask } from "@/lib/db/queries/entries";
+import { useTimerStore } from "@/features/timer/store";
 import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 import { buildMiscTaskId } from "@/lib/utils/misc-task";

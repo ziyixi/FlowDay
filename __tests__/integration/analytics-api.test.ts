@@ -1,11 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  createTimeEntry,
-  upsertTasks,
-  setFlowTaskIds,
-  addCompletedFlowTask,
-  setSetting,
-} from "@/lib/db/queries";
+import { createTimeEntry } from "@/lib/db/queries/entries";
+import { addCompletedFlowTask, setFlowTaskIds } from "@/lib/db/queries/flows";
+import { setSetting } from "@/lib/db/queries/settings";
+import { upsertTasks } from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 import { buildMiscTaskId, buildMiscTaskTitle } from "@/lib/utils/misc-task";
 

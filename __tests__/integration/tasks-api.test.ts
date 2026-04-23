@@ -1,9 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  upsertTasks,
-  setFlowTaskIds,
-  getAllFlows,
-} from "@/lib/db/queries";
+import { getAllFlows, setFlowTaskIds } from "@/lib/db/queries/flows";
+import { upsertTasks } from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 
 /**

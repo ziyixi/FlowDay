@@ -5,7 +5,7 @@ import { Trash2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useTodoistStore } from "@/features/todoist/store";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { EditableLocalTitle } from "@/components/shared/editable-local-title";

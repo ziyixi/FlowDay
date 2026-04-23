@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Hourglass, Play } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTimerStore } from "@/features/timer/store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { cn } from "@/lib/utils";

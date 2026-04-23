@@ -1,65 +1,31 @@
-import { NextResponse } from "next/server";
-import { getAllTasks, updateTaskEstimate, updateTaskTitle, softDeleteTask, removeTaskFromFlows, createLocalTask } from "@/lib/db/queries";
+import {
+  createTask,
+  deleteTask,
+  listTasks,
+  patchTask,
+} from "@/features/tasks/services/task-service";
+import {
+  readJsonBody,
+  serviceJson,
+} from "@/lib/server/route-helpers";
+import type {
+  TaskCreateBody,
+  TaskDeleteBody,
+  TaskPatchBody,
+} from "@/features/tasks/contracts";
 
 export async function GET() {
-  return NextResponse.json(getAllTasks());
+  return serviceJson(listTasks());
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { title, priority, dueDate, estimatedMins, labels, description } = body;
-
-  if (typeof title !== "string" || !title.trim()) {
-    return NextResponse.json({ error: "title is required" }, { status: 400 });
-  }
-
-  const task = createLocalTask({
-    title: title.trim(),
-    priority: typeof priority === "number" ? priority : undefined,
-    dueDate: typeof dueDate === "string" ? dueDate : undefined,
-    estimatedMins: typeof estimatedMins === "number" ? estimatedMins : undefined,
-    labels: Array.isArray(labels) ? labels : undefined,
-    description: typeof description === "string" ? description : undefined,
-  });
-
-  return NextResponse.json(task, { status: 201 });
+  return serviceJson(createTask(await readJsonBody<TaskCreateBody>(request)));
 }
 
 export async function PATCH(request: Request) {
-  const body = await request.json();
-  const { taskId, estimatedMins, title } = body;
-
-  if (typeof taskId !== "string") {
-    return NextResponse.json({ error: "taskId required" }, { status: 400 });
-  }
-
-  if (typeof title === "string") {
-    if (!title.trim()) {
-      return NextResponse.json({ error: "title cannot be empty" }, { status: 400 });
-    }
-    updateTaskTitle(taskId, title.trim());
-  }
-
-  if ("estimatedMins" in body) {
-    const mins = estimatedMins === null || estimatedMins === "" ? null : Number(estimatedMins);
-    if (mins !== null && (isNaN(mins) || mins < 0)) {
-      return NextResponse.json({ error: "Invalid estimatedMins" }, { status: 400 });
-    }
-    updateTaskEstimate(taskId, mins);
-  }
-
-  return NextResponse.json({ success: true });
+  return serviceJson(patchTask(await readJsonBody<TaskPatchBody>(request)));
 }
 
 export async function DELETE(request: Request) {
-  const body = await request.json();
-  const { taskId } = body;
-
-  if (typeof taskId !== "string") {
-    return NextResponse.json({ error: "taskId required" }, { status: 400 });
-  }
-
-  softDeleteTask(taskId);
-  removeTaskFromFlows(taskId);
-  return NextResponse.json({ success: true });
+  return serviceJson(deleteTask(await readJsonBody<TaskDeleteBody>(request)));
 }

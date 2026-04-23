@@ -1,18 +1,17 @@
-import { NextResponse } from "next/server";
-import { getDeletedTasks, restoreTask } from "@/lib/db/queries";
+import {
+  listDeletedTasks,
+  restoreDeletedTask,
+} from "@/features/tasks/services/task-service";
+import {
+  readJsonBody,
+  serviceJson,
+} from "@/lib/server/route-helpers";
 
 export async function GET() {
-  return NextResponse.json(getDeletedTasks());
+  return serviceJson(listDeletedTasks());
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { taskId } = body;
-
-  if (typeof taskId !== "string") {
-    return NextResponse.json({ error: "taskId required" }, { status: 400 });
-  }
-
-  restoreTask(taskId);
-  return NextResponse.json({ success: true });
+  const body = await readJsonBody<{ taskId?: string }>(request);
+  return serviceJson(restoreDeletedTask(body.taskId));
 }

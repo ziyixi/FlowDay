@@ -1,51 +1,19 @@
-import { NextResponse } from "next/server";
-import { getSetting, setSetting } from "@/lib/db/queries";
+import {
+  getSettings,
+  updateSettings,
+} from "@/features/settings/services/settings-service";
+import {
+  getSearchParams,
+  readJsonBody,
+  serviceJson,
+} from "@/lib/server/route-helpers";
+import type { SettingsUpdateBody } from "@/features/settings/contracts";
 
 export async function GET(request: Request) {
-  const capacityRaw = getSetting("day_capacity_mins");
-  // Client passes its local date so we don't rely on server timezone
-  const url = new URL(request.url);
-  const clientToday = url.searchParams.get("today");
-  const planningCompleted = clientToday
-    ? getSetting(`planning_completed:${clientToday}`) === "true"
-    : false;
-  return NextResponse.json({
-    todoist_api_key: getSetting("todoist_api_key") ? "••••••••" : null,
-    has_api_key: !!getSetting("todoist_api_key"),
-    last_sync_at: getSetting("last_sync_at"),
-    day_capacity_mins: capacityRaw != null ? Number(capacityRaw) : 360,
-    planning_completed_today: planningCompleted,
-  });
+  const searchParams = getSearchParams(request);
+  return serviceJson(getSettings(searchParams.get("today")));
 }
 
 export async function PUT(request: Request) {
-  const body = await request.json();
-
-  // Handle API key update
-  if ("todoist_api_key" in body) {
-    const { todoist_api_key } = body;
-    if (typeof todoist_api_key !== "string" || !todoist_api_key.trim()) {
-      return NextResponse.json({ error: "API key is required" }, { status: 400 });
-    }
-    setSetting("todoist_api_key", todoist_api_key.trim());
-  }
-
-  // Handle capacity update
-  if ("day_capacity_mins" in body) {
-    const mins = Number(body.day_capacity_mins);
-    if (isNaN(mins) || mins < 0) {
-      return NextResponse.json({ error: "Invalid capacity value" }, { status: 400 });
-    }
-    setSetting("day_capacity_mins", String(mins));
-  }
-
-  // Handle planning completed flag
-  if ("planning_completed_date" in body) {
-    const date = body.planning_completed_date;
-    if (typeof date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
-      setSetting(`planning_completed:${date}`, "true");
-    }
-  }
-
-  return NextResponse.json({ success: true });
+  return serviceJson(updateSettings(await readJsonBody<SettingsUpdateBody>(request)));
 }

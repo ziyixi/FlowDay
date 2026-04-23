@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { formatDuration } from "@/lib/utils/time";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useTodoistStore } from "@/features/todoist/store";
 import type { Task } from "@/lib/types/task";
 import { cn } from "@/lib/utils";
 

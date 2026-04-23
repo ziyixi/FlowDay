@@ -1,10 +1,6 @@
 import { describe, it, expect } from "vitest";
-import {
-  upsertTasks,
-  setFlowTaskIds,
-  addCompletedFlowTask,
-  getAllFlows,
-} from "@/lib/db/queries";
+import { addCompletedFlowTask, getAllFlows, setFlowTaskIds } from "@/lib/db/queries/flows";
+import { upsertTasks } from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 
 /**
@@ -301,5 +297,23 @@ describe("PUT /api/flows — errors", () => {
     expect(res.status).toBe(400);
     const data = await res.json();
     expect(data.error).toBeDefined();
+  });
+
+  it("returns the same date-required error when the payload is not an object", async () => {
+    const res = await callFlows("PUT", "not-an-object");
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("date is required");
+  });
+
+  it("returns 400 when rolloverSelected is missing required fields", async () => {
+    const res = await callFlows("PUT", {
+      action: "rolloverSelected",
+      date: "2026-04-13",
+      fromDate: "2026-04-13",
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toBe("fromDate, toDate, and taskIds required");
   });
 });

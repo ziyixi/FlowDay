@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useTodoistStore } from "@/features/todoist/store";
 
 export function QuickAdd() {
   const [value, setValue] = useState("");

@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTimerStore } from "@/lib/stores/timer-store";
-import { useFlowStore } from "@/lib/stores/flow-store";
-import { useTaskById } from "@/lib/stores/todoist-store";
+import { useTimerStore } from "@/features/timer/store";
+import { useFlowStore } from "@/features/flow/store";
+import { useTaskById } from "@/features/todoist/store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";

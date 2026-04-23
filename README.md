@@ -118,4 +118,20 @@ GitHub Actions runs on push to `main` and pull requests:
 Todoist Cloud (read-only) → FlowDay API (Next.js routes) → SQLite → Zustand → React UI
 ```
 
+The public entrypoints stay in their original places (`app/`, `components/`, `lib/stores/`), but the domain logic is now organized behind feature slices so route handlers, stores, and large client components have smaller internal modules:
+
+```text
+features/
+  analytics/    dialog views, charts, data-loading hooks, server analytics service
+  flow/         day-flow UI, planning wizard, notes hooks, flow store modules
+  settings/     settings/export dialogs, settings/export route services
+  tasks/        task route services
+  timer/        manual-entry UI, timer store modules, entry/session services
+  todoist/      todoist store modules and sync service
+lib/db/queries/
+  analytics.ts  entries.ts  flows.ts  notes.ts  settings.ts  tasks.ts  timer-session.ts
+```
+
+`components/*` and `lib/stores/*` act as stable facades for the rest of the app and the test suite, while the feature folders carry the implementation detail.
+
 See [PRD/PRD.md](PRD/PRD.md) for full architecture documentation.

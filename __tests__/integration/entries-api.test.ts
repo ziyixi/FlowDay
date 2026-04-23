@@ -1,8 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  createTimeEntry,
-  getEntriesByTask,
-} from "@/lib/db/queries";
+import { createTimeEntry, getEntriesByTask } from "@/lib/db/queries/entries";
 
 /**
  * Integration tests for entry API routes.

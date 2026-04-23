@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import {
-  upsertTasks,
   getAllTasks,
-  softDeleteTask,
   getDeletedTasks,
-} from "@/lib/db/queries";
+  softDeleteTask,
+  upsertTasks,
+} from "@/lib/db/queries/tasks";
 import { partitionTasksByDueDate } from "@/lib/utils/task-sections";
 import type { Task } from "@/lib/types/task";
 

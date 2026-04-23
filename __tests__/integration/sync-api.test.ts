@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getSetting, setSetting } from "@/lib/db/queries";
+import { getSetting, setSetting } from "@/lib/db/queries/settings";
 
 async function callSync() {
   const mod = await import("@/app/api/sync/route");

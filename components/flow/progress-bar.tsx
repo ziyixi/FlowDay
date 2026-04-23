@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
-import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/lib/stores/flow-store";
+import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/features/flow/store";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTimerStore } from "@/features/timer/store";
 import { cn } from "@/lib/utils";
 
 export function ProgressBar({ date }: { date: string }) {

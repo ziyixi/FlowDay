@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useFlowStore } from "@/lib/stores/flow-store";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useFlowStore } from "@/features/flow/store";
+import { useTodoistStore } from "@/features/todoist/store";
+import { useTimerStore } from "@/features/timer/store";
 import type { Task } from "@/lib/types/task";
 
 function jsonResponse(data: unknown, status = 200) {

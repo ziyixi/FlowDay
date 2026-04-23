@@ -3,9 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
-import { useTimerStore } from "@/lib/stores/timer-store";
-import { useFlowStore, useFlowTasksForDate } from "@/lib/stores/flow-store";
-import { useTaskById } from "@/lib/stores/todoist-store";
+import { useTimerStore } from "@/features/timer/store";
+import { useFlowStore, useFlowTasksForDate } from "@/features/flow/store";
+import { useTaskById } from "@/features/todoist/store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";

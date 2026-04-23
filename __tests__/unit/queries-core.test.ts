@@ -1,21 +1,22 @@
 import { describe, it, expect } from "vitest";
 import {
-  getSetting,
-  setSetting,
+  addCompletedFlowTask,
+  getAllCompletedFlowTasks,
+  getAllFlows,
+  removeCompletedFlowTask,
+  setFlowTaskIds,
+} from "@/lib/db/queries/flows";
+import { getSetting, setSetting } from "@/lib/db/queries/settings";
+import {
   getAllTasks,
-  upsertTasks,
-  softDeleteTask,
   restoreTask,
   getDeletedTasks,
-  updateTaskEstimate,
-  markOrphanedTodoistTasksDeleted,
-  setFlowTaskIds,
-  getAllFlows,
-  addCompletedFlowTask,
-  removeCompletedFlowTask,
-  getAllCompletedFlowTasks,
   getTasksByIds,
-} from "@/lib/db/queries";
+  markOrphanedTodoistTasksDeleted,
+  softDeleteTask,
+  updateTaskEstimate,
+  upsertTasks,
+} from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 import { buildMiscTaskId } from "@/lib/utils/misc-task";
 

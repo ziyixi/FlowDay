@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useFlowStore } from "@/lib/stores/flow-store";
-import { useTimerStore } from "@/lib/stores/timer-store";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useFlowStore } from "@/features/flow/store";
+import { useTimerStore } from "@/features/timer/store";
+import { useTodoistStore } from "@/features/todoist/store";
 
 export function useHydration() {
   const hydrated = useRef(false);

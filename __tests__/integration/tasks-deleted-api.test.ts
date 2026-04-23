@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { upsertTasks, softDeleteTask } from "@/lib/db/queries";
+import { softDeleteTask, upsertTasks } from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 
 /**

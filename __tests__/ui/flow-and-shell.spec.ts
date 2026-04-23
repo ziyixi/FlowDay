@@ -320,7 +320,7 @@ test("[UI-042] Multi-day read-only columns keep tasks, notes, and done markers o
   await seedAppState(request, "multi-day-readonly");
   await openApp(page);
 
-  await page.getByRole("button", { name: "3" }).click();
+  await page.getByRole("button", { name: "3-day view" }).click();
 
   const todayColumn = page.locator(
     `[data-testid="day-column"][data-date="${TODAY}"]`
@@ -356,7 +356,7 @@ test("[UI-042] Multi-day read-only columns keep tasks, notes, and done markers o
   await expect(inTwoDaysColumn.getByText("Two-day note stays put.")).toBeVisible();
   await expect(inTwoDaysColumn.getByText("Tomorrow shipped task")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "5" }).click();
+  await page.getByRole("button", { name: "5-day view" }).click();
   const inThreeDaysColumn = page.locator(
     `[data-testid="day-column"][data-date="${IN_THREE_DAYS}"]`
   );

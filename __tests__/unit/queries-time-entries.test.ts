@@ -1,14 +1,14 @@
 import { describe, it, expect } from "vitest";
 import {
   createTimeEntry,
-  getEntriesByTask,
-  getEntriesByDate,
-  getEntriesByTaskAndDate,
-  updateTimeEntry,
   deleteTimeEntry,
-  getEntriesInDateRange,
   getAllTimeEntries,
-} from "@/lib/db/queries";
+  getEntriesByDate,
+  getEntriesByTask,
+  getEntriesByTaskAndDate,
+  getEntriesInDateRange,
+  updateTimeEntry,
+} from "@/lib/db/queries/entries";
 
 describe("time entry queries", () => {
   it("creates and retrieves entries by task", () => {

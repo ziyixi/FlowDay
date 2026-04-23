@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getSetting, setSetting } from "@/lib/db/queries";
+import { getSetting, setSetting } from "@/lib/db/queries/settings";
 
 /**
  * Integration tests for the settings API routes.

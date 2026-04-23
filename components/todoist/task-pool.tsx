@@ -3,8 +3,8 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { ChevronRight, Check } from "lucide-react";
-import { useTaskSections } from "@/lib/stores/todoist-store";
-import { useFlowStore, useFlowTasksForDate, useCompletedTasksForDate } from "@/lib/stores/flow-store";
+import { useTaskSections } from "@/features/todoist/store";
+import { useFlowStore, useFlowTasksForDate, useCompletedTasksForDate } from "@/features/flow/store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { TaskCard } from "./task-card";

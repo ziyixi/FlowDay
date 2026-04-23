@@ -5,9 +5,9 @@ import fs from "node:fs";
 import {
   getAllTasks,
   getDeletedTasks,
-  upsertTasks,
   markOrphanedTodoistTasksDeleted,
-} from "@/lib/db/queries";
+  upsertTasks,
+} from "@/lib/db/queries/tasks";
 import { getDb } from "@/lib/db";
 import type { Task } from "@/lib/types/task";
 

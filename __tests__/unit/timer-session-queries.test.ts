@@ -3,7 +3,7 @@ import {
   clearActiveTimerSession,
   getActiveTimerSession,
   saveActiveTimerSession,
-} from "@/lib/db/queries";
+} from "@/lib/db/queries/timer-session";
 
 describe("active timer session queries", () => {
   beforeEach(() => {

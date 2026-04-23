@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { getAllTasks, getSetting, setSetting } from "@/lib/db/queries";
+import { getSetting, setSetting } from "@/lib/db/queries/settings";
+import { getAllTasks } from "@/lib/db/queries/tasks";
 
 describe("todoist sync transform", () => {
   afterEach(() => {

@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTimerStore } from "@/features/timer/store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 
 const IDLE_THRESHOLD_MS = 10 * 60 * 1000;

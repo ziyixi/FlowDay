@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useTodoistStore } from "@/features/todoist/store";
 
 export function useAutoSync() {
   const lastSyncAt = useTodoistStore((s) => s.lastSyncAt);

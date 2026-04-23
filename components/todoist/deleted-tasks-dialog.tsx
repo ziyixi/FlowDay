@@ -21,7 +21,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { useTodoistStore } from "@/lib/stores/todoist-store";
+import { useTodoistStore } from "@/features/todoist/store";
 import type { Task } from "@/lib/types/task";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";

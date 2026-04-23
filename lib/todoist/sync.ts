@@ -1,9 +1,11 @@
 import {
   getSetting,
   setSetting,
-  upsertTasks,
+} from "@/lib/db/queries/settings";
+import {
   markOrphanedTodoistTasksDeleted,
-} from "@/lib/db/queries";
+  upsertTasks,
+} from "@/lib/db/queries/tasks";
 import { fetchTodoistTasks, fetchTodoistProjects } from "./api";
 import { todoistColorToHex } from "./colors";
 import type { Task, TaskPriority } from "@/lib/types/task";

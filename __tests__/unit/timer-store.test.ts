@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { useTimerStore } from "@/lib/stores/timer-store";
+import { useTimerStore } from "@/features/timer/store";
 import { _getChimeCount, _resetChime } from "@/lib/utils/chime";
 import { buildMiscTaskId } from "@/lib/utils/misc-task";
 

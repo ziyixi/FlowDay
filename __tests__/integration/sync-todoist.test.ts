@@ -1,12 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { syncTodoistToDb } from "@/lib/todoist/sync";
+import { setSetting } from "@/lib/db/queries/settings";
 import {
   getAllTasks,
   getDeletedTasks,
-  setSetting,
   softDeleteTask,
   upsertTasks,
-} from "@/lib/db/queries";
+} from "@/lib/db/queries/tasks";
 import type { Task } from "@/lib/types/task";
 
 /**

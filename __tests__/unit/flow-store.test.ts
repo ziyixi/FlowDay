@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { format } from "date-fns";
-import { useFlowStore } from "@/lib/stores/flow-store";
+import { useFlowStore } from "@/features/flow/store";
 
 function jsonResponse(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
