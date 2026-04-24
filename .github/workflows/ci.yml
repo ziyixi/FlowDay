@@ -73,6 +73,27 @@ jobs:
           path: output/playwright
           if-no-files-found: ignore
 
+  # ─── README Screenshot Goldens ──────────────────
+  readme-screenshots:
+    name: README Screenshots
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run screenshots:readme:check
+      - name: Upload generated screenshots
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: readme-screenshot-current
+          path: output/readme-screenshots/current
+          if-no-files-found: ignore
+
   # ─── Type Check ─────────────────────────────────
   typecheck:
     name: Type Check
@@ -130,7 +151,7 @@ jobs:
   # ─── Docker Image ───────────────────────────────
   docker:
     name: Docker Image
-    needs: [lint, typecheck, test-unit, test-integration, test-ui, build, changes]
+    needs: [lint, typecheck, test-unit, test-integration, test-ui, readme-screenshots, build, changes]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.docker == 'true'
     steps:
