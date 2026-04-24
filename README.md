@@ -1,5 +1,9 @@
 # FlowDay
 
+<a href="https://openai.com/codex">
+  <img alt="Vibe coded with Codex" src="https://img.shields.io/badge/Vibe_coded_with-Codex-10A37F?style=for-the-badge&logo=openai&logoColor=white&labelColor=111827" />
+</a>
+
 FlowDay is a simple daily execution board for solo work. Pull in your Todoist tasks, choose what belongs in today, put the work in order, then track what actually happened.
 
 Todoist stays read-only. You can also use FlowDay without Todoist by adding local tasks directly in the sidebar.
