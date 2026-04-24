@@ -260,7 +260,6 @@ function PomodoroFinishedPanel() {
 
   const handleRestart = (mins: number) => {
     if (!Number.isFinite(mins) || mins <= 0) return;
-    dismiss();
     void startPomodoro(finishedTaskId, finishedFlowDate, mins * 60);
     setCustomMins("");
   };

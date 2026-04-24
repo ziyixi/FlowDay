@@ -6,6 +6,7 @@ import {
   TODAY,
   getChimeCount,
   getTimerState,
+  mountFakePopOutWindow,
   openApp,
   primeFakePopOutWindow,
   resetAppState,
@@ -347,6 +348,50 @@ test("[UI-036] Pop-out stays open when the PiP window lands before the timer sta
   await expect
     .poll(async () => await getPopOutState(page))
     .toEqual({ isOpen: true, fakeClosed: false });
+});
+
+test("[UI-049] Pop-out restart after pomodoro completion keeps the window open", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "single-flow-task");
+  await openApp(page);
+
+  const card = flowCard(page, "Deep work block");
+  await card.getByTitle("Start Pomodoro").click();
+  await page.getByRole("button", { name: "30m", exact: true }).click();
+  await expect(page.getByRole("banner").getByText("Pomodoro 30m")).toBeVisible();
+
+  await mountFakePopOutWindow(page);
+  await expect.poll(async () => (await getPopOutState(page))?.isOpen).toBe(true);
+
+  await setRunningTimerElapsed(page, 30 * 60);
+  await expect
+    .poll(async () => (await getTimerState(page))?.pomodoroFinishedTaskId ?? null)
+    .toBe("flow-task-1");
+
+  await page
+    .getByTestId("pomodoro-finished-preset")
+    .filter({ hasText: /^30m$/ })
+    .click();
+
+  await expect
+    .poll(async () => await getPopOutState(page))
+    .toEqual({ isOpen: true, fakeClosed: false });
+  await expect
+    .poll(async () => {
+      const state = await getTimerState(page);
+      return {
+        activeTaskId: state?.activeTaskId ?? null,
+        status: state?.status ?? null,
+        timerMode: state?.timerMode ?? null,
+      };
+    })
+    .toEqual({
+      activeTaskId: "flow-task-1",
+      status: "running",
+      timerMode: "pomodoro",
+    });
 });
 
 test("[UI-037] Misc total badge shows even for sub-minute segments", async ({

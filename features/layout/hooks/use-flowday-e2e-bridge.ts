@@ -20,6 +20,7 @@ declare global {
       resetChimeCount: () => void;
       simulateIdleAway: (secondsAgo: number) => void;
       primeFakePopOutWindow: () => void;
+      mountFakePopOutWindow: () => void;
       getPopOutState: () => {
         isOpen: boolean;
         fakeClosed: boolean;
@@ -33,6 +34,69 @@ export function useFlowdayE2EBridge(enabled: boolean) {
     if (!enabled || typeof window === "undefined") return;
 
     let fakePopOutClosed = false;
+    let fakePopOutContainer: HTMLElement | null = null;
+    const hadDocumentPictureInPicture = "documentPictureInPicture" in window;
+    const originalDocumentPictureInPicture = window.documentPictureInPicture;
+
+    const restoreDocumentPictureInPicture = () => {
+      if (hadDocumentPictureInPicture) {
+        Object.defineProperty(window, "documentPictureInPicture", {
+          configurable: true,
+          value: originalDocumentPictureInPicture,
+        });
+        return;
+      }
+      delete window.documentPictureInPicture;
+    };
+
+    const setFakePopOutWindow = (renderPortal: boolean) => {
+      fakePopOutClosed = false;
+      fakePopOutContainer?.remove();
+      fakePopOutContainer = null;
+
+      const fakeDocument = {
+        visibilityState: "visible",
+        addEventListener() {},
+        removeEventListener() {},
+        documentElement: {
+          classList: {
+            toggle() {},
+          },
+        },
+      };
+      let fakeWindowClosed = false;
+      const fakeWindow = {
+        get closed() {
+          return fakeWindowClosed;
+        },
+        document: fakeDocument,
+        focus() {},
+        close() {
+          fakeWindowClosed = true;
+          fakePopOutClosed = true;
+          fakePopOutContainer?.remove();
+          fakePopOutContainer = null;
+        },
+      } as unknown as Window;
+
+      if (renderPortal) {
+        fakePopOutContainer = document.createElement("div");
+        fakePopOutContainer.setAttribute("data-testid", "fake-pop-out-root");
+        document.body.appendChild(fakePopOutContainer);
+        Object.defineProperty(window, "documentPictureInPicture", {
+          configurable: true,
+          value: {
+            requestWindow: async () => fakeWindow,
+            window: fakeWindow,
+          } satisfies DocumentPictureInPicture,
+        });
+      }
+
+      usePopOutStore.setState({
+        pipWindow: fakeWindow,
+        container: fakePopOutContainer,
+      });
+    };
 
     window.__FLOWDAY_E2E__ = {
       setRunningTimerElapsed: (seconds: number) => {
@@ -65,28 +129,8 @@ export function useFlowdayE2EBridge(enabled: boolean) {
         }
         void state.pauseTimer(Date.now() - secondsAgo * 1000);
       },
-      primeFakePopOutWindow: () => {
-        fakePopOutClosed = false;
-        const fakeDocument = {
-          visibilityState: "visible",
-          addEventListener() {},
-          removeEventListener() {},
-          documentElement: {
-            classList: {
-              toggle() {},
-            },
-          },
-        };
-        usePopOutStore.setState({
-          pipWindow: {
-            document: fakeDocument,
-            close() {
-              fakePopOutClosed = true;
-            },
-          } as unknown as Window,
-          container: null,
-        });
-      },
+      primeFakePopOutWindow: () => setFakePopOutWindow(false),
+      mountFakePopOutWindow: () => setFakePopOutWindow(true),
       getPopOutState: () => {
         const state = usePopOutStore.getState();
         return {
@@ -98,6 +142,8 @@ export function useFlowdayE2EBridge(enabled: boolean) {
 
     return () => {
       usePopOutStore.getState().close();
+      fakePopOutContainer?.remove();
+      restoreDocumentPictureInPicture();
       delete window.__FLOWDAY_E2E__;
     };
   }, [enabled]);

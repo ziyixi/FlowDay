@@ -582,6 +582,10 @@ export async function primeFakePopOutWindow(page: Page) {
   await page.evaluate(() => window.__FLOWDAY_E2E__?.primeFakePopOutWindow());
 }
 
+export async function mountFakePopOutWindow(page: Page) {
+  await page.evaluate(() => window.__FLOWDAY_E2E__?.mountFakePopOutWindow());
+}
+
 export async function getPopOutState(page: Page) {
   return page.evaluate(() => window.__FLOWDAY_E2E__?.getPopOutState() ?? null);
 }
