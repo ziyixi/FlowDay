@@ -13,6 +13,8 @@ import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
 import { cn } from "@/lib/utils";
 
+const POP_OUT_AUTO_CLOSE_GRACE_MS = 500;
+
 export function PopOutTimerButton() {
   const pipWindow = usePopOutStore((s) => s.pipWindow);
   const container = usePopOutStore((s) => s.container);
@@ -51,7 +53,9 @@ export function PopOutTimerButton() {
   // If openPopOut resolves before startPomodoro sets activeTaskId, this effect
   // would see "window open + no activity" and close the window on the spot.
   // We only treat "no activity" as a close signal after we've observed
-  // activity for this pop-out session.
+  // activity for this pop-out session. The close is also delayed briefly so a
+  // restart click that clears/hydrates state while startPomodoro awaits prior
+  // entries does not shut the PiP window before the new round appears.
   const hadActivityRef = useRef(false);
   useEffect(() => {
     if (!pipWindow) {
@@ -63,7 +67,13 @@ export function PopOutTimerButton() {
       return;
     }
     if (hadActivityRef.current) {
-      closePopOut();
+      const timer = window.setTimeout(() => {
+        const timerState = useTimerStore.getState();
+        if (!timerState.activeTaskId && !timerState.pomodoroFinishedTaskId) {
+          closePopOut();
+        }
+      }, POP_OUT_AUTO_CLOSE_GRACE_MS);
+      return () => window.clearTimeout(timer);
     }
   }, [pipWindow, hasActivity, closePopOut]);
 

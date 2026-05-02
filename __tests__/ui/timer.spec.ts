@@ -11,6 +11,7 @@ import {
   primeFakePopOutWindow,
   resetAppState,
   resetChimeCount,
+  restartFinishedPomodoroWithGap,
   setRunningTimerElapsed,
   seedAppState,
   simulateIdleAway,
@@ -392,6 +393,31 @@ test("[UI-049] Pop-out restart after pomodoro completion keeps the window open",
       status: "running",
       timerMode: "pomodoro",
     });
+
+  await setRunningTimerElapsed(page, 30 * 60);
+  await expect
+    .poll(async () => (await getTimerState(page))?.pomodoroFinishedTaskId ?? null)
+    .toBe("flow-task-1");
+
+  await restartFinishedPomodoroWithGap(page, 30 * 60, 100);
+
+  await expect
+    .poll(async () => {
+      const state = await getTimerState(page);
+      return {
+        activeTaskId: state?.activeTaskId ?? null,
+        status: state?.status ?? null,
+        timerMode: state?.timerMode ?? null,
+      };
+    })
+    .toEqual({
+      activeTaskId: "flow-task-1",
+      status: "running",
+      timerMode: "pomodoro",
+    });
+  await expect
+    .poll(async () => await getPopOutState(page))
+    .toEqual({ isOpen: true, fakeClosed: false });
 });
 
 test("[UI-037] Misc total badge shows even for sub-minute segments", async ({

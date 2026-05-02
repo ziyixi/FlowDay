@@ -586,6 +586,18 @@ export async function mountFakePopOutWindow(page: Page) {
   await page.evaluate(() => window.__FLOWDAY_E2E__?.mountFakePopOutWindow());
 }
 
+export async function restartFinishedPomodoroWithGap(
+  page: Page,
+  targetSeconds: number,
+  gapMs = 100
+) {
+  await page.evaluate(
+    ({ seconds, delay }) =>
+      window.__FLOWDAY_E2E__?.restartFinishedPomodoroWithGap(seconds, delay),
+    { seconds: targetSeconds, delay: gapMs }
+  );
+}
+
 export async function getPopOutState(page: Page) {
   return page.evaluate(() => window.__FLOWDAY_E2E__?.getPopOutState() ?? null);
 }

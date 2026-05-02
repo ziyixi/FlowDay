@@ -21,6 +21,10 @@ declare global {
       simulateIdleAway: (secondsAgo: number) => void;
       primeFakePopOutWindow: () => void;
       mountFakePopOutWindow: () => void;
+      restartFinishedPomodoroWithGap: (
+        targetSeconds: number,
+        gapMs?: number
+      ) => void;
       getPopOutState: () => {
         isOpen: boolean;
         fakeClosed: boolean;
@@ -131,6 +135,24 @@ export function useFlowdayE2EBridge(enabled: boolean) {
       },
       primeFakePopOutWindow: () => setFakePopOutWindow(false),
       mountFakePopOutWindow: () => setFakePopOutWindow(true),
+      restartFinishedPomodoroWithGap: (targetSeconds: number, gapMs = 100) => {
+        if (!Number.isFinite(targetSeconds) || targetSeconds <= 0) {
+          throw new Error("Invalid pomodoro target for E2E restart");
+        }
+        const state = useTimerStore.getState();
+        const taskId = state.pomodoroFinishedTaskId;
+        const flowDate = state.pomodoroFinishedFlowDate;
+        if (!taskId || !flowDate) {
+          throw new Error("No finished pomodoro available for E2E restart");
+        }
+
+        state.dismissPomodoroFinished();
+        window.setTimeout(() => {
+          void useTimerStore
+            .getState()
+            .startPomodoro(taskId, flowDate, targetSeconds);
+        }, gapMs);
+      },
       getPopOutState: () => {
         const state = usePopOutStore.getState();
         return {
