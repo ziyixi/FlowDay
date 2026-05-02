@@ -16,7 +16,31 @@ import { cn } from "@/lib/utils";
 const POP_OUT_AUTO_CLOSE_GRACE_MS = 500;
 const PIP_SURFACE_STYLE = {
   background:
-    "linear-gradient(180deg, var(--background) 0%, color-mix(in oklch, var(--primary) 5%, var(--background)) 100%)",
+    "linear-gradient(180deg, var(--background) 0%, color-mix(in oklch, var(--card) 62%, var(--background)) 48%, color-mix(in oklch, var(--primary) 4%, var(--background)) 100%)",
+} as const;
+const PIP_RAIL_STYLES = {
+  active: {
+    background:
+      "linear-gradient(90deg, color-mix(in oklch, var(--chart-1) 74%, var(--primary)) 0%, color-mix(in oklch, var(--chart-2) 36%, var(--primary)) 58%, color-mix(in oklch, var(--primary) 80%, var(--chart-1)) 100%)",
+  },
+  paused: {
+    background:
+      "linear-gradient(90deg, color-mix(in oklch, var(--muted-foreground) 72%, var(--border)) 0%, color-mix(in oklch, var(--border) 82%, var(--muted-foreground)) 100%)",
+  },
+  completed: {
+    background:
+      "linear-gradient(90deg, color-mix(in oklch, var(--chart-1) 86%, var(--primary)) 0%, color-mix(in oklch, var(--chart-1) 62%, var(--background)) 100%)",
+  },
+} as const;
+const PIP_RING_STROKES = {
+  idle: "color-mix(in oklch, var(--border) 80%, var(--muted-foreground))",
+  running: "color-mix(in oklch, var(--primary) 72%, var(--chart-1))",
+  paused: "color-mix(in oklch, var(--muted-foreground) 66%, var(--border))",
+} as const;
+const PIP_SUCCESS_STYLE = {
+  background: "color-mix(in oklch, var(--chart-1) 14%, var(--card))",
+  borderColor: "color-mix(in oklch, var(--chart-1) 34%, var(--border))",
+  color: "color-mix(in oklch, var(--chart-1) 72%, var(--foreground))",
 } as const;
 
 function clampProgress(value: number): number {
@@ -33,13 +57,14 @@ function TimerProgressRing({
   status: "idle" | "running" | "paused";
   children: ReactNode;
 }) {
-  const radius = 47;
+  const radius = 46;
   const circumference = 2 * Math.PI * radius;
   const clampedProgress = progress == null ? 0 : clampProgress(progress);
   const dashOffset = circumference * (1 - clampedProgress);
+  const progressStroke = PIP_RING_STROKES[status];
 
   return (
-    <div className="relative grid h-[124px] w-[124px] shrink-0 place-items-center">
+    <div className="relative grid h-[118px] w-[118px] shrink-0 place-items-center">
       <svg
         className="absolute inset-0 h-full w-full -rotate-90"
         viewBox="0 0 112 112"
@@ -50,27 +75,36 @@ function TimerProgressRing({
           cy="56"
           r={radius}
           fill="none"
-          stroke="var(--border)"
-          strokeWidth="9"
+          stroke="color-mix(in oklch, var(--border) 72%, var(--background))"
+          strokeWidth="7"
         />
         <circle
           cx="56"
           cy="56"
           r={radius}
           fill="none"
-          stroke={status === "paused" ? "var(--muted-foreground)" : "var(--primary)"}
-          strokeWidth="9"
+          stroke={progressStroke}
+          strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={`${circumference} ${circumference}`}
           strokeDashoffset={dashOffset}
           className="transition-[stroke-dashoffset,stroke] duration-500 ease-out"
         />
       </svg>
-      <div className="absolute inset-2 rounded-full border border-border/70 bg-card/80 shadow-[inset_0_1px_0_oklch(1_0_0/0.55),0_12px_32px_-24px_oklch(0_0_0/0.55)] backdrop-blur-sm" />
+      <div className="absolute inset-[9px] rounded-full border border-border/70 bg-card/90 shadow-[inset_0_1px_0_oklch(1_0_0/0.42),0_14px_34px_-28px_oklch(0_0_0/0.7)] backdrop-blur-sm" />
       <div className="relative z-10 flex min-w-0 flex-col items-center text-center">
         {children}
       </div>
     </div>
+  );
+}
+
+function PipStateRail({ tone }: { tone: "active" | "paused" | "completed" }) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 top-0 h-0.5"
+      style={PIP_RAIL_STYLES[tone]}
+    />
   );
 }
 
@@ -93,10 +127,10 @@ function PipIconButton({
       className={cn(
         "inline-flex h-9 w-9 items-center justify-center rounded-md border text-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors",
         variant === "primary"
-          ? "border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
+          ? "border-primary/25 bg-primary text-primary-foreground hover:bg-primary/90"
           : variant === "success"
-            ? "border-green-500/20 bg-green-500/10 text-green-700 hover:bg-green-500/20 dark:text-green-300"
-            : "border-border bg-card hover:bg-accent"
+            ? "border-chart-1/30 bg-chart-1/10 text-foreground hover:bg-chart-1/20"
+            : "border-border/80 bg-card/85 hover:bg-accent"
       )}
     >
       {children}
@@ -219,14 +253,24 @@ function PipTimerContent() {
   if (!activeTaskId || !task) {
     if (!nextTask) {
       return (
-        <div className="flex h-full items-center justify-center p-4 text-sm text-muted-foreground">
-          No tasks queued
+        <div
+          className="relative flex h-full items-center justify-center p-4 text-sm text-muted-foreground"
+          style={PIP_SURFACE_STYLE}
+        >
+          <PipStateRail tone="paused" />
+          <span className="rounded-md border border-border/70 bg-card/70 px-3 py-2 shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+            No tasks queued
+          </span>
         </div>
       );
     }
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-3 p-3">
-        <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+      <div
+        className="relative flex h-full flex-col items-center justify-center gap-3 p-3"
+        style={PIP_SURFACE_STYLE}
+      >
+        <PipStateRail tone="active" />
+        <div className="rounded-md border border-border/70 bg-card/70 px-2 py-0.5 text-[10px] font-medium text-muted-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
           Up next
         </div>
         <div className="text-center">
@@ -280,33 +324,38 @@ function PipTimerContent() {
       className="relative flex h-full min-h-0 flex-col overflow-hidden p-3.5 text-foreground"
       style={PIP_SURFACE_STYLE}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-primary/80" />
+      <PipStateRail tone={status === "running" ? "active" : "paused"} />
 
-      <div className="flex min-h-0 items-start justify-between gap-3">
+      <div className="flex min-h-0 items-start justify-between gap-2.5">
         <div className="min-w-0">
-          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
+          <div className="mb-1.5 inline-flex max-w-full items-center gap-1.5 rounded-md border border-border/60 bg-card/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground shadow-[0_1px_2px_oklch(0_0_0/0.035)]">
             <span
               className={cn(
                 "h-1.5 w-1.5 rounded-full",
-                status === "running" ? "bg-primary" : "bg-muted-foreground"
+                status === "running" ? "bg-chart-1" : "bg-muted-foreground"
               )}
             />
             {statusLabel}
           </div>
-          <div className="truncate text-sm font-semibold leading-tight" title={taskTitle}>
+          <div className="truncate text-[13px] font-semibold leading-tight" title={taskTitle}>
             {taskTitle}
           </div>
         </div>
         {isPomodoro && (
-          <span className="shrink-0 rounded-md border border-border/70 bg-card px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
+          <span className="shrink-0 rounded-md border border-border/70 bg-card/75 px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
             {pomodoroLabel ?? "Pomodoro"}
           </span>
         )}
       </div>
 
-      <div className="flex flex-1 items-center justify-center py-2">
+      <div className="flex flex-1 items-center justify-center py-1.5">
         <TimerProgressRing progress={progress} status={status}>
-          <span className="text-[30px] font-semibold leading-none tabular-nums text-primary">
+          <span
+            className={cn(
+              "text-[29px] font-semibold leading-none tabular-nums",
+              status === "running" ? "text-foreground" : "text-muted-foreground"
+            )}
+          >
             {formatElapsed(displaySeconds)}
           </span>
           <span className="mt-1 text-[10px] font-medium uppercase text-muted-foreground">
@@ -315,24 +364,22 @@ function PipTimerContent() {
         </TimerProgressRing>
       </div>
 
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex h-9 items-center justify-between gap-2">
         <div className="min-w-0 flex-1">
-          {nextTask ? (
+          {nextTask && (
             <div
-              className="truncate text-[11px] text-muted-foreground"
+              className="inline-flex max-w-full items-center rounded-md bg-card/55 px-2 py-1 text-[11px] text-muted-foreground"
               title={nextTask.title}
             >
-              <span className="opacity-60">Next </span>
-              {nextTask.title}
+              <span className="shrink-0 opacity-65">Next&nbsp;</span>
+              <span className="truncate">{nextTask.title}</span>
               {nextTask.estimatedMins != null && (
-                <span className="opacity-60">
+                <span className="shrink-0 opacity-65">
                   {" "}
                   · {formatDuration(nextTask.estimatedMins)}
                 </span>
               )}
             </div>
-          ) : (
-            <div className="text-[11px] text-muted-foreground">Last task</div>
           )}
         </div>
         <div className="flex items-center gap-1.5">
@@ -379,6 +426,8 @@ function PomodoroFinishedPanel() {
     task?.estimatedMins,
     Math.floor(loggedSeconds / 60)
   );
+  const loggedMins = Math.round(loggedSeconds / 60);
+  const loggedLabel = loggedMins > 0 ? formatDuration(loggedMins) : null;
 
   const handleRestart = (mins: number) => {
     if (!Number.isFinite(mins) || mins <= 0) return;
@@ -406,19 +455,29 @@ function PomodoroFinishedPanel() {
       className="relative flex h-full min-h-0 flex-col overflow-hidden p-3.5 text-foreground"
       style={PIP_SURFACE_STYLE}
     >
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-green-500/75" />
+      <PipStateRail tone="completed" />
 
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-18px_oklch(0_0_0/0.8)]">
+      <div className="flex items-start justify-between gap-2.5">
+        <div className="flex min-w-0 flex-1 items-start gap-2.5">
+          <div
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full border shadow-[0_10px_28px_-22px_oklch(0_0_0/0.75)]"
+            style={PIP_SUCCESS_STYLE}
+          >
             <Check className="h-4 w-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-[10px] font-medium uppercase text-muted-foreground">
-              Pomodoro done
+            <div className="mb-1 flex items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-muted-foreground">
+                Pomodoro done
+              </span>
+              {loggedLabel && (
+                <span className="shrink-0 rounded-sm border border-border/60 bg-card/70 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                  {loggedLabel} logged
+                </span>
+              )}
             </div>
             <div
-              className="truncate text-sm font-semibold leading-tight text-foreground"
+              className="truncate text-[13px] font-semibold leading-tight text-foreground"
               title={task?.title ?? ""}
             >
               {isMiscTask ? MISC_TASK_TITLE : task?.title ?? "Task"}
@@ -440,7 +499,7 @@ function PomodoroFinishedPanel() {
         </button>
       </div>
 
-      <div className="grid grid-cols-3 gap-1.5 pt-1">
+      <div className="grid grid-cols-3 gap-1.5 pt-2">
         {presets.map((preset) => (
           <button
             key={preset.mins}
@@ -454,10 +513,10 @@ function PomodoroFinishedPanel() {
                 : `Restart ${preset.label}`
             }
             className={cn(
-              "rounded-md border px-1.5 py-1.5 text-xs font-medium shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors",
+              "rounded-md border px-1.5 py-1.5 text-xs font-semibold shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors",
               preset.suggested
-                ? "border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
-                : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
+                ? "border-chart-1/35 bg-chart-1/10 text-foreground hover:bg-chart-1/20"
+                : "border-border/80 bg-card/70 text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
             {preset.label}
@@ -466,7 +525,7 @@ function PomodoroFinishedPanel() {
       </div>
 
       <form
-        className="flex items-center gap-1.5 border-t border-border/60 pt-2"
+        className="mt-2 flex items-center gap-1 rounded-md border border-border/65 bg-card/65 p-1 shadow-[0_1px_2px_oklch(0_0_0/0.035)]"
         onSubmit={(e) => {
           e.preventDefault();
           submitCustom();
@@ -482,14 +541,14 @@ function PomodoroFinishedPanel() {
           placeholder="Custom"
           data-testid="pomodoro-finished-custom-input"
           aria-label="Custom Pomodoro minutes"
-          className="h-7 w-20 rounded-md border border-border bg-card px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-7 min-w-0 flex-1 rounded border border-transparent bg-transparent px-1.5 text-xs text-foreground outline-none focus:border-border focus:bg-background/60 focus:ring-1 focus:ring-primary/30 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        <span className="text-xs text-muted-foreground">min</span>
+        <span className="pr-1 text-[11px] text-muted-foreground">min</span>
         <button
           type="submit"
           data-testid="pomodoro-finished-custom-start"
           disabled={!customMins || Number.parseInt(customMins, 10) <= 0}
-          className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
           title="Start custom Pomodoro"
           aria-label="Start custom Pomodoro"
         >
@@ -499,7 +558,7 @@ function PomodoroFinishedPanel() {
 
       <button
         onClick={handleComplete}
-        className="mt-auto inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-green-500/20 bg-green-500/10 px-3 text-xs font-medium text-green-700 transition-colors hover:bg-green-500/20 dark:text-green-300"
+        className="mt-auto inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-chart-1/30 bg-chart-1/10 px-3 text-xs font-medium text-foreground transition-colors hover:bg-chart-1/20"
       >
         <Check className="h-3 w-3" />
         {isMiscTask ? "Done" : "Complete & next"}
