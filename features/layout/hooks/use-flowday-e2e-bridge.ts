@@ -86,6 +86,16 @@ export function useFlowdayE2EBridge(enabled: boolean) {
       if (renderPortal) {
         fakePopOutContainer = document.createElement("div");
         fakePopOutContainer.setAttribute("data-testid", "fake-pop-out-root");
+        Object.assign(fakePopOutContainer.style, {
+          bottom: "24px",
+          boxShadow: "0 18px 60px -32px rgba(0, 0, 0, 0.55)",
+          height: "240px",
+          overflow: "hidden",
+          position: "fixed",
+          right: "24px",
+          width: "320px",
+          zIndex: "2147483647",
+        });
         document.body.appendChild(fakePopOutContainer);
         Object.defineProperty(window, "documentPictureInPicture", {
           configurable: true,

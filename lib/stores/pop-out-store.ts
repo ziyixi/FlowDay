@@ -42,8 +42,8 @@ export const usePopOutStore = create<PopOutState>()((set, get) => ({
     }
 
     const win = await window.documentPictureInPicture!.requestWindow({
-      width: 280,
-      height: 200,
+      width: 320,
+      height: 240,
     });
 
     copyStylesToPipWindow(win);

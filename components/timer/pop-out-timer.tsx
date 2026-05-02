@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import { useTimerStore } from "@/features/timer/store";
@@ -14,6 +14,95 @@ import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
 import { cn } from "@/lib/utils";
 
 const POP_OUT_AUTO_CLOSE_GRACE_MS = 500;
+const PIP_SURFACE_STYLE = {
+  background:
+    "linear-gradient(180deg, var(--background) 0%, color-mix(in oklch, var(--primary) 5%, var(--background)) 100%)",
+} as const;
+
+function clampProgress(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.min(Math.max(value, 0), 1);
+}
+
+function TimerProgressRing({
+  progress,
+  status,
+  children,
+}: {
+  progress: number | null;
+  status: "idle" | "running" | "paused";
+  children: ReactNode;
+}) {
+  const radius = 47;
+  const circumference = 2 * Math.PI * radius;
+  const clampedProgress = progress == null ? 0 : clampProgress(progress);
+  const dashOffset = circumference * (1 - clampedProgress);
+
+  return (
+    <div className="relative grid h-[124px] w-[124px] shrink-0 place-items-center">
+      <svg
+        className="absolute inset-0 h-full w-full -rotate-90"
+        viewBox="0 0 112 112"
+        aria-hidden="true"
+      >
+        <circle
+          cx="56"
+          cy="56"
+          r={radius}
+          fill="none"
+          stroke="var(--border)"
+          strokeWidth="9"
+        />
+        <circle
+          cx="56"
+          cy="56"
+          r={radius}
+          fill="none"
+          stroke={status === "paused" ? "var(--muted-foreground)" : "var(--primary)"}
+          strokeWidth="9"
+          strokeLinecap="round"
+          strokeDasharray={`${circumference} ${circumference}`}
+          strokeDashoffset={dashOffset}
+          className="transition-[stroke-dashoffset,stroke] duration-500 ease-out"
+        />
+      </svg>
+      <div className="absolute inset-2 rounded-full border border-border/70 bg-card/80 shadow-[inset_0_1px_0_oklch(1_0_0/0.55),0_12px_32px_-24px_oklch(0_0_0/0.55)] backdrop-blur-sm" />
+      <div className="relative z-10 flex min-w-0 flex-col items-center text-center">
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function PipIconButton({
+  children,
+  title,
+  onClick,
+  variant = "neutral",
+}: {
+  children: ReactNode;
+  title: string;
+  onClick: () => void;
+  variant?: "neutral" | "primary" | "success";
+}) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      className={cn(
+        "inline-flex h-9 w-9 items-center justify-center rounded-md border text-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors",
+        variant === "primary"
+          ? "border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
+          : variant === "success"
+            ? "border-green-500/20 bg-green-500/10 text-green-700 hover:bg-green-500/20 dark:text-green-300"
+            : "border-border bg-card hover:bg-accent"
+      )}
+    >
+      {children}
+    </button>
+  );
+}
 
 export function PopOutTimerButton() {
   const pipWindow = usePopOutStore((s) => s.pipWindow);
@@ -167,6 +256,13 @@ function PipTimerContent() {
     pomodoroTargetSeconds != null
       ? formatDuration(Math.round(pomodoroTargetSeconds / 60))
       : null;
+  const progress =
+    isPomodoro && pomodoroTargetSeconds != null
+      ? displaySeconds / pomodoroTargetSeconds
+      : null;
+  const taskTitle = isMiscTask ? MISC_TASK_TITLE : task.title;
+  const statusLabel =
+    status === "running" ? (isPomodoro ? "Focus" : "Tracking") : "Paused";
 
   const handleComplete = async () => {
     const date = activeFlowDate;
@@ -180,70 +276,86 @@ function PipTimerContent() {
   };
 
   return (
-    <div className="flex h-full flex-col justify-between gap-2 p-3">
-      <div className="flex items-center gap-2">
-        <div className="relative flex h-2 w-2 shrink-0">
-          {status === "running" && (
-            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/75" />
-          )}
-          <span
-            className={`relative inline-flex h-2 w-2 rounded-full ${
-              status === "running" ? "bg-primary" : "bg-muted-foreground"
-            }`}
-          />
+    <div
+      className="relative flex h-full min-h-0 flex-col overflow-hidden p-3.5 text-foreground"
+      style={PIP_SURFACE_STYLE}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-primary/80" />
+
+      <div className="flex min-h-0 items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="mb-1 flex items-center gap-1.5 text-[10px] font-medium uppercase text-muted-foreground">
+            <span
+              className={cn(
+                "h-1.5 w-1.5 rounded-full",
+                status === "running" ? "bg-primary" : "bg-muted-foreground"
+              )}
+            />
+            {statusLabel}
+          </div>
+          <div className="truncate text-sm font-semibold leading-tight" title={taskTitle}>
+            {taskTitle}
+          </div>
         </div>
-        <span className="truncate text-sm font-medium" title={task.title}>
-          {isMiscTask ? MISC_TASK_TITLE : task.title}
-        </span>
         {isPomodoro && (
-          <span className="ml-auto rounded bg-primary/10 px-1.5 py-0.5 text-[10px] font-medium text-primary">
+          <span className="shrink-0 rounded-md border border-border/70 bg-card px-2 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_1px_2px_oklch(0_0_0/0.04)]">
             {pomodoroLabel ?? "Pomodoro"}
           </span>
         )}
       </div>
 
-      <div className="text-center text-3xl font-bold tabular-nums text-primary">
-        {formatElapsed(displaySeconds)}
-        {isPomodoro && (
-          <span className="ml-1 text-xs font-normal text-muted-foreground">
-            left
+      <div className="flex flex-1 items-center justify-center py-2">
+        <TimerProgressRing progress={progress} status={status}>
+          <span className="text-[30px] font-semibold leading-none tabular-nums text-primary">
+            {formatElapsed(displaySeconds)}
           </span>
-        )}
+          <span className="mt-1 text-[10px] font-medium uppercase text-muted-foreground">
+            {isPomodoro ? "left" : "elapsed"}
+          </span>
+        </TimerProgressRing>
       </div>
 
-      <div className="flex items-center justify-center gap-2">
-        <button
-          onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
-          title={status === "running" ? "Pause" : "Resume"}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-accent"
-        >
-          {status === "running" ? (
-            <Pause className="h-4 w-4" />
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          {nextTask ? (
+            <div
+              className="truncate text-[11px] text-muted-foreground"
+              title={nextTask.title}
+            >
+              <span className="opacity-60">Next </span>
+              {nextTask.title}
+              {nextTask.estimatedMins != null && (
+                <span className="opacity-60">
+                  {" "}
+                  · {formatDuration(nextTask.estimatedMins)}
+                </span>
+              )}
+            </div>
           ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </button>
-        <button
-          onClick={handleComplete}
-          title={isMiscTask ? "Save misc time" : "Complete task"}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-border bg-background text-foreground transition-colors hover:bg-green-500/20 hover:text-green-600"
-        >
-          <Check className="h-4 w-4" />
-        </button>
-      </div>
-
-      {nextTask && (
-        <div
-          className="truncate border-t border-border/50 pt-1.5 text-[11px] text-muted-foreground"
-          title={nextTask.title}
-        >
-          <span className="opacity-60">Next: </span>
-          {nextTask.title}
-          {nextTask.estimatedMins != null && (
-            <span className="opacity-60"> · ~{formatDuration(nextTask.estimatedMins)}</span>
+            <div className="text-[11px] text-muted-foreground">Last task</div>
           )}
         </div>
-      )}
+        <div className="flex items-center gap-1.5">
+          <PipIconButton
+            onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
+            title={status === "running" ? "Pause" : "Resume"}
+            variant={status === "running" ? "neutral" : "primary"}
+          >
+            {status === "running" ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </PipIconButton>
+          <PipIconButton
+            onClick={() => void handleComplete()}
+            title={isMiscTask ? "Save misc time" : "Complete task"}
+            variant="success"
+          >
+            <Check className="h-4 w-4" />
+          </PipIconButton>
+        </div>
+      </div>
     </div>
   );
 }
@@ -290,13 +402,28 @@ function PomodoroFinishedPanel() {
   };
 
   return (
-    <div className="flex h-full flex-col gap-2 p-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <Check className="h-3.5 w-3.5 text-primary" />
-          <span className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-            Pomodoro done
-          </span>
+    <div
+      className="relative flex h-full min-h-0 flex-col overflow-hidden p-3.5 text-foreground"
+      style={PIP_SURFACE_STYLE}
+    >
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-green-500/75" />
+
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground shadow-[0_8px_24px_-18px_oklch(0_0_0/0.8)]">
+            <Check className="h-4 w-4" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-[10px] font-medium uppercase text-muted-foreground">
+              Pomodoro done
+            </div>
+            <div
+              className="truncate text-sm font-semibold leading-tight text-foreground"
+              title={task?.title ?? ""}
+            >
+              {isMiscTask ? MISC_TASK_TITLE : task?.title ?? "Task"}
+            </div>
+          </div>
         </div>
         <button
           onClick={() => {
@@ -306,20 +433,14 @@ function PomodoroFinishedPanel() {
             dismiss();
           }}
           title="Dismiss"
-          className="inline-flex h-5 w-5 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          aria-label="Dismiss"
+          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
         >
           <X className="h-3 w-3" />
         </button>
       </div>
 
-      <div
-        className="truncate text-sm font-medium text-foreground"
-        title={task?.title ?? ""}
-      >
-        {isMiscTask ? MISC_TASK_TITLE : task?.title ?? "Task"}
-      </div>
-
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-3 gap-1.5 pt-1">
         {presets.map((preset) => (
           <button
             key={preset.mins}
@@ -333,10 +454,10 @@ function PomodoroFinishedPanel() {
                 : `Restart ${preset.label}`
             }
             className={cn(
-              "rounded-md px-1.5 py-1 text-xs font-medium transition-colors",
+              "rounded-md border px-1.5 py-1.5 text-xs font-medium shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors",
               preset.suggested
-                ? "bg-primary/15 text-primary ring-1 ring-primary/30 hover:bg-primary/25"
-                : "bg-muted text-muted-foreground hover:bg-accent hover:text-foreground"
+                ? "border-primary/20 bg-primary text-primary-foreground hover:bg-primary/90"
+                : "border-border bg-card text-muted-foreground hover:bg-accent hover:text-foreground"
             )}
           >
             {preset.label}
@@ -345,7 +466,7 @@ function PomodoroFinishedPanel() {
       </div>
 
       <form
-        className="flex items-center gap-1 border-t border-border/50 pt-2"
+        className="flex items-center gap-1.5 border-t border-border/60 pt-2"
         onSubmit={(e) => {
           e.preventDefault();
           submitCustom();
@@ -361,15 +482,16 @@ function PomodoroFinishedPanel() {
           placeholder="Custom"
           data-testid="pomodoro-finished-custom-input"
           aria-label="Custom Pomodoro minutes"
-          className="w-16 rounded-md border border-border bg-background px-1.5 py-1 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+          className="h-7 w-20 rounded-md border border-border bg-card px-2 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary/40 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
         <span className="text-xs text-muted-foreground">min</span>
         <button
           type="submit"
           data-testid="pomodoro-finished-custom-start"
           disabled={!customMins || Number.parseInt(customMins, 10) <= 0}
-          className="ml-auto inline-flex h-6 w-6 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
+          className="ml-auto inline-flex h-7 w-7 items-center justify-center rounded-md bg-primary text-primary-foreground transition-colors hover:bg-primary/90 disabled:cursor-not-allowed disabled:bg-muted disabled:text-muted-foreground"
           title="Start custom Pomodoro"
+          aria-label="Start custom Pomodoro"
         >
           <Play className="h-3 w-3" />
         </button>
@@ -377,7 +499,7 @@ function PomodoroFinishedPanel() {
 
       <button
         onClick={handleComplete}
-        className="mt-auto inline-flex items-center justify-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-green-500/20 hover:text-green-600"
+        className="mt-auto inline-flex h-8 items-center justify-center gap-1.5 rounded-md border border-green-500/20 bg-green-500/10 px-3 text-xs font-medium text-green-700 transition-colors hover:bg-green-500/20 dark:text-green-300"
       >
         <Check className="h-3 w-3" />
         {isMiscTask ? "Done" : "Complete & next"}
