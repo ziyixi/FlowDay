@@ -94,6 +94,27 @@ jobs:
           path: output/readme-screenshots/current
           if-no-files-found: ignore
 
+  # ─── UI Visual Goldens ──────────────────────────
+  ui-goldens:
+    name: UI Goldens
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run screenshots:ui:check
+      - name: Upload generated UI goldens
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-golden-current
+          path: output/ui-goldens/current
+          if-no-files-found: ignore
+
   # ─── Type Check ─────────────────────────────────
   typecheck:
     name: Type Check
@@ -138,7 +159,7 @@ jobs:
           DOMINATED_ONLY=true
           for f in $CHANGED; do
             case "$f" in
-              *.md|.husky/*|.vscode/*) ;;
+              *.md|docs/readme/*.png|docs/ui-goldens/*|.husky/*|.vscode/*) ;;
               *) DOMINATED_ONLY=false; break ;;
             esac
           done
@@ -151,7 +172,7 @@ jobs:
   # ─── Docker Image ───────────────────────────────
   docker:
     name: Docker Image
-    needs: [lint, typecheck, test-unit, test-integration, test-ui, readme-screenshots, build, changes]
+    needs: [lint, typecheck, test-unit, test-integration, test-ui, readme-screenshots, ui-goldens, build, changes]
     runs-on: ubuntu-latest
     if: needs.changes.outputs.docker == 'true'
     steps:

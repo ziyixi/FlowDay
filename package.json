@@ -17,6 +17,8 @@
     "test:imports": "bash scripts/check-refactor-imports.sh",
     "screenshots:readme": "node scripts/generate-readme-screenshots.mjs",
     "screenshots:readme:check": "node scripts/generate-readme-screenshots.mjs --check",
+    "screenshots:ui": "node scripts/generate-ui-goldens.mjs",
+    "screenshots:ui:check": "node scripts/generate-ui-goldens.mjs --check",
     "test:watch": "vitest",
     "prepare": "husky"
   },

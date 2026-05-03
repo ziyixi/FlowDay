@@ -102,7 +102,9 @@ FlowDay is built with Next.js, React, TypeScript, SQLite, Drizzle, Zustand, and 
 | `npm run test:imports` | Check refactor import boundaries. |
 | `npm run screenshots:readme` | Rebuild the app, seed demo states, regenerate README screenshots, and verify image links. |
 | `npm run screenshots:readme:check` | Generate README screenshots into `output/readme-screenshots/current` and compare them with the committed goldens. |
+| `npm run screenshots:ui` | Regenerate the broader UI visual goldens in `docs/ui-goldens`. |
+| `npm run screenshots:ui:check` | Generate fresh UI screenshots into `output/ui-goldens/current` and compare them with the committed UI goldens. |
 
-CI runs the README screenshot check on Ubuntu 24.04. The comparison keeps a small pixel-diff budget for browser and font rendering differences, while the scripted seed data, fixed date, fixed viewport, and disabled animations keep the figures stable.
+CI runs the README and UI screenshot checks on Ubuntu 24.04. The comparisons keep a small pixel-diff budget for browser and font rendering differences, while the scripted seed data, fixed date, fixed viewport, and disabled animations keep the figures stable.
 
 For deeper product and implementation details, see [PRD/PRD.md](PRD/PRD.md). The UI test catalog lives in [PRD/UI_TEST_PLAN.md](PRD/UI_TEST_PLAN.md).
