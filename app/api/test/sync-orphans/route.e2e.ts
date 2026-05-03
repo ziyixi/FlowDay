@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isE2ETestModeEnabled } from "@/lib/test/e2e";
+import { isE2ETestModeEnabled } from "@/features/testing/server/e2e-data";
 import { markOrphanedTodoistTasksDeleted } from "@/lib/db/queries/tasks";
 
 export const dynamic = "force-dynamic";

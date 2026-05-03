@@ -6,6 +6,11 @@ npm-debug.log*
 .next
 out
 
+# Generated artifacts and docs
+output
+docs
+*.md
+
 # Database
 db/*.db
 db/*.db-journal
@@ -23,7 +28,4 @@ __tests__
 .git
 .gitignore
 .github
-README.md
 PRD/
-AGENTS.md
-CLAUDE.md

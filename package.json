@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run __tests__/unit",
     "test:integration": "vitest run __tests__/integration",
@@ -19,6 +19,7 @@
     "screenshots:readme:check": "node scripts/generate-readme-screenshots.mjs --check",
     "screenshots:ui": "node scripts/generate-ui-goldens.mjs",
     "screenshots:ui:check": "node scripts/generate-ui-goldens.mjs --check",
+    "docker:prune": "node scripts/prune-production-standalone.mjs",
     "test:watch": "vitest",
     "prepare": "husky"
   },

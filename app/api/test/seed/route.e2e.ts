@@ -4,7 +4,7 @@ import {
   isE2ETestModeEnabled,
   seedE2ETestData,
   type E2ESeedPayload,
-} from "@/lib/test/e2e";
+} from "@/features/testing/server/e2e-data";
 
 export const dynamic = "force-dynamic";
 

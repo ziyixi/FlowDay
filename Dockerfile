@@ -13,10 +13,12 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-# Disable Next.js telemetry during build
+# Disable Next.js telemetry during build. E2E test routes are opt-in through
+# E2E_TEST_MODE and are intentionally absent from production Docker builds.
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
+RUN npm run docker:prune
 
 # ---- Runner ----
 FROM node:20-alpine AS runner

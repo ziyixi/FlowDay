@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { clearE2ETestData, isE2ETestModeEnabled } from "@/lib/test/e2e";
+import {
+  clearE2ETestData,
+  isE2ETestModeEnabled,
+} from "@/features/testing/server/e2e-data";
 
 export const dynamic = "force-dynamic";
 

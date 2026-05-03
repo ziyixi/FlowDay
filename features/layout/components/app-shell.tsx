@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { format, addDays } from "date-fns";
 import { DragDropProvider, DragOverlay } from "@dnd-kit/react";
 import { TopBar } from "./top-bar";
@@ -14,14 +14,34 @@ import { useAutoSync } from "@/lib/hooks/use-auto-sync";
 import { useAutoIdlePause } from "@/lib/hooks/use-auto-idle-pause";
 import type { Task } from "@/lib/types/task";
 import { MultiDayFlowColumns } from "@/features/layout/components/multi-day-flow-columns";
-import { useFlowdayE2EBridge } from "@/features/layout/hooks/use-flowday-e2e-bridge";
 import { handleAppDragEnd } from "@/features/layout/utils/handle-app-drag-end";
+
+function useOptionalE2EBridge(enabled: boolean) {
+  useEffect(() => {
+    if (!enabled || process.env.NEXT_PUBLIC_FLOWDAY_E2E !== "1") return;
+
+    let cleanup: (() => void) | null = null;
+    let cancelled = false;
+
+    void import("@/features/testing/client/flowday-e2e-bridge").then(
+      ({ installFlowdayE2EBridge }) => {
+        if (cancelled) return;
+        cleanup = installFlowdayE2EBridge();
+      }
+    );
+
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [enabled]);
+}
 
 export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
   useHydration();
   useAutoSync();
   useAutoIdlePause();
-  useFlowdayE2EBridge(e2eEnabled);
+  useOptionalE2EBridge(e2eEnabled);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   const currentDateStr = useFlowStore((s) => s.currentDate);
