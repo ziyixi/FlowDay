@@ -568,22 +568,48 @@ export async function installFixedClock(page: Page) {
   await page.clock.install({ time: new Date(FIXED_TIME_ISO) });
 }
 
+export async function waitForFlowdayE2EBridge(page: Page) {
+  await page.waitForFunction(
+    () => Boolean(window.__FLOWDAY_E2E__),
+    undefined,
+    { timeout: 10_000 }
+  );
+}
+
 export async function setRunningTimerElapsed(page: Page, seconds: number) {
+  await waitForFlowdayE2EBridge(page);
   await page.evaluate((elapsedSeconds) => {
-    window.__FLOWDAY_E2E__?.setRunningTimerElapsed(elapsedSeconds);
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    bridge.setRunningTimerElapsed(elapsedSeconds);
   }, seconds);
 }
 
 export async function getTimerState(page: Page) {
-  return page.evaluate(() => window.__FLOWDAY_E2E__?.getTimerState() ?? null);
+  await waitForFlowdayE2EBridge(page);
+  return page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    return bridge.getTimerState();
+  });
 }
 
 export async function primeFakePopOutWindow(page: Page) {
-  await page.evaluate(() => window.__FLOWDAY_E2E__?.primeFakePopOutWindow());
+  await waitForFlowdayE2EBridge(page);
+  await page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    bridge.primeFakePopOutWindow();
+  });
 }
 
 export async function mountFakePopOutWindow(page: Page) {
-  await page.evaluate(() => window.__FLOWDAY_E2E__?.mountFakePopOutWindow());
+  await waitForFlowdayE2EBridge(page);
+  await page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    bridge.mountFakePopOutWindow();
+  });
 }
 
 export async function restartFinishedPomodoroWithGap(
@@ -591,28 +617,52 @@ export async function restartFinishedPomodoroWithGap(
   targetSeconds: number,
   gapMs = 100
 ) {
+  await waitForFlowdayE2EBridge(page);
   await page.evaluate(
-    ({ seconds, delay }) =>
-      window.__FLOWDAY_E2E__?.restartFinishedPomodoroWithGap(seconds, delay),
+    ({ seconds, delay }) => {
+      const bridge = window.__FLOWDAY_E2E__;
+      if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+      bridge.restartFinishedPomodoroWithGap(seconds, delay);
+    },
     { seconds: targetSeconds, delay: gapMs }
   );
 }
 
 export async function getPopOutState(page: Page) {
-  return page.evaluate(() => window.__FLOWDAY_E2E__?.getPopOutState() ?? null);
+  await waitForFlowdayE2EBridge(page);
+  return page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    return bridge.getPopOutState();
+  });
 }
 
 export async function getChimeCount(page: Page): Promise<number> {
-  return page.evaluate(() => window.__FLOWDAY_E2E__?.getChimeCount() ?? 0);
+  await waitForFlowdayE2EBridge(page);
+  return page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    return bridge.getChimeCount();
+  });
 }
 
 export async function resetChimeCount(page: Page) {
-  await page.evaluate(() => window.__FLOWDAY_E2E__?.resetChimeCount());
+  await waitForFlowdayE2EBridge(page);
+  await page.evaluate(() => {
+    const bridge = window.__FLOWDAY_E2E__;
+    if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+    bridge.resetChimeCount();
+  });
 }
 
 export async function simulateIdleAway(page: Page, secondsAgo: number) {
+  await waitForFlowdayE2EBridge(page);
   await page.evaluate(
-    (s) => window.__FLOWDAY_E2E__?.simulateIdleAway(s),
+    (s) => {
+      const bridge = window.__FLOWDAY_E2E__;
+      if (!bridge) throw new Error("FlowDay E2E bridge is not installed");
+      bridge.simulateIdleAway(s);
+    },
     secondsAgo
   );
 }
