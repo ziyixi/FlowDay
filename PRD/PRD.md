@@ -142,7 +142,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Time entries stored in SQLite `time_entries` table via `/api/entries` routes
 - `{ cache: "no-store" }` on all fetch calls to avoid Next.js response caching
 - `entryRevision` counter in timer store bumped on segment saves, triggers UI refresh of time entry lists
-- E2E test bridge (`window.__FLOWDAY_E2E__`) exposes `setRunningTimerElapsed`, `getTimerState`, `getChimeCount`, `resetChimeCount`, and `simulateIdleAway` for deterministic UI tests
+- E2E test bridge (`window.__FLOWDAY_E2E__`) exposes deterministic timer and pop-out helpers only in `E2E_TEST_MODE=1` builds; production builds do not include the bridge or `/api/test/*` seed routes
 
 ### 4.4 — Day View / Multi-Day View ✅ Implemented
 
@@ -296,7 +296,8 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 |-------|--------|-------|
 | **Test Runner** | **Vitest 3.2** | Fast, ESM-native, shared Vite config |
 | **Test Structure** | Unit + Integration + UI | `__tests__/unit/`, `__tests__/integration/`, and `__tests__/ui/` |
-| **UI Harness** | **Playwright** | Seeded via `/api/test/*`, run under `TZ=UTC`, and kept in sync with `PRD/UI_TEST_PLAN.md` by a unit test |
+| **UI Harness** | **Playwright** | Runs under `TZ=UTC`; `E2E_TEST_MODE=1` enables `/api/test/*` seed routes and the E2E browser bridge |
+| **Visual Goldens** | **Playwright + pixelmatch-style budget** | README screenshots and broader UI goldens use deterministic seed states, fixed viewport/time, and small diff budgets for renderer drift |
 | **DB Isolation** | Fresh SQLite per test | `beforeEach` closes connection + wipes DB file |
 
 ### Deployment
@@ -305,7 +306,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 |-------|--------|-------|
 | **Container** | **Docker (multi-stage)** | Node 20 Alpine, standalone Next.js output |
 | **Registry** | **GitHub Container Registry** | `ghcr.io`, pushed on main push and release |
-| **CI/CD** | **GitHub Actions** | Lint → Unit tests → Integration tests → Build → Docker push |
+| **CI/CD** | **GitHub Actions** | Lint, typecheck, unit/integration/UI tests, README screenshots, UI goldens, build, then Docker push when runtime-relevant files changed |
 
 ### Key Architecture Decisions
 
@@ -316,6 +317,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - **Dev-mode fresh DB**: `predev` script wipes SQLite on `npm run dev`; production persists.
 - **`serverExternalPackages: ["better-sqlite3"]`** in next.config.ts for native addon support.
 - **Standalone output**: `output: "standalone"` in next.config.ts for minimal Docker images.
+- **Production/test decoupling**: Test-only API routes use `route.e2e.ts` and are recognized only when `E2E_TEST_MODE=1`. The E2E browser bridge lives under `features/testing` and is dynamically imported only in E2E builds. Docker runs a prune verifier that removes or fails on docs, markdown, source maps, DB files, and test-only markers in `.next/standalone`.
 - **Client-authoritative timezone**: All "what day is today?" logic runs in the browser or is passed from the browser via query params. Server never guesses the user's timezone — safe for VPS deployment in any timezone.
 
 ---
@@ -325,49 +327,64 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 ```
 flowday/
 ├── app/
-│   ├── layout.tsx                 # Root layout, providers, theme
-│   ├── page.tsx                   # Main app (single-page)
+│   ├── layout.tsx                 # Root layout, providers, theme metadata
+│   ├── page.tsx                   # AppShell entry point
 │   ├── globals.css                # Tailwind CSS v4 theme + global styles
-│   ├── manifest.ts                # PWA web manifest (dynamic route)
-│   ├── sw/route.ts                # Service worker route (serves public/sw.js for standalone compat)
+│   ├── pwa/
+│   │   ├── manifest.webmanifest/route.ts # PWA web manifest
+│   │   └── sw/route.ts            # Service worker route for standalone compat
 │   └── api/
-│       ├── entries/
-│       │   ├── route.ts           # POST create, GET query time entries
-│       │   └── [id]/route.ts      # PUT update, DELETE time entry
+│       ├── analytics/route.ts     # GET daily/weekly/all-time analytics aggregation
+│       ├── entries/route.ts       # POST create, GET query time entries
+│       ├── entries/[id]/route.ts  # PUT update, DELETE time entry
+│       ├── export/route.ts        # GET CSV/JSON export of entries or flows
 │       ├── flows/route.ts         # GET all flows, PUT flow mutations
 │       ├── notes/route.ts         # GET/PUT task notes (per task+date)
-│       ├── analytics/route.ts     # GET daily/weekly analytics aggregation
-│       ├── export/route.ts        # GET CSV/JSON export of entries or flows
 │       ├── settings/route.ts      # GET/PUT settings (accepts ?today= for timezone-safe planning check)
 │       ├── sync/route.ts          # POST trigger Todoist sync
 │       ├── tasks/route.ts         # GET all, POST create local, PATCH estimate/title, DELETE soft-delete
-│       │   └── deleted/route.ts   # GET deleted tasks, POST restore
-├── components/
-│   ├── layout/
-│   │   ├── app-shell.tsx          # DragDropProvider + sidebar + canvas
-│   │   ├── top-bar.tsx            # Date nav, view toggle, timer, analytics, settings
-│   │   └── sidebar.tsx            # Collapsible sidebar with timer + search + task pool
-│   ├── todoist/
-│   │   ├── task-pool.tsx          # Task sections (Arranged, Completed, Overdue, Today)
-│   │   ├── task-card.tsx          # Draggable sidebar task card (with delete + tooltip)
-│   │   ├── task-card-overlay.tsx  # Drag overlay appearance
-│   │   ├── quick-add.tsx          # Inline quick-add input for local tasks
-│   │   └── deleted-tasks-dialog.tsx # Calendar-based trash browser
-│   ├── flow/
-│   │   ├── day-flow.tsx           # Editable + read-only day flow views
-│   │   ├── flow-task-card.tsx     # Full task card with timer + actions
-│   │   ├── progress-bar.tsx       # Day progress + capacity warning
-│   │   └── planning-wizard.tsx    # Daily planning ritual wizard
-│   ├── timer/
-│   │   ├── timer-display.tsx      # Top bar timer component
-│   │   └── manual-entry.tsx       # Time entry popover + add/edit dialogs
-│   ├── settings/
-│   │   ├── settings-dialog.tsx    # API key + capacity + sync + export settings dialog
-│   │   └── export-dialog.tsx      # Data export sub-dialog (type, date range, format)
+│       ├── tasks/deleted/route.ts # GET deleted tasks, POST restore
+│       ├── timer/session/route.ts # Server-backed active timer continuity
+│       └── test/*/route.e2e.ts    # Seed/reset helpers, only included when E2E_TEST_MODE=1
+├── features/
 │   ├── analytics/
-│   │   └── analytics-dashboard.tsx # Daily + weekly review analytics dialog
+│   │   ├── components/            # Dashboard tabs, daily/weekly review, shared chart UI
+│   │   ├── hooks/                 # Analytics resource fetching
+│   │   ├── services/              # Analytics route service
+│   │   └── contracts.ts           # API payload contracts
+│   ├── flow/
+│   │   ├── components/            # Editable/read-only day flow, task cards, progress bar
+│   │   ├── planning/              # 3-step planning wizard
+│   │   ├── services/              # Flow and note route services
+│   │   └── store/                 # Zustand flow store + persistence helpers
+│   ├── layout/
+│   │   ├── app-shell.tsx          # DragDropProvider + sidebar + canvas + optional E2E bridge
+│   │   ├── top-bar.tsx            # Date nav, view toggle, timer, analytics, settings
+│   │   ├── sidebar.tsx            # Collapsible sidebar with timer + search + task pool
+│   │   └── multi-day-flow-columns.tsx
+│   ├── settings/
+│   │   ├── components/            # Settings + export dialogs
+│   │   ├── hooks/                 # Idle permission status
+│   │   └── services/              # Settings/export route services
+│   ├── tasks/
+│   │   └── services/              # Task route service
+│   ├── testing/
+│   │   ├── client/flowday-e2e-bridge.ts # Browser bridge, E2E-only dynamic import
+│   │   └── server/e2e-data.ts     # Seed/reset helpers, guarded by E2E_TEST_MODE
+│   ├── timer/
+│   │   ├── components/            # Manual entry UI and timer dialog pieces
+│   │   ├── services/              # Entries + timer-session route services
+│   │   └── store/                 # Timer Zustand store + persistence helpers
+│   └── todoist/
+│       ├── services/              # Todoist sync service
+│       └── store/                 # Todoist task cache + persistence helpers
+├── components/
 │   ├── shared/
-│   │   └── estimate-editor.tsx    # Reusable estimate popover (presets + custom)
+│   │   ├── editable-local-title.tsx
+│   │   ├── estimate-editor.tsx    # Reusable estimate popover (presets + custom)
+│   │   └── idle-permission-prompt.tsx
+│   ├── timer/                     # Timer display, misc time, Pomodoro picker, pop-out surface
+│   ├── todoist/                   # Sidebar task cards, task pool, quick add, deleted dialog
 │   ├── theme-provider.tsx
 │   └── ui/                        # shadcn/ui components (base-ui/react, base-nova style)
 │       ├── button.tsx
@@ -378,28 +395,25 @@ flowday/
 │       ├── separator.tsx
 │       ├── sheet.tsx
 │       ├── toggle.tsx
+│       ├── tooltip-icon-button.tsx
 │       └── tooltip.tsx
 ├── lib/
-│   ├── todoist/
-│   │   ├── api.ts                 # Todoist API client (read-only, paginated)
-│   │   ├── colors.ts              # Todoist color name → hex mapping
-│   │   └── sync.ts                # Sync orchestration: fetch → transform → upsert
 │   ├── db/
-│   │   ├── schema.ts              # Drizzle schema (6 tables)
 │   │   ├── index.ts               # DB connection singleton
-│   │   └── queries.ts             # All CRUD query helpers
-│   ├── stores/
-│   │   ├── flow-store.ts          # Zustand: flow assignments + write-through
-│   │   ├── timer-store.ts         # Zustand: active timer state
-│   │   └── todoist-store.ts       # Zustand: task cache + hydrate/sync
+│   │   ├── queries.ts             # CRUD and analytics query helpers
+│   │   └── schema.ts              # Drizzle schema
 │   ├── hooks/
 │   │   ├── use-hydration.ts       # Load tasks + flows from SQLite on mount
 │   │   └── use-auto-sync.ts       # 1-minute Todoist sync interval
+│   ├── stores/
+│   │   └── pop-out-store.ts       # Pop-out window request/state coordination
+│   ├── todoist/
+│   │   ├── api.ts                 # Todoist API client (read-only, paginated)
+│   │   └── colors.ts              # Todoist color name -> hex mapping
 │   ├── types/
 │   │   └── task.ts                # Task interface + priority config
-│   ├── data/
-│   │   └── mock-tasks.ts          # Legacy mock data (unused)
 │   ├── utils/
+│   │   ├── date.ts                # Date helpers
 │   │   └── time.ts                # formatDuration, formatElapsed
 │   └── utils.ts                   # cn() utility
 ├── __tests__/
@@ -407,11 +421,19 @@ flowday/
 │   ├── unit/                      # Query helpers, timers, stores, Todoist client/sync, docs sync guards
 │   ├── integration/               # Route handlers: entries, flows, notes, settings, sync, export, analytics, timers
 │   └── ui/                        # Playwright specs + seeded helpers for wizard, shell/flow, and timer journeys
+├── docs/
+│   ├── readme/                    # Committed README screenshot goldens
+│   └── ui-goldens/                # Broader committed UI visual goldens
+├── scripts/
+│   ├── check-refactor-imports.sh  # Import boundary guard
+│   ├── generate-readme-screenshots.mjs
+│   ├── generate-ui-goldens.mjs
+│   └── prune-production-standalone.mjs # Docker/prod standalone leak guard
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                 # CI/CD: lint → test → build → Docker push
+│       └── ci.yml                 # CI/CD: checks, screenshot goldens, build, Docker push
 ├── public/
-│   ├── sw.js                      # Service worker source (served via app/sw/route.ts in production)
+│   ├── sw.js                      # Service worker source (served via app/pwa/sw/route.ts)
 │   ├── icon.svg                   # App icon (SVG source)
 │   ├── icon-192x192.png           # PWA icon 192px
 │   ├── icon-512x512.png           # PWA icon 512px
@@ -426,7 +448,7 @@ flowday/
 ├── AGENTS.md                      # Agent rules for Next.js 16 breaking changes
 ├── CLAUDE.md                      # Claude AI coding instructions
 ├── README.md
-├── next.config.ts                 # output: "standalone" + serverExternalPackages
+├── next.config.ts                 # standalone output + E2E-only page extension gating
 ├── tsconfig.json
 ├── eslint.config.mjs
 ├── postcss.config.mjs
@@ -455,7 +477,8 @@ CREATE TABLE tasks (
   due_date        TEXT,                 -- YYYY-MM-DD
   created_at      TEXT,
   synced_at       TEXT,                 -- Last sync timestamp
-  deleted_at      TEXT                  -- Soft-delete timestamp (NULL = active)
+  deleted_at      TEXT,                 -- Soft-delete timestamp (NULL = active)
+  deleted_source  TEXT                  -- 'sync' when Todoist stopped returning it, 'local' or NULL when user-hidden
 );
 
 -- Settings: key-value store (API keys, preferences)
@@ -492,6 +515,32 @@ CREATE TABLE time_entries (
   source      TEXT NOT NULL DEFAULT 'timer',  -- 'timer' | 'manual'
   created_at  TEXT DEFAULT (datetime('now'))
 );
+
+-- Per-task notes scoped to a specific flow date
+CREATE TABLE flow_task_notes (
+  id         TEXT PRIMARY KEY,
+  task_id    TEXT NOT NULL,
+  flow_date  TEXT NOT NULL,
+  content    TEXT NOT NULL DEFAULT '',
+  updated_at TEXT DEFAULT (datetime('now')),
+  UNIQUE(task_id, flow_date)
+);
+
+-- Singleton active timer session for reload and cross-device continuity
+CREATE TABLE active_timer_session (
+  id                              TEXT PRIMARY KEY, -- 'main'
+  task_id                         TEXT,
+  flow_date                       TEXT,
+  status                          TEXT NOT NULL DEFAULT 'idle',
+  timer_mode                      TEXT NOT NULL DEFAULT 'countup',
+  pomodoro_target_s               INTEGER,
+  segment_wall_start              TEXT,
+  session_saved_s                 INTEGER NOT NULL DEFAULT 0,
+  pomodoro_finished_task_id       TEXT,
+  pomodoro_finished_flow_date     TEXT,
+  pomodoro_finished_target_s      INTEGER,
+  updated_at                      TEXT DEFAULT (datetime('now'))
+);
 ```
 
 ---
@@ -503,7 +552,7 @@ CREATE TABLE time_entries (
 │                    TODOIST CLOUD                     │
 │  (Source of truth for tasks — read-only access)      │
 └─────────────┬───────────────────────────────────────┘
-              │ GET /api/v1/tasks/filter?query=today|overdue
+              │ GET /api/v1/tasks
               │ GET /api/v1/projects
               ▼
 ┌─────────────────────────────────────────────────────┐
@@ -514,6 +563,7 @@ CREATE TABLE time_entries (
 │  GET/PUT /api/flows → read/write flow assignments   │
 │  GET/PUT /api/settings → API key management         │
 │  CRUD /api/entries → time entry management          │
+│  GET /api/analytics + /api/export → review/export   │
 └─────────────┬───────────────────────┬───────────────┘
               │                       │
               ▼                       ▲
@@ -526,9 +576,10 @@ CREATE TABLE time_entries (
               ▼                       ▲
 ┌─────────────────────────────────────────────────────┐
 │          Zustand Stores (reactive cache)             │
-│  todoist-store: tasks[], hydrate(), sync()           │
-│  flow-store: flows{}, completedTasks{}, hydrate()    │
-│  timer-store: activeTaskId, displaySeconds           │
+│  todoist-store: task cache + sync orchestration      │
+│  flow-store: flow assignments + planning state       │
+│  timer-store: active task + persisted session state  │
+│  pop-out-store: small-window open/request state      │
 └─────────────┬───────────────────────┬───────────────┘
               │                       │
               ▼                       ▲
@@ -575,7 +626,7 @@ CREATE TABLE time_entries (
 ### Session 5 — Todoist Integration + Full Persistence ✅
 - SQLite tables for tasks, settings, flow_tasks, completed_flow_tasks
 - Todoist API client (read-only) with cursor-based pagination
-- Only fetches today + overdue tasks
+- Fetches all active tasks, then the sidebar filters to today, overdue, and selected planning-date contexts
 - Settings dialog for API key input
 - Manual refresh button + 1-minute auto-sync
 - Task and flow persistence across page refreshes
@@ -645,7 +696,7 @@ CREATE TABLE time_entries (
 - **Integration tests**: route handlers for analytics, entries, export, flows, notes, settings, sync, tasks, deleted tasks, and timer persistence
 - **Playwright UI tests**: seeded browser coverage for the wizard, flow/shell journeys, timers, settings, export, analytics, and multi-day read-only behavior
 - **Docker**: multi-stage build (Node 20 Alpine) — deps → build → standalone runner, non-root `nextjs` user, `/app/db` directory with correct permissions
-- **GitHub Actions CI/CD**: lint + unit tests + integration tests + build (parallel), then Docker build & push to GHCR on main push or release
+- **GitHub Actions CI/CD**: lint, typecheck, unit tests, integration tests, UI tests, screenshot goldens, build, then Docker build & push to GHCR on main push or release
 - Docker metadata: tags by branch, semver, and SHA; GHA build cache for fast rebuilds
 - `output: "standalone"` in next.config.ts for minimal Docker images
 - `.dockerignore` excludes tests, docs, DB files, and `.git`
@@ -654,20 +705,20 @@ CREATE TABLE time_entries (
 - **Quick add:** Inline input in sidebar to create local tasks (`local-<uuid>` ID, today's due date, default priority). `POST /api/tasks` endpoint. `addLocalTask` action in todoist store.
 - **Editable titles:** Local (non-Todoist) tasks show pencil icon on hover. Inline input with Enter/Escape/blur commit. `updateTitle` action + `PATCH /api/tasks` with `title` field. Works in both sidebar `TaskCard` and flow `FlowTaskCard` via `EditableTitle` / `EditableFlowTitle` components.
 - **Data export:** Export dialog in settings — select data type (time entries / flow history), date range, format (CSV/JSON). `GET /api/export?type=entries|flows&format=csv|json&start=&end=`. Download via anchor element.
-- **PWA support:** Web manifest (`app/manifest.ts`), app icons (SVG + PNG at 192/512/maskable), service worker (`public/sw.js`), `apple-touch-icon`, theme-color meta tags. Service worker uses network-first for navigation and API calls, stale-while-revalidate for static assets.
+- **PWA support:** Web manifest (`app/pwa/manifest.webmanifest/route.ts`), app icons (SVG + PNG at 192/512/maskable), service worker source (`public/sw.js`) served through `app/pwa/sw/route.ts`, `apple-touch-icon`, and theme-color meta tags. Service worker uses network-first for navigation and API calls, stale-while-revalidate for static assets.
 - **Service worker safety:** SW only registered in production. Development mode auto-unregisters stale service workers to prevent cached HTML from loading outdated JS bundles after dev server restarts.
 - **Timezone fix:** All "today" comparisons use `date-fns format()` (local time) instead of `toISOString().slice(0,10)` (UTC). Settings API accepts `?today=` param from client so VPS timezone doesn't affect `planning_completed_today` check.
 - **Integration tests:** 6 new test files (export, flows, notes, settings, tasks, deleted tasks) covering all API routes
 - **Refactors:** `useEffect`-based dialog initialization replaced with `onOpenChange` callbacks (analytics, manual entry, deleted tasks, estimate editor) for simpler lifecycle management. Progress bar `getEntryRevision()` extracted from dependency array.
 
-### Session 14 — UI Visual Polish 🔮 Future
-- **Card elevation**: Add subtle box shadows (`0 1px 2px oklch(0 0 0 / 0.04)`) to flow task cards and sidebar task cards for layered depth, keeping existing borders
-- **Active task glow**: Strengthen running-timer visual — thicker left border (4px) with brighter accent color, replacing the current faint `ring-1 ring-primary/30`
-- **Progress bar refinement**: Increase bar height to `h-2`, add gradient (`from-primary to-primary/70`), and a subtle glow (`shadow-[0_0_8px_-2px_var(--primary)]`) when progress > 0
-- **Sidebar spatial separation**: Replace flat `border-r` with a soft drop shadow (`1px 0 4px -2px oklch(0 0 0 / 0.08)`) for better depth hierarchy between sidebar and main content
-- **Completed tasks treatment**: Replace `opacity-60` with normal opacity using `text-muted-foreground`, add green checkmark icon replacing priority dot, add `bg-muted/30` group background
-- **"Next" badge softening**: Switch from `bg-primary text-primary-foreground font-semibold` to `bg-primary/10 text-primary font-medium` for a subtler inline badge style
-- **Top bar backdrop**: Increase blur to `backdrop-blur-md`, lighten border to `border-border/50` for a more premium frosted-glass effect when content scrolls behind it
+### Session 14 — UI Polish, Goldens, and Production Hygiene ✅ Implemented
+- **Overall visual polish**: Refined app shell, sidebar, day-flow hierarchy, task-card treatments, planning wizard, analytics surfaces, and small pop-out timer while preserving existing workflows and selectors
+- **Feature-boundary cleanup**: Moved major app surfaces under `features/*` while keeping shared reusable UI in `components/*` and source-of-truth database helpers in `lib/db/*`
+- **README screenshots**: Maintained onboarding-first screenshots in `docs/readme` with deterministic generation and CI comparison
+- **UI visual goldens**: Added broader product screenshots under `docs/ui-goldens` covering shell, planning, timer, pop-out, settings, analytics, dark mode, and multi-day states
+- **CI screenshot checks**: Added README screenshot and UI-golden checks on Ubuntu 24.04 with fixed seed data, viewport, timezone, reduced motion, and small pixel-diff budgets for renderer drift
+- **Production/test split**: Moved seed/reset helpers and the browser E2E bridge under `features/testing`, converted test API route files to `route.e2e.ts`, and gated them with `E2E_TEST_MODE=1`
+- **Docker payload hygiene**: Added `npm run docker:prune` to remove or fail on test routes, test helpers, docs, markdown files, source maps, local DB files, and E2E marker strings in `.next/standalone`
 
 ---
 
@@ -719,5 +770,5 @@ CREATE TABLE time_entries (
 
 ---
 
-*Last updated: April 13, 2026*
-*Version: 1.5 — Post-Session 13 (quick add, export, editable titles, PWA, timezone fixes, expanded integration tests)*
+*Last updated: May 3, 2026*
+*Version: 1.6 — Post-Session 14 (feature-boundary cleanup, UI polish, screenshot goldens, and production/test decoupling)*

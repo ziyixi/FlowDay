@@ -86,6 +86,8 @@ For a persistent local container, use Docker Compose. It mounts `/app/db` to a n
 docker compose up -d
 ```
 
+The production Docker image is built from Next.js standalone output. Test-only routes and the E2E browser bridge are opt-in for Playwright builds and are not shipped in the production image. The Docker build also prunes docs, markdown files, source maps, local DB files, and test-only markers from the standalone payload.
+
 ## Developer Notes
 
 FlowDay is built with Next.js, React, TypeScript, SQLite, Drizzle, Zustand, and Tailwind/shadcn UI.
@@ -104,7 +106,10 @@ FlowDay is built with Next.js, React, TypeScript, SQLite, Drizzle, Zustand, and 
 | `npm run screenshots:readme:check` | Generate README screenshots into `output/readme-screenshots/current` and compare them with the committed goldens. |
 | `npm run screenshots:ui` | Regenerate the broader UI visual goldens in `docs/ui-goldens`. |
 | `npm run screenshots:ui:check` | Generate fresh UI screenshots into `output/ui-goldens/current` and compare them with the committed UI goldens. |
+| `npm run docker:prune` | Verify a production standalone build is free of test routes, docs, source maps, and local DB files. |
 
-CI runs the README and UI screenshot checks on Ubuntu 24.04. The comparisons keep a small pixel-diff budget for browser and font rendering differences, while the scripted seed data, fixed date, fixed viewport, and disabled animations keep the figures stable.
+CI runs lint, typecheck, unit tests, integration tests, Playwright UI tests, README screenshot checks, and UI golden checks before the Docker image job. The screenshot comparisons run on Ubuntu 24.04 with a small pixel-diff budget for browser and font rendering differences, while the scripted seed data, fixed date, fixed viewport, and disabled animations keep the figures stable.
+
+Playwright and screenshot workflows build with `E2E_TEST_MODE=1`, which enables `/api/test/*` seed routes and the `window.__FLOWDAY_E2E__` bridge. Normal production builds leave those files out through Next.js page-extension gating and fail the Docker prune check if test-only code leaks back into the standalone output.
 
 For deeper product and implementation details, see [PRD/PRD.md](PRD/PRD.md). The UI test catalog lives in [PRD/UI_TEST_PLAN.md](PRD/UI_TEST_PLAN.md).
