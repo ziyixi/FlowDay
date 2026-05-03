@@ -25,7 +25,7 @@ export function PlanningStepConfirm({
   return (
     <div className="p-5">
       <p className="text-sm font-medium text-foreground">You&apos;re all set!</p>
-      <div className="mt-4 space-y-3">
+      <div className="mt-4 space-y-3 rounded-md border border-border/65 bg-background/35 p-3">
         <div className="flex items-baseline justify-between text-sm">
           <span className="text-muted-foreground">Tasks</span>
           <span className="font-medium text-foreground">{taskCount}</span>
@@ -44,7 +44,7 @@ export function PlanningStepConfirm({
                 {formatDuration(capacityMins)}
               </span>
             </div>
-            <div className="h-2 overflow-hidden rounded-full bg-muted">
+            <div className="h-2 overflow-hidden rounded-full bg-muted/80">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-300",
@@ -71,7 +71,7 @@ export function PlanningStepConfirm({
         )}
       </div>
 
-      <div className="mt-5 flex items-center justify-end gap-2">
+      <div className="mt-5 flex items-center justify-end gap-2 border-t border-border/55 pt-4">
         <Button size="sm" variant="ghost" onClick={onBack}>
           Back
         </Button>

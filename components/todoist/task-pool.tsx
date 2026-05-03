@@ -54,7 +54,7 @@ export function TaskPool() {
       : format(new Date(currentDate + "T00:00:00"), "EEE, MMM d");
 
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       {arrangedTasks.length > 0 && (
         <TaskPoolSection
           title="Arranged"
@@ -108,7 +108,7 @@ function TaskPoolSection({
     <div className="mb-1">
       <button
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-1 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground sm:text-xs"
+        className="flex w-full items-center gap-1 rounded-md px-1 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:text-xs"
       >
         <ChevronRight
           className={cn(
@@ -117,7 +117,14 @@ function TaskPoolSection({
           )}
         />
         <span className={cn("flex-1 text-left", accentClass)}>{title}</span>
-        <span className={cn("tabular-nums", accentClass)}>{tasks.length}</span>
+        <span
+          className={cn(
+            "rounded-sm bg-background/70 px-1.5 py-0.5 text-[10px] tabular-nums",
+            accentClass
+          )}
+        >
+          {tasks.length}
+        </span>
       </button>
       <div
         className={cn(
@@ -127,7 +134,7 @@ function TaskPoolSection({
       >
         <div className="overflow-hidden">
           {tasks.length > 0 ? (
-            <div className="space-y-1 pb-1">
+            <div className="space-y-1.5 pb-1">
               {variant === "pool"
                 ? tasks.map((task) => <TaskCard key={task.id} task={task} />)
                 : variant === "arranged"
@@ -141,7 +148,7 @@ function TaskPoolSection({
                     ))}
             </div>
           ) : (
-            <div className="mb-1 flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 text-sm text-muted-foreground/60 sm:text-xs">
+            <div className="mb-1 flex h-16 items-center justify-center rounded-md border border-dashed border-border/60 bg-background/35 text-sm text-muted-foreground/60 sm:text-xs">
               No tasks
             </div>
           )}
@@ -155,7 +162,7 @@ function ArrangedRow({ task }: { task: Task }) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+    <div className="fd-soft-row flex items-center gap-2 px-2.5 py-1.5">
       <span className={cn("h-2 w-2 shrink-0 rounded-full", priorityColor)} />
       <p className="flex-1 truncate text-sm font-medium text-foreground sm:text-xs">{task.title}</p>
       {task.estimatedMins != null && task.estimatedMins > 0 && (
@@ -169,7 +176,7 @@ function ArrangedRow({ task }: { task: Task }) {
 
 function CompletedRow({ task, loggedSeconds }: { task: Task; loggedSeconds: number }) {
   return (
-    <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5 opacity-60">
+    <div className="flex items-center gap-2 rounded-md px-2.5 py-1.5 opacity-65">
       <Check className="h-3 w-3 shrink-0 text-green-500" />
       <p className="flex-1 truncate text-sm text-muted-foreground line-through sm:text-xs">{task.title}</p>
       <div className="flex items-center gap-1.5 shrink-0 text-xs tabular-nums text-muted-foreground/60 sm:text-[10px]">

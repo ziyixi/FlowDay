@@ -110,10 +110,10 @@ export function MiscTimeButton() {
       <PopoverTrigger
         render={<button />}
         className={cn(
-          "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm font-medium transition-colors sm:h-7 sm:px-2 sm:text-xs",
+          "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-sm font-medium shadow-[0_1px_2px_oklch(0_0_0/0.025)] transition-colors sm:h-7 sm:px-2 sm:text-xs",
           isActiveMisc || isFinishedMisc
-            ? "border-primary/30 bg-primary/5 text-primary hover:bg-primary/10"
-            : "border-border bg-background text-muted-foreground hover:bg-accent hover:text-foreground"
+            ? "border-primary/25 bg-card/80 text-primary hover:bg-primary/10"
+            : "border-border/75 bg-card/70 text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
         title={
           miscTodayLabel != null
@@ -138,7 +138,7 @@ export function MiscTimeButton() {
         {isFinishedMisc ? (
           <div className="space-y-3">
             <div className="space-y-1">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="text-xs font-medium uppercase text-muted-foreground">
                 Pomodoro done
               </div>
               <div className="text-sm font-medium text-foreground">
@@ -209,7 +209,7 @@ export function MiscTimeButton() {
         ) : isActiveMisc ? (
           <div className="space-y-3">
             <div className="space-y-1">
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="text-xs font-medium uppercase text-muted-foreground">
                 {status === "running" ? "Tracking" : "Paused"}
               </div>
               <div className="text-sm font-medium text-foreground">
@@ -269,7 +269,7 @@ export function MiscTimeButton() {
             </button>
 
             <div className="space-y-1">
-              <div className="flex items-center gap-1.5 px-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              <div className="flex items-center gap-1.5 px-0.5 text-xs font-medium uppercase text-muted-foreground">
                 <Hourglass className="h-3 w-3" />
                 Pomodoro
               </div>

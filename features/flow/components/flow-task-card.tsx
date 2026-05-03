@@ -119,12 +119,12 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
 
       <div
         className={cn(
-          "group rounded-lg border bg-card px-4 py-3 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-all",
+          "fd-flow-card group rounded-md border px-4 py-3 transition-all",
           isNext
-            ? "border-b-border border-l-4 border-l-primary border-r-border border-t-border"
+            ? "fd-flow-card-focus border-b-border border-l-4 border-r-border border-t-border"
             : "border-border",
           isActive &&
-            "border-l-4 border-l-primary shadow-[0_0_12px_-3px_oklch(from_var(--color-primary)_l_c_h/0.35)]",
+            "fd-flow-card-focus border-l-4",
           isDropTarget && !isDragSource && "border-primary/40"
         )}
       >
@@ -133,7 +133,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               {isNext && (
-                <span className="shrink-0 rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium uppercase tracking-wider text-primary sm:text-[10px]">
+                <span className="fd-focus-pill shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-semibold sm:text-[10px]">
                   Next
                 </span>
               )}
@@ -153,7 +153,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                 {task.labels.map((label) => (
                   <span
                     key={label}
-                    className="rounded-full bg-muted px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]"
+                    className="rounded-sm border border-border/55 bg-muted/65 px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]"
                   >
                     {label}
                   </span>
@@ -163,15 +163,15 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           </div>
         </div>
 
-        <div className="mt-2.5 flex items-center justify-between">
-          <div className="flex items-center gap-3 text-sm text-muted-foreground sm:text-xs">
+        <div className="mt-3 flex items-center justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground sm:text-xs">
             <EstimateEditor task={task} variant="flow" />
             {shownSeconds > 0 ? (
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 items-center gap-2">
                 <span
                   className={cn(
                     "tabular-nums font-medium",
-                    isActive ? "text-primary" : "text-foreground"
+                    isActive ? "fd-focus-text" : "text-foreground"
                   )}
                 >
                   {isActivePomodoro

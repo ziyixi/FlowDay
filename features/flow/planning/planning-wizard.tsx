@@ -52,16 +52,21 @@ export function PlanningWizard({
   return (
     <div className="flex flex-1 flex-col items-center justify-center p-6">
       <div className="w-full max-w-lg">
-        <div className="mb-6 flex items-center justify-between">
+        <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <Sunrise className="h-5 w-5 text-amber-500" />
-            <h2 className="text-lg font-semibold text-foreground">Start Your Day</h2>
+            <span className="grid h-8 w-8 place-items-center rounded-md border border-amber-500/25 bg-amber-500/10 text-amber-600 dark:text-amber-400">
+              <Sunrise className="h-4 w-4" />
+            </span>
+            <div>
+              <h2 className="text-lg font-semibold text-foreground">Start Your Day</h2>
+              <p className="text-xs text-muted-foreground">Build a focused queue for today.</p>
+            </div>
           </div>
           <button
             onClick={handleDismiss}
             aria-label="Dismiss planning wizard"
             title="Dismiss planning wizard"
-            className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="fd-icon-button h-7 w-7"
           >
             <X className="h-4 w-4" />
           </button>
@@ -69,7 +74,7 @@ export function PlanningWizard({
 
         <PlanningStepIndicator stepIndex={stepIndex} />
 
-        <div className="rounded-lg border border-border bg-card">
+        <div className="fd-dialog-panel overflow-hidden rounded-md border border-border/75">
           {currentStep.id === "add" && (
             <PlanningStepAddTasks
               dueOnDateTasks={dueOnDate}

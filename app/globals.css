@@ -131,6 +131,94 @@
   }
 }
 
+@layer components {
+  .fd-app-canvas {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--background) 92%, var(--card)) 0%, var(--background) 42%),
+      var(--background);
+  }
+
+  .fd-topbar {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--card) 76%, var(--background)) 0%, color-mix(in oklch, var(--background) 88%, var(--card)) 100%);
+    box-shadow: 0 1px 0 color-mix(in oklch, var(--border) 82%, transparent);
+  }
+
+  .fd-sidebar {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--sidebar) 88%, var(--card)) 0%, var(--sidebar) 100%);
+    border-right: 1px solid color-mix(in oklch, var(--sidebar-border) 78%, transparent);
+    box-shadow: inset -1px 0 0 color-mix(in oklch, var(--card) 38%, transparent);
+  }
+
+  .fd-control-cluster {
+    @apply rounded-md border border-border/70 bg-card/70 shadow-[0_1px_2px_oklch(0_0_0/0.035)];
+  }
+
+  .fd-icon-button {
+    @apply inline-flex items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring/35 disabled:pointer-events-none disabled:opacity-45;
+  }
+
+  .fd-field {
+    @apply rounded-md border border-border/75 bg-card/80 shadow-[0_1px_2px_oklch(0_0_0/0.025)] transition-colors focus-within:border-ring/50 focus-within:bg-background;
+  }
+
+  .fd-section-label {
+    @apply text-[11px] font-semibold uppercase text-muted-foreground/80;
+  }
+
+  .fd-flow-card {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--card) 94%, var(--background)) 0%, color-mix(in oklch, var(--card) 78%, var(--background)) 100%);
+    border-color: color-mix(in oklch, var(--border) 86%, transparent);
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.035);
+  }
+
+  .fd-flow-card-focus {
+    background:
+      linear-gradient(180deg, var(--card) 0%, color-mix(in oklch, var(--chart-1) 4%, var(--card)) 100%);
+    border-left-color: color-mix(in oklch, var(--chart-1) 78%, var(--primary));
+    box-shadow:
+      0 1px 2px oklch(0 0 0 / 0.04),
+      0 18px 42px -34px color-mix(in oklch, var(--chart-1) 72%, transparent);
+  }
+
+  .fd-focus-pill {
+    background: color-mix(in oklch, var(--chart-1) 13%, transparent);
+    border: 1px solid color-mix(in oklch, var(--chart-1) 22%, transparent);
+    color: color-mix(in oklch, var(--chart-1) 70%, var(--foreground));
+  }
+
+  .fd-focus-text {
+    color: color-mix(in oklch, var(--chart-1) 72%, var(--foreground));
+  }
+
+  .fd-soft-row {
+    @apply rounded-md border border-border/65 bg-card/65 shadow-[0_1px_2px_oklch(0_0_0/0.025)];
+  }
+
+  .fd-muted-row {
+    @apply rounded-md border border-border/45 bg-muted/25;
+  }
+
+  .fd-dialog-panel {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--card) 92%, var(--background)) 0%, var(--card) 100%);
+    box-shadow: 0 24px 80px -48px oklch(0 0 0 / 0.55);
+  }
+
+  .fd-stat-card {
+    background:
+      linear-gradient(180deg, color-mix(in oklch, var(--card) 94%, var(--background)) 0%, color-mix(in oklch, var(--card) 82%, var(--background)) 100%);
+    border-color: color-mix(in oklch, var(--border) 84%, transparent);
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.03);
+  }
+
+  .fd-chart-panel {
+    @apply rounded-md border border-border/65 bg-card/55 p-3 shadow-[0_1px_2px_oklch(0_0_0/0.025)];
+  }
+}
+
 @media (orientation: portrait) and (max-width: 900px) {
   .text-xs {
     font-size: 0.8125rem;

@@ -125,13 +125,13 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="fd-dialog-panel rounded-md sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="space-y-2">
+          <div className="rounded-md border border-border/60 bg-background/25 p-3">
             <label className="text-sm font-medium text-foreground">
               Todoist API Key
             </label>
@@ -161,7 +161,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="rounded-md border border-border/60 bg-background/25 p-3">
             <div className="flex items-center justify-between">
               <label className="text-sm font-medium text-foreground">
                 Todoist Sync
@@ -194,7 +194,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </p>
           </div>
 
-          <div className="space-y-2">
+          <div className="rounded-md border border-border/60 bg-background/25 p-3">
             <label className="text-sm font-medium text-foreground">
               Daily Work Capacity
             </label>
@@ -226,7 +226,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
           </div>
 
           {idleStatus !== "unsupported" && (
-            <div className="space-y-2">
+            <div className="rounded-md border border-border/60 bg-background/25 p-3">
               <label className="text-sm font-medium text-foreground">
                 Auto-pause when idle
               </label>
@@ -257,7 +257,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
             </div>
           )}
 
-          <div className="space-y-2">
+          <div className="rounded-md border border-border/60 bg-background/25 p-3">
             <label className="text-sm font-medium text-foreground">Export Data</label>
             <p className="text-xs text-muted-foreground">
               Download your time entries or flow history as CSV or JSON.

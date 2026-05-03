@@ -37,7 +37,7 @@ function SidebarTimer() {
       : null;
 
   return (
-    <div className="mx-3 mb-2 flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5">
+    <div className="mx-3 mb-2 flex items-center gap-2 rounded-md border border-primary/20 bg-card/70 px-2.5 py-1.5 shadow-[0_1px_2px_oklch(0_0_0/0.025)]">
       <div className="relative flex h-2 w-2 shrink-0">
         {status === "running" && (
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/75" />
@@ -66,7 +66,7 @@ function SidebarTimer() {
       </span>
       <button
         onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:text-foreground sm:h-5 sm:w-5"
+        className="fd-icon-button h-6 w-6 shrink-0 sm:h-5 sm:w-5"
       >
         {status === "running" ? (
           <Pause className="h-3 w-3" />
@@ -97,7 +97,7 @@ export function Sidebar({
         <div className="relative shrink-0">
           <Tooltip>
             <TooltipTrigger
-              className="absolute left-1 top-1 z-10 inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
+              className="fd-icon-button absolute left-1 top-1 z-10 h-8 w-8 sm:h-7 sm:w-7"
               onClick={() => onCollapsedChange(false)}
               aria-label="Expand sidebar"
               title="Expand sidebar"
@@ -117,18 +117,18 @@ export function Sidebar({
     <>
       <aside
         className={cn(
-          "relative flex h-full w-[280px] shrink-0 flex-col bg-sidebar shadow-[1px_0_4px_-2px_oklch(0_0_0/0.08)]"
+          "fd-sidebar relative flex h-full w-[280px] shrink-0 flex-col"
         )}
       >
         {/* Sidebar header */}
         <div className="flex h-10 items-center justify-between px-3">
-          <span className="text-sm font-semibold uppercase tracking-wider text-muted-foreground sm:text-xs">
+          <span className="fd-section-label">
             Todoist
           </span>
           <div className="flex items-center gap-0.5">
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
                 onClick={() => sync()}
                 aria-label="Sync tasks"
                 title="Sync tasks"
@@ -139,7 +139,7 @@ export function Sidebar({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
                 onClick={() => setTrashOpen(true)}
                 aria-label="Deleted tasks"
                 title="Deleted tasks"
@@ -150,7 +150,7 @@ export function Sidebar({
             </Tooltip>
             <Tooltip>
               <TooltipTrigger
-                className="inline-flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
                 onClick={() => onCollapsedChange(true)}
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
@@ -164,14 +164,14 @@ export function Sidebar({
 
         {/* Search */}
         <div className="px-3 pb-2">
-          <div className="flex h-8 items-center gap-2 rounded-md border border-border bg-background px-2.5">
+          <div className="fd-field flex h-8 items-center gap-2 px-2.5">
             <Search className="h-3.5 w-3.5 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              className="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
             />
           </div>
         </div>

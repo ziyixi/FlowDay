@@ -25,7 +25,7 @@ export function WeeklyReview({
       )}`;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 py-1">
       <DateNav
         label={weekLabel}
         onPrev={() => onDateChange(format(addWeeks(new Date(`${date}T00:00:00`), -1), "yyyy-MM-dd"))}
@@ -49,7 +49,7 @@ export function WeeklyReview({
             />
           </div>
 
-          <div>
+          <div className="fd-chart-panel">
             <h3 className="mb-3 text-sm font-medium">Daily Trend</h3>
             <div className="flex items-end gap-1.5" style={{ height: 128 }}>
               {data.days.map((day) => {
@@ -60,7 +60,7 @@ export function WeeklyReview({
                     <div className="flex w-full flex-col justify-end" style={{ height: 96 }}>
                       {day.loggedMins > 0 ? (
                         <div
-                          className="w-full rounded-t-sm bg-primary/80 transition-all"
+                          className="w-full rounded-t-sm bg-chart-2/75 transition-all"
                           style={{ height: `${height}%` }}
                           title={`${formatDuration(day.loggedMins)} logged`}
                         />
@@ -83,7 +83,7 @@ export function WeeklyReview({
           {data.byProject.length > 0 && (
             <div>
               <h3 className="mb-3 text-sm font-medium">Time by Project</h3>
-              <div className="space-y-2.5">
+              <div className="space-y-2.5 rounded-md border border-border/60 bg-background/25 p-3">
                 {data.byProject.map((project) => {
                   const maxMins = Math.max(...data.byProject.map((item) => item.loggedMins), 1);
                   return (
@@ -107,7 +107,7 @@ export function WeeklyReview({
                           className="h-full rounded-full"
                           style={{
                             width: `${(project.loggedMins / maxMins) * 100}%`,
-                            backgroundColor: project.projectColor ?? "var(--primary)",
+                            backgroundColor: project.projectColor ?? "var(--chart-2)",
                           }}
                         />
                       </div>
@@ -128,7 +128,7 @@ export function WeeklyReview({
                 {data.stuckTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center justify-between rounded-md border border-border/50 px-3 py-1.5"
+                    className="fd-soft-row flex items-center justify-between px-3 py-1.5"
                   >
                     <span className="truncate text-sm">{task.title}</span>
                     <span className="ml-2 shrink-0 text-xs text-amber-500">
@@ -143,10 +143,10 @@ export function WeeklyReview({
           {data.estimationAccuracy.length > 0 && (
             <div>
               <h3 className="mb-3 text-sm font-medium">Estimation Accuracy</h3>
-              <div className="overflow-hidden rounded-md border border-border">
+              <div className="overflow-hidden rounded-md border border-border/70 bg-card/55">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-border bg-muted/50">
+                    <tr className="border-b border-border/70 bg-muted/45">
                       <th className="px-3 py-1.5 text-left text-xs font-medium text-muted-foreground">
                         Task
                       </th>

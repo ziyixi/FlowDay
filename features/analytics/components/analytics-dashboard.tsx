@@ -39,12 +39,12 @@ export function AnalyticsDashboard({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex h-[85vh] flex-col overflow-hidden sm:max-w-3xl">
-        <DialogHeader>
+      <DialogContent className="fd-dialog-panel flex h-[85vh] flex-col overflow-hidden rounded-md sm:max-w-3xl">
+        <DialogHeader className="shrink-0">
           <DialogTitle>Analytics</DialogTitle>
         </DialogHeader>
 
-        <div className="flex w-fit shrink-0 items-center gap-1 rounded-md border border-border bg-muted/50 p-0.5">
+        <div className="fd-control-cluster flex w-fit shrink-0 items-center gap-1 p-0.5">
           <button
             onClick={() => setTab("daily")}
             className={cn(
@@ -80,7 +80,7 @@ export function AnalyticsDashboard({
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden pr-1">
           {tab === "daily" ? (
             <DailyReview
               key={`daily-${refreshKey}-${dailyDate}`}

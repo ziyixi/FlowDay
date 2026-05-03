@@ -39,7 +39,7 @@ function IconButton({
   return (
     <Tooltip>
       <TooltipTrigger
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
+        className="fd-icon-button h-8 w-8 sm:h-7 sm:w-7"
         onClick={onClick}
         aria-label={tooltip}
         title={tooltip}
@@ -90,21 +90,21 @@ export function TopBar() {
     format(currentDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
 
   return (
-    <header className="flex h-12 shrink-0 items-center justify-between border-b border-border/50 bg-background/80 px-4 backdrop-blur-md">
+    <header className="fd-topbar flex h-12 shrink-0 items-center justify-between px-4 backdrop-blur-md">
       {/* Left: Brand */}
       <div className="flex items-center gap-3">
-        <h1 className="text-base font-semibold tracking-tight">FlowDay</h1>
+        <h1 className="text-base font-semibold text-foreground">FlowDay</h1>
       </div>
 
       {/* Center: Date navigation + View toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 rounded-md bg-background/25 p-0.5">
         <IconButton onClick={() => navigateDate(-1)} tooltip="Previous day">
           <ChevronLeft className="h-4 w-4" />
         </IconButton>
 
         <button
           onClick={goToToday}
-          className="min-w-[140px] text-center text-sm font-medium text-foreground hover:text-foreground/80 transition-colors"
+          className="min-w-[148px] rounded-md px-2 py-1 text-center text-sm font-semibold text-foreground transition-colors hover:bg-accent/70"
         >
           {format(currentDate, "EEE, MMM d")}
           {!isToday && (
@@ -122,14 +122,14 @@ export function TopBar() {
           {!isToday && (
             <button
               onClick={goToToday}
-              className="w-full rounded-md border border-border bg-muted/50 px-2 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-xs"
+              className="fd-control-cluster w-full px-2 py-0.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-xs"
             >
               Today
             </button>
           )}
         </div>
 
-        <div className="ml-3 flex items-center rounded-md border border-border bg-muted/50 p-0.5">
+        <div className="fd-control-cluster ml-3 flex items-center p-0.5">
           {([1, 3, 5] as ViewMode[]).map((mode) => (
             <Toggle
               key={mode}
@@ -137,7 +137,7 @@ export function TopBar() {
               onPressedChange={() => setViewMode(mode)}
               aria-label={`${mode}-day view`}
               title={`${mode}-day view`}
-              className="h-7 w-8 rounded-sm px-0 text-sm font-medium data-[state=on]:bg-background data-[state=on]:shadow-sm sm:h-6 sm:w-7 sm:text-xs"
+              className="h-7 w-8 rounded-sm px-0 text-sm font-medium text-muted-foreground data-[state=on]:bg-background data-[state=on]:text-foreground data-[state=on]:shadow-sm sm:h-6 sm:w-7 sm:text-xs"
             >
               {mode}
             </Toggle>
@@ -146,7 +146,7 @@ export function TopBar() {
       </div>
 
       {/* Right: Timer + Theme toggle + Settings */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1.5">
         <MiscTimeButton />
         <TimerDisplay />
         <PopOutTimerButton />

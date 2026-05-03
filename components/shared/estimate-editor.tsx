@@ -83,7 +83,7 @@ export function EstimateEditor({ task, variant }: EstimateEditorProps) {
         render={<button />}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "tabular-nums transition-colors cursor-pointer hover:text-foreground",
+          "cursor-pointer rounded-sm px-1 py-0.5 tabular-nums transition-colors hover:bg-accent/55 hover:text-foreground",
           variant === "inline" && "mt-0.5 shrink-0 text-xs text-muted-foreground",
           variant === "flow" && "text-muted-foreground"
         )}

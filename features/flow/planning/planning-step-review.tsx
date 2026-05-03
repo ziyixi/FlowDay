@@ -33,7 +33,7 @@ export function PlanningStepReview({
               <div
                 key={task.id}
                 data-testid={`planning-review-row-${task.id}`}
-                className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2"
+                className="fd-soft-row flex items-center gap-2.5 px-3 py-2"
               >
                 <span className="w-4 text-right text-xs tabular-nums text-muted-foreground/50">
                   {index + 1}
@@ -45,7 +45,7 @@ export function PlanningStepReview({
                 <EstimateEditor task={task} variant="inline" />
                 <button
                   onClick={() => onRemove(task.id)}
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-500/20 hover:text-red-600"
+                  className="fd-icon-button h-6 w-6 shrink-0 hover:bg-red-500/15 hover:text-red-600"
                 >
                   <Minus className="h-3.5 w-3.5" />
                 </button>
@@ -54,12 +54,12 @@ export function PlanningStepReview({
           })}
         </div>
       ) : (
-        <div className="mt-4 flex h-20 items-center justify-center rounded-md border border-dashed border-border/60">
+        <div className="mt-4 flex h-20 items-center justify-center rounded-md border border-dashed border-border/60 bg-background/35">
           <p className="text-xs text-muted-foreground/60">No tasks in flow yet</p>
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-end gap-2">
+      <div className="mt-4 flex items-center justify-end gap-2 border-t border-border/55 pt-4">
         <Button size="sm" variant="ghost" onClick={onBack}>
           Back
         </Button>

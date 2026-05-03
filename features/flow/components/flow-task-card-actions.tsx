@@ -39,10 +39,10 @@ export function FlowTaskCardActions({
   onRemove,
 }: FlowTaskCardActionsProps) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-0.5 rounded-md bg-background/28 p-0.5">
       <button
         className={cn(
-          "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+          "fd-icon-button",
           "h-8 w-8 sm:h-7 sm:w-7",
           isActive
             ? "text-primary hover:bg-primary/10"
@@ -66,7 +66,7 @@ export function FlowTaskCardActions({
       />
       <button
         className={cn(
-          "inline-flex h-7 w-7 items-center justify-center rounded-md transition-colors",
+          "fd-icon-button",
           "h-8 w-8 sm:h-7 sm:w-7",
           showNote || hasNote
             ? "text-primary hover:bg-primary/10"
@@ -79,21 +79,21 @@ export function FlowTaskCardActions({
         <StickyNote className="h-3.5 w-3.5" />
       </button>
       <button
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-green-500/20 hover:text-green-600 sm:h-7 sm:w-7"
+        className="fd-icon-button h-8 w-8 hover:bg-chart-1/15 hover:text-foreground sm:h-7 sm:w-7"
         onClick={onComplete}
         aria-label="Complete task"
       >
         <Check className="h-3.5 w-3.5" />
       </button>
       <button
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
+        className="fd-icon-button h-8 w-8 sm:h-7 sm:w-7"
         onClick={onSkip}
         aria-label="Skip task"
       >
         <ChevronsDown className="h-3.5 w-3.5" />
       </button>
       <button
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-red-500/20 hover:text-red-600 sm:h-7 sm:w-7"
+        className="fd-icon-button h-8 w-8 hover:bg-red-500/15 hover:text-red-600 sm:h-7 sm:w-7"
         onClick={onRemove}
         title="Return to pool"
         aria-label="Return to pool"

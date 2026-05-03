@@ -45,7 +45,7 @@ export function TaskCard({ task }: { task: Task }) {
       <EstimateEditor task={task} variant="inline" />
       <button
         onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }}
-        className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded text-muted-foreground/60 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100 sm:h-5 sm:w-5"
+        className="fd-icon-button h-6 w-6 shrink-0 opacity-0 transition-all hover:text-red-500 group-hover:opacity-100 sm:h-5 sm:w-5"
         title="Delete task"
       >
         <Trash2 className="h-3 w-3" />
@@ -54,7 +54,7 @@ export function TaskCard({ task }: { task: Task }) {
   );
 
   const cardClassName = cn(
-    "group flex items-start gap-2.5 rounded-md border border-border bg-card px-2.5 py-2 shadow-[0_1px_2px_oklch(0_0_0/0.04)] transition-colors hover:bg-accent cursor-grab active:cursor-grabbing",
+    "group flex cursor-grab items-start gap-2.5 rounded-md border border-border/75 bg-card/78 px-2.5 py-2 shadow-[0_1px_2px_oklch(0_0_0/0.025)] transition-colors hover:border-border hover:bg-accent/70 active:cursor-grabbing",
     isDragSource && "opacity-50"
   );
 

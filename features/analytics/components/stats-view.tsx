@@ -32,7 +32,7 @@ export function StatsView() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 py-1">
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-sm font-medium">Work Patterns</h3>
@@ -40,7 +40,7 @@ export function StatsView() {
             Across {data.totalWeeks} week{data.totalWeeks !== 1 ? "s" : ""} of data
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-md border border-border bg-muted/50 p-0.5">
+        <div className="fd-control-cluster flex items-center gap-1 p-0.5">
           <button
             onClick={() => setMode("frequency")}
             className={cn(
@@ -66,7 +66,7 @@ export function StatsView() {
         </div>
       </div>
 
-      <div>
+      <div className="fd-chart-panel">
         <div>
           <div className="mb-1 ml-10 flex gap-px">
             {DAY_LABELS.map((day) => (
@@ -102,7 +102,7 @@ export function StatsView() {
                         backgroundColor:
                           value === 0
                             ? "var(--muted)"
-                            : `color-mix(in oklch, var(--primary) ${alpha}%, transparent)`,
+                            : `color-mix(in oklch, var(--chart-2) ${alpha}%, transparent)`,
                       }}
                       title={tooltip}
                     />
@@ -126,7 +126,7 @@ export function StatsView() {
                 backgroundColor:
                   intensity === 0
                     ? "var(--muted)"
-                    : `color-mix(in oklch, var(--primary) ${alpha}%, transparent)`,
+                    : `color-mix(in oklch, var(--chart-2) ${alpha}%, transparent)`,
               }}
             />
           );
@@ -160,7 +160,7 @@ function PeakHoursSummary({
   if (top.length === 0) return null;
 
   return (
-    <div>
+    <div className="rounded-md border border-border/60 bg-background/25 p-3">
       <h3 className="mb-2 text-sm font-medium">Peak Work Hours</h3>
       <div className="space-y-1.5">
         {top.map((slot, index) => {
@@ -172,7 +172,7 @@ function PeakHoursSummary({
               </span>
               <div className="h-2 flex-1 overflow-hidden rounded-full bg-muted">
                 <div
-                  className="h-full rounded-full bg-primary/70"
+                  className="h-full rounded-full bg-chart-2/70"
                   style={{ width: `${pct}%` }}
                 />
               </div>

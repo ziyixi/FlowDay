@@ -47,7 +47,7 @@ export function AppShell({ e2eEnabled = false }: { e2eEnabled?: boolean }) {
             collapsed={sidebarCollapsed}
             onCollapsedChange={setSidebarCollapsed}
           />
-          <main className="flex flex-1 overflow-hidden bg-background">
+          <main className="fd-app-canvas flex flex-1 overflow-hidden">
             {viewMode === 1 ? (
               <div className="flex flex-1 flex-col overflow-y-auto">
                 <DayFlow date={dates[0]} />

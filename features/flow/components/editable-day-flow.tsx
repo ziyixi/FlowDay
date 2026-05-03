@@ -69,13 +69,15 @@ export function EditableDayFlow({
           ref={dropRef}
           data-testid="day-flow-empty-state"
           className={cn(
-            "m-4 flex flex-1 flex-col rounded-lg border-2 border-dashed transition-colors",
-            isDropTarget ? "border-primary/40 bg-primary/5" : "border-transparent"
+            "m-6 flex flex-1 flex-col rounded-md border border-dashed transition-colors",
+            isDropTarget
+              ? "border-primary/40 bg-primary/5"
+              : "border-border/55 bg-card/35"
           )}
         >
           <div className="flex flex-1 items-center justify-center">
             <div className="text-center">
-              <h2 className="text-lg font-medium text-foreground/80">
+              <h2 className="text-lg font-semibold text-foreground/85">
                 Your day flow will appear here
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
@@ -96,8 +98,8 @@ export function EditableDayFlow({
 
   return (
     <div className="flex flex-1 flex-col">
-      <div ref={dropRef} className="flex-1 overflow-y-auto px-6 py-4">
-        <div className="mx-auto max-w-2xl space-y-2">
+      <div ref={dropRef} className="flex-1 overflow-y-auto px-6 py-5">
+        <div className="mx-auto max-w-[760px] space-y-2.5">
           {flowTasks.map((task, index) => (
             <FlowTaskCard
               key={task.id}
@@ -111,7 +113,7 @@ export function EditableDayFlow({
 
         <div
           className={cn(
-            "mx-auto mt-2 max-w-2xl rounded-lg border-2 border-dashed transition-all duration-200",
+            "mx-auto mt-3 max-w-[760px] rounded-md border border-dashed transition-all duration-200",
             isDropTarget
               ? "border-primary/40 bg-primary/5 py-8"
               : "border-transparent py-4"
@@ -125,8 +127,8 @@ export function EditableDayFlow({
         </div>
 
         {completedTasks.length > 0 && (
-          <div className="mx-auto mt-6 max-w-2xl">
-            <p className="mb-2 text-sm font-medium text-muted-foreground sm:text-xs">
+          <div className="mx-auto mt-7 max-w-[760px]">
+            <p className="fd-section-label mb-2">
               Completed ({completedTasks.length})
             </p>
             <div className="space-y-1.5">
@@ -164,7 +166,7 @@ function CompletedTaskRow({
   return (
     <div
       data-testid="completed-task-row"
-      className="group rounded-md border border-border/50 bg-muted/30 px-4 py-2"
+      className="fd-muted-row group px-4 py-2"
     >
       <div className="flex items-center gap-2.5">
         <Check className="h-3.5 w-3.5 shrink-0 text-green-500" />
@@ -179,7 +181,7 @@ function CompletedTaskRow({
         </div>
         <button
           onClick={() => uncompleteTask(task.id, date)}
-          className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 transition-opacity hover:bg-accent hover:text-foreground group-hover:opacity-100 sm:h-6 sm:w-6"
+          className="fd-icon-button h-7 w-7 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 sm:h-6 sm:w-6"
           aria-label="Undo complete task"
         >
           <RotateCcw className="h-3 w-3" />

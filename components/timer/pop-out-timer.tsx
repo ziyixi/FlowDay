@@ -211,7 +211,7 @@ export function PopOutTimerButton() {
         <button
           onClick={() => void open()}
           title="Pop out timer"
-          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+          className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
         >
           <PictureInPicture2 className="h-3 w-3" />
         </button>

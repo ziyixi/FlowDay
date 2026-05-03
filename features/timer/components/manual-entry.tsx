@@ -56,7 +56,7 @@ export function ManualEntry({
     <>
       <Popover open={isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
-          className="relative inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-7 sm:w-7"
+          className="fd-icon-button relative h-8 w-8 sm:h-7 sm:w-7"
           title="Time entries"
         >
           <Clock className="h-3.5 w-3.5" />

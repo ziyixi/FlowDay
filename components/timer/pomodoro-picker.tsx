@@ -58,7 +58,7 @@ export function PomodoroPicker({
         render={<button />}
         onClick={(e) => e.stopPropagation()}
         className={cn(
-          "inline-flex h-8 w-8 items-center justify-center rounded-md transition-colors sm:h-7 sm:w-7",
+          "fd-icon-button h-8 w-8 sm:h-7 sm:w-7",
           isActivePomodoro
             ? "text-primary hover:bg-primary/10"
             : "text-muted-foreground hover:bg-accent hover:text-foreground"

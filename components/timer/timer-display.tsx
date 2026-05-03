@@ -63,7 +63,7 @@ function TimerContent() {
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1">
+    <div className="fd-control-cluster flex h-8 items-center gap-2 px-2.5 py-1 sm:h-7">
       <div className="relative flex h-2 w-2">
         {status === "running" && (
           <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary/75" />
@@ -80,7 +80,7 @@ function TimerContent() {
       </span>
 
       {isPomodoro && (
-        <span className="rounded bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary sm:text-[10px]">
+        <span className="rounded-sm bg-primary/10 px-1.5 py-0.5 text-xs font-medium text-primary sm:text-[10px]">
           Pomodoro{pomodoroLabel ? ` ${pomodoroLabel}` : ""}
         </span>
       )}
@@ -94,7 +94,7 @@ function TimerContent() {
       <div className="flex items-center gap-0.5">
         <button
           onClick={() => (status === "running" ? pauseTimer() : resumeTimer())}
-          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:h-6 sm:w-6"
+          className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
         >
           {status === "running" ? (
             <Pause className="h-3 w-3" />
@@ -106,7 +106,7 @@ function TimerContent() {
           onClick={handleComplete}
           aria-label={isMiscTask ? "Save misc time" : "Complete task"}
           title={isMiscTask ? "Save misc time" : "Complete task"}
-          className="inline-flex h-7 w-7 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-green-500/20 hover:text-green-600 sm:h-6 sm:w-6"
+          className="fd-icon-button h-7 w-7 hover:bg-chart-1/15 hover:text-foreground sm:h-6 sm:w-6"
         >
           <Check className="h-3 w-3" />
         </button>

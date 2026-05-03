@@ -60,7 +60,10 @@ export function PlanningStepAddTasks({
               <div
                 key={task.id}
                 data-testid={`planning-add-row-${task.id}`}
-                className="flex items-center gap-2.5 rounded-md border border-border px-3 py-2"
+                className={cn(
+                  "flex items-center gap-2.5 px-3 py-2",
+                  flowTaskIds.has(task.id) ? "fd-muted-row opacity-65" : "fd-soft-row"
+                )}
               >
                 <span className={cn("h-2 w-2 shrink-0 rounded-full", priorityColor)} />
                 <div className="min-w-0 flex-1">
@@ -79,7 +82,7 @@ export function PlanningStepAddTasks({
                 <button
                   data-testid={`planning-add-task-${task.id}`}
                   onClick={() => onAdd(task.id)}
-                  className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-primary transition-colors hover:bg-primary/10"
+                  className="fd-icon-button h-6 w-6 shrink-0 text-primary hover:bg-primary/10"
                   aria-label={`Add ${task.title}`}
                 >
                   <Plus className="h-3.5 w-3.5" />
@@ -89,7 +92,7 @@ export function PlanningStepAddTasks({
           })}
         </div>
       ) : (
-        <div className="mt-4 flex h-20 items-center justify-center rounded-md border border-dashed border-border/60">
+        <div className="mt-4 flex h-20 items-center justify-center rounded-md border border-dashed border-border/60 bg-background/35">
           <p className="text-xs text-muted-foreground/60">
             {flowCount > 0
               ? "All available tasks added to flow"
@@ -98,8 +101,8 @@ export function PlanningStepAddTasks({
         </div>
       )}
 
-      <div className="mt-4 flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
+      <div className="mt-4 flex items-center justify-between border-t border-border/55 pt-4">
+        <span className="rounded-sm bg-background/45 px-2 py-1 text-xs text-muted-foreground">
           {flowCount} task{flowCount !== 1 ? "s" : ""} in flow
         </span>
         <Button size="sm" onClick={onNext}>
