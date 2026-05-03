@@ -24,6 +24,7 @@ import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { useTodoistStore } from "@/features/todoist/store";
 import type { Task } from "@/lib/types/task";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { fetchJsonNoStore } from "@/lib/client/http";
 import { cn } from "@/lib/utils";
 
 interface DeletedTasksDialogProps {
@@ -58,13 +59,13 @@ export function DeletedTasksDialog({
     if (!open) return;
 
     let cancelled = false;
-    fetch("/api/tasks/deleted", { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((tasks: Task[]) => {
+    fetchJsonNoStore<Task[]>("/api/tasks/deleted")
+      .then((tasks) => {
         if (cancelled) return;
-        setAllDeleted(tasks);
-        if (tasks.length > 0) {
-          const sorted = [...tasks].sort((a, b) =>
+        const nextTasks = tasks ?? [];
+        setAllDeleted(nextTasks);
+        if (nextTasks.length > 0) {
+          const sorted = [...nextTasks].sort((a, b) =>
             (b.deletedAt ?? "").localeCompare(a.deletedAt ?? "")
           );
           const mostRecent = sorted[0].deletedAt?.slice(0, 10) ?? null;

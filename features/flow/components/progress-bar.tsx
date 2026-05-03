@@ -3,7 +3,12 @@
 import { useState, useEffect } from "react";
 import { AlertTriangle } from "lucide-react";
 import { useFlowTasksForDate, useCompletedTasksForDate, useFlowStore } from "@/features/flow/store";
+import { fetchJsonNoStore } from "@/lib/client/http";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import {
+  sumEntryDurationSeconds,
+  type DurationEntryLike,
+} from "@/lib/utils/time-entries";
 import { useTimerStore } from "@/features/timer/store";
 import { cn } from "@/lib/utils";
 
@@ -28,11 +33,12 @@ export function ProgressBar({ date }: { date: string }) {
   const entryRevision = useTimerStore((s) => s.entryRevision);
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: { durationS: number | null }[]) => {
+    fetchJsonNoStore<DurationEntryLike[]>(
+      `/api/entries?date=${encodeURIComponent(date)}`
+    )
+      .then((entries) => {
         if (!cancelled) {
-          setActualSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
+          setActualSeconds(sumEntryDurationSeconds(entries));
         }
       })
       .catch(() => {});

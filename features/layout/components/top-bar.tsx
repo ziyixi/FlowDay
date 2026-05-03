@@ -12,11 +12,7 @@ import {
   BarChart3,
 } from "lucide-react";
 import { Toggle } from "@/components/ui/toggle";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipIconButton } from "@/components/ui/tooltip-icon-button";
 import { useTheme } from "@/components/theme-provider";
 import { useFlowStore, type ViewMode } from "@/features/flow/store";
 import { MiscTimeButton } from "@/components/timer/misc-time-button";
@@ -24,32 +20,7 @@ import { TimerDisplay } from "@/components/timer/timer-display";
 import { PopOutTimerButton } from "@/components/timer/pop-out-timer";
 import { SettingsDialog } from "@/features/settings/components/settings-dialog";
 import { AnalyticsDashboard } from "@/features/analytics/components/analytics-dashboard";
-
-function IconButton({
-  onClick,
-  children,
-  tooltip,
-  tooltipSide,
-}: {
-  onClick?: () => void;
-  children: React.ReactNode;
-  tooltip: string;
-  tooltipSide?: "top" | "bottom" | "left" | "right";
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        className="fd-icon-button h-8 w-8 sm:h-7 sm:w-7"
-        onClick={onClick}
-        aria-label={tooltip}
-        title={tooltip}
-      >
-        {children}
-      </TooltipTrigger>
-      <TooltipContent side={tooltipSide}>{tooltip}</TooltipContent>
-    </Tooltip>
-  );
-}
+import { formatLocalDate } from "@/lib/utils/time";
 
 export function TopBar() {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -65,7 +36,7 @@ export function TopBar() {
     setCurrentDate(format(addDays(currentDate, direction), "yyyy-MM-dd"));
   };
 
-  const goToToday = () => setCurrentDate(format(new Date(), "yyyy-MM-dd"));
+  const goToToday = () => setCurrentDate(formatLocalDate());
 
   const cycleTheme = () => {
     const order: Array<"light" | "dark" | "system"> = [
@@ -87,7 +58,7 @@ export function TopBar() {
     );
 
   const isToday =
-    format(currentDate, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd");
+    format(currentDate, "yyyy-MM-dd") === formatLocalDate();
 
   return (
     <header className="fd-topbar flex h-12 shrink-0 items-center justify-between px-4 backdrop-blur-md">
@@ -98,9 +69,13 @@ export function TopBar() {
 
       {/* Center: Date navigation + View toggle */}
       <div className="flex items-center gap-2 rounded-md bg-background/25 p-0.5">
-        <IconButton onClick={() => navigateDate(-1)} tooltip="Previous day">
+        <TooltipIconButton
+          className="h-8 w-8 sm:h-7 sm:w-7"
+          onClick={() => navigateDate(-1)}
+          label="Previous day"
+        >
           <ChevronLeft className="h-4 w-4" />
-        </IconButton>
+        </TooltipIconButton>
 
         <button
           onClick={goToToday}
@@ -114,9 +89,13 @@ export function TopBar() {
           )}
         </button>
 
-        <IconButton onClick={() => navigateDate(1)} tooltip="Next day">
+        <TooltipIconButton
+          className="h-8 w-8 sm:h-7 sm:w-7"
+          onClick={() => navigateDate(1)}
+          label="Next day"
+        >
           <ChevronRight className="h-4 w-4" />
-        </IconButton>
+        </TooltipIconButton>
 
         <div className="ml-1 w-[54px]">
           {!isToday && (
@@ -151,17 +130,29 @@ export function TopBar() {
         <TimerDisplay />
         <PopOutTimerButton />
 
-        <IconButton onClick={() => setAnalyticsOpen(true)} tooltip="Analytics">
+        <TooltipIconButton
+          className="h-8 w-8 sm:h-7 sm:w-7"
+          onClick={() => setAnalyticsOpen(true)}
+          label="Analytics"
+        >
           <BarChart3 className="h-4 w-4" />
-        </IconButton>
+        </TooltipIconButton>
 
-        <IconButton onClick={cycleTheme} tooltip={`Theme: ${theme}`}>
+        <TooltipIconButton
+          className="h-8 w-8 sm:h-7 sm:w-7"
+          onClick={cycleTheme}
+          label={`Theme: ${theme}`}
+        >
           {themeIcon}
-        </IconButton>
+        </TooltipIconButton>
 
-        <IconButton onClick={() => setSettingsOpen(true)} tooltip="Settings">
+        <TooltipIconButton
+          className="h-8 w-8 sm:h-7 sm:w-7"
+          onClick={() => setSettingsOpen(true)}
+          label="Settings"
+        >
           <Settings className="h-4 w-4" />
-        </IconButton>
+        </TooltipIconButton>
 
         <AnalyticsDashboard open={analyticsOpen} onOpenChange={setAnalyticsOpen} />
         <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />

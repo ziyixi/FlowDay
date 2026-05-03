@@ -1,7 +1,7 @@
 "use client";
 
 import { addDays, format } from "date-fns";
-import { formatDuration } from "@/lib/utils/time";
+import { formatDuration, formatLocalDate } from "@/lib/utils/time";
 import { cn } from "@/lib/utils";
 import type { DailyAnalyticsData } from "../contracts";
 import { analyticsUrl, useAnalyticsResource } from "../hooks/use-analytics-resource";
@@ -32,7 +32,7 @@ export function DailyReview({
           label={dateLabel}
           onPrev={() => onDateChange(format(addDays(new Date(`${date}T00:00:00`), -1), "yyyy-MM-dd"))}
           onNext={() => onDateChange(format(addDays(new Date(`${date}T00:00:00`), 1), "yyyy-MM-dd"))}
-          onToday={() => onDateChange(format(new Date(), "yyyy-MM-dd"))}
+          onToday={() => onDateChange(formatLocalDate())}
         />
         <div className="py-8 text-center text-sm text-muted-foreground">Loading...</div>
       </div>
@@ -58,7 +58,7 @@ export function DailyReview({
         label={dateLabel}
         onPrev={() => onDateChange(format(addDays(new Date(`${date}T00:00:00`), -1), "yyyy-MM-dd"))}
         onNext={() => onDateChange(format(addDays(new Date(`${date}T00:00:00`), 1), "yyyy-MM-dd"))}
-        onToday={() => onDateChange(format(new Date(), "yyyy-MM-dd"))}
+        onToday={() => onDateChange(formatLocalDate())}
       />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

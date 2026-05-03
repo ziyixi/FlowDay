@@ -2,15 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { useTimerStore } from "@/features/timer/store";
+import { fetchJsonNoStore } from "@/lib/client/http";
+import { useLoggedSecondsByTaskForDate } from "@/lib/hooks/use-task-logged-seconds";
 
 interface NoteRow {
   taskId: string;
   content: string;
-}
-
-interface EntryRow {
-  taskId: string;
-  durationS: number | null;
 }
 
 export function useDayNotesMap(date: string): Record<string, string> {
@@ -18,12 +15,11 @@ export function useDayNotesMap(date: string): Record<string, string> {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(`/api/notes?date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((rows: NoteRow[]) => {
+    fetchJsonNoStore<NoteRow[]>(`/api/notes?date=${encodeURIComponent(date)}`)
+      .then((rows) => {
         if (cancelled) return;
         const next: Record<string, string> = {};
-        for (const row of rows) {
+        for (const row of rows ?? []) {
           next[row.taskId] = row.content ?? "";
         }
         setNotesByTask(next);
@@ -41,29 +37,6 @@ export function useDayNotesMap(date: string): Record<string, string> {
 }
 
 export function useDayLoggedSecondsMap(date: string): Record<string, number> {
-  const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
   const entryRevision = useTimerStore((state) => state.entryRevision);
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((response) => (response.ok ? response.json() : []))
-      .then((entries: EntryRow[]) => {
-        if (cancelled) return;
-        const next: Record<string, number> = {};
-        for (const entry of entries) {
-          next[entry.taskId] = (next[entry.taskId] ?? 0) + (entry.durationS ?? 0);
-        }
-        setSecondsByTask(next);
-      })
-      .catch(() => {
-        if (!cancelled) setSecondsByTask({});
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [date, entryRevision]);
-
-  return secondsByTask;
+  return useLoggedSecondsByTaskForDate(date, entryRevision);
 }

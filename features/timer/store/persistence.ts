@@ -1,4 +1,8 @@
-import { fetchNoStore, jsonRequestInit } from "@/lib/client/http";
+import { fetchJsonNoStore, jsonRequestInit } from "@/lib/client/http";
+import {
+  sumEntryDurationSeconds,
+  type DurationEntryLike,
+} from "@/lib/utils/time-entries";
 import type { TimerState, ServerSessionPayload } from "./types";
 import { currentSegmentSeconds } from "./helpers";
 
@@ -16,10 +20,10 @@ interface PersistedTimerSession {
 }
 
 export async function loadPersistedTimerSession(): Promise<ServerSessionPayload | null> {
-  const response = await fetchNoStore("/api/timer/session");
-  if (!response.ok) return null;
-  const payload = (await response.json()) as { session: ServerSessionPayload | null };
-  return payload.session;
+  const payload = await fetchJsonNoStore<{ session: ServerSessionPayload | null }>(
+    "/api/timer/session"
+  );
+  return payload?.session ?? null;
 }
 
 export function persistCurrentSession(session: PersistedTimerSession | null) {
@@ -86,12 +90,10 @@ export async function saveTimerSegment(
 
 export async function fetchPriorSeconds(taskId: string): Promise<number> {
   try {
-    const response = await fetchNoStore(
+    const entries = await fetchJsonNoStore<DurationEntryLike[]>(
       `/api/entries?taskId=${encodeURIComponent(taskId)}`
     );
-    if (!response.ok) return 0;
-    const entries = (await response.json()) as Array<{ durationS: number | null }>;
-    return entries.reduce((sum, entry) => sum + (entry.durationS ?? 0), 0);
+    return sumEntryDurationSeconds(entries);
   } catch {
     return 0;
   }

@@ -1,10 +1,10 @@
-import { format } from "date-fns";
-import { fetchNoStore, jsonRequestInit } from "@/lib/client/http";
+import { fetchJsonNoStore, jsonRequestInit } from "@/lib/client/http";
+import { formatLocalDate } from "@/lib/utils/time";
 import type { FlowMutationAction, FlowStateResponse } from "../contracts";
 import type { SettingsResponse } from "@/features/settings/contracts";
 
 export function todayStr() {
-  return format(new Date(), "yyyy-MM-dd");
+  return formatLocalDate();
 }
 
 export function persistFlowMutation(
@@ -26,9 +26,8 @@ export function persistPlanningCompleted(date: string) {
 }
 
 export async function loadFlowState(): Promise<FlowStateResponse | null> {
-  const response = await fetchNoStore("/api/flows");
-  if (!response.ok) return null;
-  const data = (await response.json()) as FlowStateResponse;
+  const data = await fetchJsonNoStore<FlowStateResponse>("/api/flows");
+  if (!data) return null;
   return {
     flows: data.flows ?? {},
     completedTasks: data.completedTasks ?? {},
@@ -39,17 +38,12 @@ export async function loadHydrationData(today: string): Promise<{
   flowState: FlowStateResponse | null;
   settings: SettingsResponse | null;
 }> {
-  const [flowResponse, settingsResponse] = await Promise.all([
-    fetchNoStore("/api/flows"),
-    fetchNoStore(`/api/settings?today=${encodeURIComponent(today)}`),
+  const [flowState, settings] = await Promise.all([
+    fetchJsonNoStore<FlowStateResponse>("/api/flows"),
+    fetchJsonNoStore<SettingsResponse>(
+      `/api/settings?today=${encodeURIComponent(today)}`
+    ),
   ]);
-
-  const flowState = flowResponse.ok
-    ? (((await flowResponse.json()) as FlowStateResponse) ?? null)
-    : null;
-  const settings = settingsResponse.ok
-    ? (((await settingsResponse.json()) as SettingsResponse) ?? null)
-    : null;
 
   return { flowState, settings };
 }

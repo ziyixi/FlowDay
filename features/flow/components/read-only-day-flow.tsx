@@ -4,9 +4,9 @@ import { Check, StickyNote } from "lucide-react";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration } from "@/lib/utils/time";
 import { cn } from "@/lib/utils";
-import { ProgressBar } from "@/components/flow/progress-bar";
 import type { Task } from "@/lib/types/task";
 import { useDayNotesMap } from "../hooks/use-day-flow-data";
+import { ProgressBar } from "./progress-bar";
 
 export function ReadOnlyDayFlow({
   flowTasks,

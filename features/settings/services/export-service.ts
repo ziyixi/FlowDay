@@ -8,6 +8,7 @@ import {
   getTasksByIds,
 } from "@/lib/db/queries/tasks";
 import { serviceError, serviceOk, type ServiceResult } from "@/lib/server/service-result";
+import { entryDurationSeconds } from "@/lib/utils/time-entries";
 import type { ExportDataType, ExportFormat } from "../contracts";
 
 function escapeCsvField(value: string): string {
@@ -42,7 +43,7 @@ function exportEntries(
     project: taskMap.get(entry.taskId)?.projectName ?? "",
     startTime: entry.startTime,
     endTime: entry.endTime ?? "",
-    durationMins: entry.durationS ? Math.round(entry.durationS / 60) : 0,
+    durationMins: Math.round(entryDurationSeconds(entry) / 60),
     source: entry.source,
   }));
 
@@ -98,7 +99,10 @@ function exportFlows(
   const timeByTaskDate = new Map<string, number>();
   for (const entry of entries) {
     const key = `${entry.flowDate}:${entry.taskId}`;
-    timeByTaskDate.set(key, (timeByTaskDate.get(key) ?? 0) + (entry.durationS ?? 0));
+    timeByTaskDate.set(
+      key,
+      (timeByTaskDate.get(key) ?? 0) + entryDurationSeconds(entry)
+    );
   }
 
   const rows = flowEntries.map((entry) => {

@@ -14,6 +14,11 @@ import {
 } from "@/lib/db/queries/analytics";
 import { getSetting } from "@/lib/db/queries/settings";
 import { serviceError, serviceOk, type ServiceResult } from "@/lib/server/service-result";
+import {
+  entryDurationSeconds,
+  mapEntrySecondsByTask,
+  sumEntryDurationSeconds,
+} from "@/lib/utils/time-entries";
 import type {
   DailyAnalyticsData,
   WeeklyAnalyticsData,
@@ -128,11 +133,7 @@ function computeDailyAnalytics(date: string, timeZone?: string): DailyAnalyticsD
   const taskMap = new Map(getTasksByIds(allTaskIds).map((task) => [task.id, task]));
   const completedSet = new Set(completedEntries.map((row) => row.taskId));
 
-  const timeByTask = new Map<string, number>();
-  for (const entry of timeEntryRows) {
-    const seconds = entry.durationS ?? 0;
-    timeByTask.set(entry.taskId, (timeByTask.get(entry.taskId) ?? 0) + seconds);
-  }
+  const secondsByTask = mapEntrySecondsByTask(timeEntryRows);
 
   const tasks = allTaskIds.map((id) => {
     const task = taskMap.get(id);
@@ -142,7 +143,7 @@ function computeDailyAnalytics(date: string, timeZone?: string): DailyAnalyticsD
       projectName: task?.projectName ?? null,
       projectColor: task?.projectColor ?? null,
       estimatedMins: task?.estimatedMins ?? null,
-      loggedMins: Math.round((timeByTask.get(id) ?? 0) / 60),
+      loggedMins: Math.round((secondsByTask[id] ?? 0) / 60),
       completed: completedSet.has(id),
     };
   });
@@ -151,9 +152,7 @@ function computeDailyAnalytics(date: string, timeZone?: string): DailyAnalyticsD
     (sum, task) => sum + (task.estimatedMins ?? 0),
     0
   );
-  const totalLoggedMins = Math.round(
-    timeEntryRows.reduce((sum, entry) => sum + (entry.durationS ?? 0), 0) / 60
-  );
+  const totalLoggedMins = Math.round(sumEntryDurationSeconds(timeEntryRows) / 60);
 
   const hourlyMins = new Array(24).fill(0);
   for (const entry of timeEntryRows) {
@@ -209,9 +208,9 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
         .map((row) => row.taskId),
     ]);
     const completed = allCompletedEntries.filter((row) => row.flowDate === dateStr);
-    const loggedSecs = allTimeEntries
-      .filter((entry) => entry.flowDate === dateStr)
-      .reduce((sum, entry) => sum + (entry.durationS ?? 0), 0);
+    const loggedSecs = sumEntryDurationSeconds(
+      allTimeEntries.filter((entry) => entry.flowDate === dateStr)
+    );
 
     return {
       date: dateStr,
@@ -233,7 +232,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
     if (!projectMap.has(project)) {
       projectMap.set(project, { loggedSecs: 0, completed: new Set(), color });
     }
-    projectMap.get(project)!.loggedSecs += entry.durationS ?? 0;
+    projectMap.get(project)!.loggedSecs += entryDurationSeconds(entry);
   }
   for (const entry of allCompletedEntries) {
     const task = taskMap.get(entry.taskId);
@@ -282,9 +281,9 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
     .map((row) => {
       const task = taskMap.get(row.taskId);
       if (!task || task.estimatedMins == null || task.estimatedMins <= 0) return null;
-      const loggedSecs = allTimeEntries
-        .filter((entry) => entry.taskId === row.taskId)
-        .reduce((sum, entry) => sum + (entry.durationS ?? 0), 0);
+      const loggedSecs = sumEntryDurationSeconds(
+        allTimeEntries.filter((entry) => entry.taskId === row.taskId)
+      );
       if (loggedSecs === 0) return null;
       return {
         id: row.taskId,
@@ -322,7 +321,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
 
   const totalCompleted = new Set(allCompletedEntries.map((row) => row.taskId)).size;
   const totalLoggedMins = Math.round(
-    allTimeEntries.reduce((sum, entry) => sum + (entry.durationS ?? 0), 0) / 60
+    sumEntryDurationSeconds(allTimeEntries) / 60
   );
   const activeDays = days.filter((day) => day.tasksPlanned > 0).length;
 

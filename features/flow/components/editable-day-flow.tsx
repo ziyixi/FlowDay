@@ -1,17 +1,16 @@
 "use client";
 
 import { useState } from "react";
-import { format } from "date-fns";
 import { useDroppable } from "@dnd-kit/react";
 import { Check, RotateCcw, Sunrise } from "lucide-react";
 import { useFlowStore } from "@/features/flow/store";
 import { Button } from "@/components/ui/button";
-import { ProgressBar } from "@/components/flow/progress-bar";
 import { PlanningWizard } from "@/features/flow/planning/planning-wizard";
 import { FlowTaskCard } from "./flow-task-card";
+import { ProgressBar } from "./progress-bar";
 import { useDayLoggedSecondsMap, useDayNotesMap } from "../hooks/use-day-flow-data";
 import { cn } from "@/lib/utils";
-import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { formatDuration, formatElapsed, formatLocalDate } from "@/lib/utils/time";
 import type { Task } from "@/lib/types/task";
 
 export function EditableDayFlow({
@@ -30,7 +29,7 @@ export function EditableDayFlow({
   const notesByTask = useDayNotesMap(date);
   const loggedByTask = useDayLoggedSecondsMap(date);
 
-  const isToday = date === format(new Date(), "yyyy-MM-dd");
+  const isToday = date === formatLocalDate();
   const autoShowWizard = hydrated && isEmpty && isToday && !planningCompleted;
 
   const [dismissed, setDismissed] = useState(false);

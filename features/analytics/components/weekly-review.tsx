@@ -1,7 +1,7 @@
 "use client";
 
 import { addWeeks, format } from "date-fns";
-import { formatDuration } from "@/lib/utils/time";
+import { formatDuration, formatLocalDate } from "@/lib/utils/time";
 import { cn } from "@/lib/utils";
 import type { WeeklyAnalyticsData } from "../contracts";
 import { analyticsUrl, useAnalyticsResource } from "../hooks/use-analytics-resource";
@@ -30,7 +30,7 @@ export function WeeklyReview({
         label={weekLabel}
         onPrev={() => onDateChange(format(addWeeks(new Date(`${date}T00:00:00`), -1), "yyyy-MM-dd"))}
         onNext={() => onDateChange(format(addWeeks(new Date(`${date}T00:00:00`), 1), "yyyy-MM-dd"))}
-        onToday={() => onDateChange(format(new Date(), "yyyy-MM-dd"))}
+        onToday={() => onDateChange(formatLocalDate())}
       />
 
       {loading ? (

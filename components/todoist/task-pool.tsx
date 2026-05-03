@@ -1,55 +1,25 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { format } from "date-fns";
 import { ChevronRight, Check } from "lucide-react";
 import { useTaskSections } from "@/features/todoist/store";
 import { useFlowStore, useFlowTasksForDate, useCompletedTasksForDate } from "@/features/flow/store";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { formatDuration, formatElapsed } from "@/lib/utils/time";
+import { useLoggedSecondsByTaskForDate } from "@/lib/hooks/use-task-logged-seconds";
+import { formatDuration, formatElapsed, formatLocalDate } from "@/lib/utils/time";
 import { TaskCard } from "./task-card";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
-
-interface EntryRow {
-  taskId: string;
-  durationS: number | null;
-}
-
-function useLoggedByTaskForDate(date: string): Record<string, number> {
-  const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch(`/api/entries?date=${encodeURIComponent(date)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: EntryRow[]) => {
-        if (cancelled) return;
-        const next: Record<string, number> = {};
-        for (const entry of entries) {
-          next[entry.taskId] = (next[entry.taskId] ?? 0) + (entry.durationS ?? 0);
-        }
-        setSecondsByTask(next);
-      })
-      .catch(() => {
-        if (!cancelled) setSecondsByTask({});
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [date]);
-
-  return secondsByTask;
-}
 
 export function TaskPool() {
   const currentDate = useFlowStore((s) => s.currentDate);
   const { dueOnDate, overdue } = useTaskSections(currentDate);
   const arrangedTasks = useFlowTasksForDate(currentDate);
   const completedTasks = useCompletedTasksForDate(currentDate);
-  const loggedByTask = useLoggedByTaskForDate(currentDate);
+  const loggedByTask = useLoggedSecondsByTaskForDate(currentDate);
   const dateLabel =
-    currentDate === format(new Date(), "yyyy-MM-dd")
+    currentDate === formatLocalDate()
       ? "Today"
       : format(new Date(currentDate + "T00:00:00"), "EEE, MMM d");
 

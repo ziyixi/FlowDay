@@ -1,4 +1,4 @@
-import { fetchNoStore, jsonRequestInit } from "@/lib/client/http";
+import { fetchJson, fetchJsonNoStore, jsonRequestInit } from "@/lib/client/http";
 import { formatLocalDate } from "@/lib/utils/time";
 import type { Task } from "@/lib/types/task";
 import type { SettingsResponse } from "@/features/settings/contracts";
@@ -20,36 +20,27 @@ export async function loadTasksAndSettings(): Promise<{
   tasks: Task[] | null;
   settings: SettingsResponse | null;
 }> {
-  const [tasksResponse, settingsResponse] = await Promise.all([
-    fetchNoStore("/api/tasks"),
-    fetchNoStore("/api/settings"),
+  const [tasks, settings] = await Promise.all([
+    fetchJsonNoStore<Task[]>("/api/tasks"),
+    fetchJsonNoStore<SettingsResponse>("/api/settings"),
   ]);
-
-  const tasks = tasksResponse.ok ? ((await tasksResponse.json()) as Task[]) : null;
-  const settings = settingsResponse.ok
-    ? ((await settingsResponse.json()) as SettingsResponse)
-    : null;
 
   return { tasks, settings };
 }
 
 export async function syncTasksOnServer(): Promise<SyncResponse | null> {
-  const response = await fetch("/api/sync", {
+  return fetchJson<SyncResponse>("/api/sync", {
     method: "POST",
     cache: "no-store",
   });
-  if (!response.ok) return null;
-  return (await response.json()) as SyncResponse;
 }
 
 export async function createLocalTaskOnServer(title: string): Promise<Task | null> {
-  const response = await fetch(
+  return fetchJson<Task>(
     "/api/tasks",
     jsonRequestInit("POST", {
       title,
       dueDate: formatLocalDate(),
     })
   );
-  if (!response.ok) return null;
-  return (await response.json()) as Task;
 }

@@ -14,7 +14,7 @@ import { ExportDialog } from "./export-dialog";
 import { useIdlePermissionStatus } from "../hooks/use-idle-permission-status";
 import { useTodoistStore } from "@/features/todoist/store";
 import { useFlowStore } from "@/features/flow/store";
-import { fetchNoStore, jsonRequestInit } from "@/lib/client/http";
+import { fetchJsonNoStore, jsonRequestInit } from "@/lib/client/http";
 import { cn } from "@/lib/utils";
 import type { SettingsResponse } from "../contracts";
 
@@ -48,9 +48,9 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
     setApiKey("");
     setMessage(null);
 
-    fetchNoStore("/api/settings")
-      .then((response) => response.json())
-      .then((data: SettingsResponse) => {
+    fetchJsonNoStore<SettingsResponse>("/api/settings")
+      .then((data) => {
+        if (!data) return;
         setHasExistingKey(data.has_api_key);
         if (data.day_capacity_mins != null) {
           setCapacityHours(String(data.day_capacity_mins / 60));

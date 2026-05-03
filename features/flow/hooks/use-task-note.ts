@@ -1,7 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { jsonRequestInit } from "@/lib/client/http";
+import { fetchJsonNoStore, jsonRequestInit } from "@/lib/client/http";
+
+interface TaskNoteResponse {
+  content?: string | null;
+}
 
 export function useTaskNote(taskId: string, flowDate: string) {
   const [note, setNote] = useState("");
@@ -11,11 +15,9 @@ export function useTaskNote(taskId: string, flowDate: string) {
 
   useEffect(() => {
     let cancelled = false;
-    fetch(
-      `/api/notes?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(flowDate)}`,
-      { cache: "no-store" }
+    fetchJsonNoStore<TaskNoteResponse>(
+      `/api/notes?taskId=${encodeURIComponent(taskId)}&date=${encodeURIComponent(flowDate)}`
     )
-      .then((response) => (response.ok ? response.json() : null))
       .then((data) => {
         if (!cancelled && data?.content) {
           setNote(data.content);

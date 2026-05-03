@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fetchJsonNoStore } from "@/lib/client/http";
+import {
+  mapEntrySecondsByTask,
+  sumEntryDurationSeconds,
+  type DurationEntryLike,
+  type TaskDurationEntryLike,
+} from "@/lib/utils/time-entries";
 
 export function useTaskLoggedSeconds(taskId: string, revision: number): number {
   const [seconds, setSeconds] = useState(0);
@@ -8,11 +15,12 @@ export function useTaskLoggedSeconds(taskId: string, revision: number): number {
   useEffect(() => {
     if (!taskId) return;
     let cancelled = false;
-    fetch(`/api/entries?taskId=${encodeURIComponent(taskId)}`, { cache: "no-store" })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((entries: { durationS: number | null }[]) => {
+    fetchJsonNoStore<DurationEntryLike[]>(
+      `/api/entries?taskId=${encodeURIComponent(taskId)}`
+    )
+      .then((entries) => {
         if (!cancelled) {
-          setSeconds(entries.reduce((s, e) => s + (e.durationS ?? 0), 0));
+          setSeconds(sumEntryDurationSeconds(entries));
         }
       })
       .catch(() => {});
@@ -22,4 +30,31 @@ export function useTaskLoggedSeconds(taskId: string, revision: number): number {
   }, [taskId, revision]);
 
   return seconds;
+}
+
+export function useLoggedSecondsByTaskForDate(
+  date: string,
+  revision?: number
+): Record<string, number> {
+  const [secondsByTask, setSecondsByTask] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    fetchJsonNoStore<TaskDurationEntryLike[]>(
+      `/api/entries?date=${encodeURIComponent(date)}`
+    )
+      .then((entries) => {
+        if (cancelled) return;
+        setSecondsByTask(mapEntrySecondsByTask(entries));
+      })
+      .catch(() => {
+        if (!cancelled) setSecondsByTask({});
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [date, revision]);
+
+  return secondsByTask;
 }

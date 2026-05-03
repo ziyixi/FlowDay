@@ -2,11 +2,7 @@
 
 import { useState } from "react";
 import { PanelLeftClose, PanelLeft, Search, RefreshCw, Pause, Play, Trash2 } from "lucide-react";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { TooltipIconButton } from "@/components/ui/tooltip-icon-button";
 import { cn } from "@/lib/utils";
 import { useTodoistStore } from "@/features/todoist/store";
 import { useTaskById } from "@/features/todoist/store";
@@ -95,17 +91,14 @@ export function Sidebar({
     return (
       <>
         <div className="relative shrink-0">
-          <Tooltip>
-            <TooltipTrigger
-              className="fd-icon-button absolute left-1 top-1 z-10 h-8 w-8 sm:h-7 sm:w-7"
-              onClick={() => onCollapsedChange(false)}
-              aria-label="Expand sidebar"
-              title="Expand sidebar"
-            >
-              <PanelLeft className="h-4 w-4" />
-            </TooltipTrigger>
-            <TooltipContent side="right">Expand sidebar</TooltipContent>
-          </Tooltip>
+          <TooltipIconButton
+            className="absolute left-1 top-1 z-10 h-8 w-8 sm:h-7 sm:w-7"
+            onClick={() => onCollapsedChange(false)}
+            label="Expand sidebar"
+            tooltipSide="right"
+          >
+            <PanelLeft className="h-4 w-4" />
+          </TooltipIconButton>
         </div>
 
         <DeletedTasksDialog open={trashOpen} onOpenChange={setTrashOpen} />
@@ -126,39 +119,27 @@ export function Sidebar({
             Todoist
           </span>
           <div className="flex items-center gap-0.5">
-            <Tooltip>
-              <TooltipTrigger
-                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
-                onClick={() => sync()}
-                aria-label="Sync tasks"
-                title="Sync tasks"
-              >
-                <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
-              </TooltipTrigger>
-              <TooltipContent>Sync tasks</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
-                onClick={() => setTrashOpen(true)}
-                aria-label="Deleted tasks"
-                title="Deleted tasks"
-              >
-                <Trash2 className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>Deleted tasks</TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger
-                className="fd-icon-button h-7 w-7 sm:h-6 sm:w-6"
-                onClick={() => onCollapsedChange(true)}
-                aria-label="Collapse sidebar"
-                title="Collapse sidebar"
-              >
-                <PanelLeftClose className="h-3 w-3" />
-              </TooltipTrigger>
-              <TooltipContent>Collapse sidebar</TooltipContent>
-            </Tooltip>
+            <TooltipIconButton
+              className="h-7 w-7 sm:h-6 sm:w-6"
+              onClick={() => sync()}
+              label="Sync tasks"
+            >
+              <RefreshCw className={cn("h-3 w-3", isSyncing && "animate-spin")} />
+            </TooltipIconButton>
+            <TooltipIconButton
+              className="h-7 w-7 sm:h-6 sm:w-6"
+              onClick={() => setTrashOpen(true)}
+              label="Deleted tasks"
+            >
+              <Trash2 className="h-3 w-3" />
+            </TooltipIconButton>
+            <TooltipIconButton
+              className="h-7 w-7 sm:h-6 sm:w-6"
+              onClick={() => onCollapsedChange(true)}
+              label="Collapse sidebar"
+            >
+              <PanelLeftClose className="h-3 w-3" />
+            </TooltipIconButton>
           </div>
         </div>
 

@@ -8,7 +8,8 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import type { TimeEntry } from "@/features/timer/contracts";
-import { fetchNoStore } from "@/lib/client/http";
+import { fetchJsonNoStore } from "@/lib/client/http";
+import { sumEntryDurationSeconds } from "@/lib/utils/time-entries";
 import { formatDurationShort } from "./manual-entry-utils";
 import { AddEntryDialog, EditEntryDialog } from "./manual-entry-dialogs";
 import { ManualEntryRow } from "./manual-entry-entry-row";
@@ -29,11 +30,11 @@ export function ManualEntry({
 
   const fetchEntries = useCallback(async () => {
     try {
-      const response = await fetchNoStore(
+      const nextEntries = await fetchJsonNoStore<TimeEntry[]>(
         `/api/entries?taskId=${encodeURIComponent(taskId)}`
       );
-      if (response.ok) {
-        setEntries((await response.json()) as TimeEntry[]);
+      if (nextEntries) {
+        setEntries(nextEntries);
       }
     } catch {
       // Keeping the popover open with stale data is less disruptive than closing it.
@@ -50,7 +51,7 @@ export function ManualEntry({
     onEntriesChanged?.();
   }, [fetchEntries, onEntriesChanged]);
 
-  const totalSeconds = entries.reduce((sum, entry) => sum + (entry.durationS ?? 0), 0);
+  const totalSeconds = sumEntryDurationSeconds(entries);
 
   return (
     <>

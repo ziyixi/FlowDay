@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchNoStore } from "@/lib/client/http";
+import { fetchJsonNoStore } from "@/lib/client/http";
 
 export function analyticsUrl(type: "daily" | "weekly" | "stats", date?: string) {
   const params = new URLSearchParams({ type });
@@ -21,9 +21,8 @@ export function useAnalyticsResource<T>(url: string) {
   useEffect(() => {
     let cancelled = false;
 
-    fetchNoStore(url)
-      .then((response) => response.json())
-      .then((payload: T) => {
+    fetchJsonNoStore<T>(url)
+      .then((payload) => {
         if (!cancelled) setData(payload);
       })
       .catch(() => {})
