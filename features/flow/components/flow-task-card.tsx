@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
-import { Zap } from "lucide-react";
+import { ChevronRight, Zap } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
@@ -218,9 +218,6 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                 ) : (
                   <span className="shrink-0 text-muted-foreground/60">Quick tasks</span>
                 )}
-                {focusedQuickTask && (
-                  <EstimateEditor task={focusedQuickTask} variant="flow" />
-                )}
               </div>
             ) : (
               <EstimateEditor task={task} variant="flow" />
@@ -298,6 +295,8 @@ function QuickTaskSelector({
   activeTaskId: string | null;
   onSelect: (taskId: string) => void;
 }) {
+  const [open, setOpen] = useState(false);
+
   if (tasks.length === 0) {
     return (
       <p className="mt-1.5 text-xs text-muted-foreground/60 sm:text-[10px]">
@@ -307,44 +306,85 @@ function QuickTaskSelector({
   }
 
   return (
-    <div className="mt-2 grid gap-1">
-      {tasks.map((task) => {
-        const selected = selectedTaskId === task.id;
-        const active = activeTaskId === task.id;
-        return (
-          <button
-          key={task.id}
-            type="button"
-            data-testid="quick-focus-option"
-            data-task-id={task.id}
-            aria-pressed={selected}
-            onPointerDown={(event) => event.stopPropagation()}
-            onClick={(event) => {
-              event.stopPropagation();
-              onSelect(task.id);
-            }}
-            className={cn(
-              "flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-xs transition-colors sm:text-[10px]",
-              selected
-                ? "border-primary/35 bg-primary/10 text-foreground"
-                : "border-border/45 bg-background/45 text-muted-foreground hover:bg-accent hover:text-foreground"
-            )}
-          >
-            <span
-              className={cn(
-                "h-1.5 w-1.5 shrink-0 rounded-full",
-                active ? "bg-chart-1" : selected ? "bg-primary" : "bg-muted-foreground/35"
-              )}
-            />
-            <span className="min-w-0 flex-1 truncate">{task.title}</span>
-            {task.estimatedMins != null && task.estimatedMins > 0 && (
-              <span className="shrink-0 tabular-nums text-muted-foreground/70">
-                {formatDuration(task.estimatedMins)}
-              </span>
-            )}
-          </button>
-        );
-      })}
+    <div className="mt-2">
+      <button
+        type="button"
+        data-testid="quick-focus-list-toggle"
+        aria-expanded={open}
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          setOpen((current) => !current);
+        }}
+        className="flex w-full items-center gap-1.5 rounded-md border border-border/45 bg-background/45 px-2 py-1.5 text-left text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground sm:text-[10px]"
+      >
+        <ChevronRight
+          className={cn(
+            "h-3 w-3 shrink-0 transition-transform duration-150",
+            open && "rotate-90"
+          )}
+        />
+        <span className="min-w-0 flex-1 truncate">
+          {selectedTaskId
+            ? tasks.find((task) => task.id === selectedTaskId)?.title ?? "Quick tasks"
+            : "Quick tasks"}
+        </span>
+        <span className="shrink-0 tabular-nums text-muted-foreground/70">
+          {tasks.length}
+        </span>
+      </button>
+      <div
+        className={cn(
+          "grid transition-[grid-template-rows] duration-150",
+          open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+        )}
+      >
+        <div className={cn("min-h-0 overflow-hidden", !open && "hidden")}>
+          <div className="mt-1 grid gap-1">
+            {tasks.map((task) => {
+              const selected = selectedTaskId === task.id;
+              const active = activeTaskId === task.id;
+              return (
+                <div
+                  key={task.id}
+                  data-testid="quick-focus-option"
+                  data-task-id={task.id}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  className={cn(
+                    "flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-xs transition-colors sm:text-[10px]",
+                    selected
+                      ? "border-primary/35 bg-primary/10 text-foreground"
+                      : "border-border/45 bg-background/45 text-muted-foreground"
+                  )}
+                >
+                  <button
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onSelect(task.id);
+                    }}
+                    className="flex min-w-0 flex-1 items-center gap-2 text-left transition-colors hover:text-foreground"
+                  >
+                    <span
+                      className={cn(
+                        "h-1.5 w-1.5 shrink-0 rounded-full",
+                        active
+                          ? "bg-chart-1"
+                          : selected
+                            ? "bg-primary"
+                            : "bg-muted-foreground/35"
+                      )}
+                    />
+                    <span className="min-w-0 flex-1 truncate">{task.title}</span>
+                  </button>
+                  <EstimateEditor task={task} variant="inline" />
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

@@ -77,7 +77,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Each task card shows: title, project name, labels, estimated duration (click-to-edit via `EstimateEditor` popover), actual time (when timer runs), priority color dot
 - Each card has action buttons: play/pause (timer), manual time entry (clock icon), complete (check), skip (move to bottom), remove (return to pool)
 - The top card is visually highlighted as "Next" with a primary-color left border and badge
-- The synthetic `Quick` placeholder is arrangeable like a flow item, but uses a quieter treatment and requires selecting a real quick task before timer, Pomodoro, completion, or manual time actions record work; statistics attribute that work to the selected quick task, not to the placeholder.
+- The synthetic `Quick` placeholder is arrangeable like a flow item, but uses a quieter treatment and requires selecting a real quick task before timer, Pomodoro, completion, or manual time actions record work. Its individual quick-task list is collapsed by default, can be expanded for selection, and keeps each quick task's estimate editable; statistics attribute work to the selected quick task, not to the placeholder.
 - Drag-sortable within the flow using unique sortable IDs (`date::taskId::sortableKey`) for dnd-kit stability
 - Visual progress bar at the bottom: tasks completed vs. total, total estimated time vs. actual logged time
 - Completed tasks shown in a dimmed section with undo button, showing both estimated and actual logged time

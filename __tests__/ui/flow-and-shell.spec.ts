@@ -433,25 +433,36 @@ test("[UI-050] Quick-labelled tasks collapse into a quiet arrangeable Quick bloc
   await expect(quickSection).toHaveAttribute("aria-expanded", "true");
   await expect(quickRow).toBeVisible();
 
-  await quickRow.getByRole("button", { name: "5m" }).click();
-  await page.getByRole("button", { name: "30m" }).click();
-  await expect(quickRow.getByRole("button", { name: "30m" })).toBeVisible();
-
   await dragTaskToEmptyFlow(page, "Quick");
 
   const quickCard = flowCardById(page, "__flowday_quick__");
   await expect(quickCard).toBeVisible();
-  await expect(quickCard.getByText("Answer Slack ping")).toBeVisible();
-  await expect(quickCard.getByText("Approve invoice")).toBeVisible();
-  await expect(quickCard.getByText("40m quick total")).toBeVisible();
+  await expect(quickCard.getByText("15m quick total")).toBeVisible();
+  await expect(quickCard.getByRole("button", { name: "15m" })).toHaveCount(0);
+  const quickListToggle = quickCard.getByTestId("quick-focus-list-toggle");
+  await expect(quickListToggle).toHaveAttribute("aria-expanded", "false");
   await expect(taskPoolCard(page, "Quick")).toHaveCount(0);
 
   await expect(quickCard.getByRole("button", { name: "Start timer" })).toBeDisabled();
   await expect(quickCard.getByRole("button", { name: "Start Pomodoro" })).toBeDisabled();
 
+  await quickListToggle.click();
+  await expect(quickListToggle).toHaveAttribute("aria-expanded", "true");
+  await expect(quickCard.getByText("Answer Slack ping")).toBeVisible();
+  await expect(quickCard.getByText("Approve invoice")).toBeVisible();
+
+  const answerQuickTask = quickCard
+    .getByTestId("quick-focus-option")
+    .filter({ hasText: "Answer Slack ping" });
+  await answerQuickTask.getByRole("button", { name: "5m" }).click();
+  await page.getByRole("button", { name: "30m" }).click();
+  await expect(answerQuickTask.getByRole("button", { name: "30m" })).toBeVisible();
+  await expect(quickCard.getByText("40m quick total")).toBeVisible();
+
   await quickCard
     .getByTestId("quick-focus-option")
     .filter({ hasText: "Answer Slack ping" })
+    .getByRole("button", { name: "Answer Slack ping" })
     .click();
   await expect(quickCard.getByRole("button", { name: "Start timer" })).toBeEnabled();
 
