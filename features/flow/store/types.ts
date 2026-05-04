@@ -9,8 +9,11 @@ export interface FlowState {
   sortableGen: number;
   // Maps taskId -> generation number for unique sortable ids.
   sortableKeys: Record<string, number>;
+  // Maps flow date -> selected quick task id for the synthetic Quick block.
+  quickFocusTaskIds: Record<string, string>;
   setCurrentDate: (date: string) => void;
   setViewMode: (mode: ViewMode) => void;
+  setQuickFocusTask: (date: string, taskId: string | null) => void;
   addTask: (taskId: string, date: string, index?: number) => void;
   removeTask: (taskId: string, date: string) => void;
   reorderTasks: (fromIndex: number, toIndex: number, date: string) => void;

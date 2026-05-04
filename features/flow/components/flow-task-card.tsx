@@ -30,6 +30,8 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const skipTask = useFlowStore((state) => state.skipTask);
   const removeTask = useFlowStore((state) => state.removeTask);
   const sortableKey = useFlowStore((state) => state.sortableKeys[task.id] ?? 0);
+  const quickFocusTaskId = useFlowStore((state) => state.quickFocusTaskIds[date]);
+  const setQuickFocusTask = useFlowStore((state) => state.setQuickFocusTask);
   const updateTitle = useTodoistStore((state) => state.updateTitle);
 
   const activeTaskId = useTimerStore((state) => state.activeTaskId);
@@ -45,11 +47,22 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const stopWithoutSaving = useTimerStore((state) => state.stopWithoutSaving);
   const entryRevision = useTimerStore((state) => state.entryRevision);
 
-  const isActive = activeTaskId === task.id;
-  const isRunning = isActive && timerStatus === "running";
-  const isPaused = isActive && timerStatus === "paused";
   const isQuickPlaceholder = isQuickTaskPlaceholderId(task.id);
   const quickTasks = useQuickTasksForDate(date);
+  const activeQuickTask = isQuickPlaceholder
+    ? quickTasks.find((candidate) => candidate.id === activeTaskId)
+    : null;
+  const selectedQuickTask = isQuickPlaceholder
+    ? quickTasks.find((candidate) => candidate.id === quickFocusTaskId)
+    : null;
+  const focusedQuickTask = activeQuickTask ?? selectedQuickTask ?? null;
+  const actionTask = isQuickPlaceholder ? focusedQuickTask : task;
+  const actionTaskId = actionTask?.id ?? null;
+  const timingDisabled = isQuickPlaceholder && !actionTaskId;
+  const timingDisabledReason = "Select a quick task first";
+  const isActive = actionTaskId != null && activeTaskId === actionTaskId;
+  const isRunning = isActive && timerStatus === "running";
+  const isPaused = isActive && timerStatus === "paused";
 
   const [localRevision, setLocalRevision] = useState(0);
   const onEntriesChanged = useCallback(() => {
@@ -57,7 +70,7 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   }, []);
   const combinedRevision = localRevision + entryRevision;
 
-  const loggedSeconds = useTaskLoggedSeconds(task.id, combinedRevision);
+  const loggedSeconds = useTaskLoggedSeconds(actionTaskId ?? "", combinedRevision);
   const shownSeconds = isActive ? displaySeconds : loggedSeconds;
   const isActivePomodoro = isActive && timerMode === "pomodoro";
   const activePomodoroLoggedSeconds =
@@ -65,8 +78,9 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
       ? derivePomodoroLoggedSeconds(priorSeconds, pomodoroTargetSeconds, displaySeconds)
       : null;
 
+  const noteTaskId = actionTaskId ?? task.id;
   const { note, showNote, hasNote, updateNote, toggle: toggleNote } = useTaskNote(
-    task.id,
+    noteTaskId,
     date
   );
 
@@ -82,20 +96,25 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const priorityColor = PRIORITY_CONFIG[task.priority].color;
 
   const handlePlayPause = () => {
+    if (!actionTaskId) return;
     if (isRunning) {
       void pauseTimer();
     } else if (isPaused) {
       resumeTimer();
     } else {
-      void startTimer(task.id, date);
+      void startTimer(actionTaskId, date);
     }
   };
 
   const handleComplete = async () => {
+    if (!actionTaskId) return;
     if (isActive) {
       await stopAndSave();
     }
-    completeTask(task.id, date);
+    completeTask(actionTaskId, date);
+    if (isQuickPlaceholder && quickTasks.length <= 1) {
+      removeTask(task.id, date);
+    }
   };
 
   const handleRemove = () => {
@@ -167,7 +186,12 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
               </p>
             )}
             {isQuickPlaceholder ? (
-              <QuickTaskPreview tasks={quickTasks} />
+              <QuickTaskSelector
+                tasks={quickTasks}
+                selectedTaskId={focusedQuickTask?.id ?? null}
+                activeTaskId={activeTaskId}
+                onSelect={(taskId) => setQuickFocusTask(date, taskId)}
+              />
             ) : task.labels.length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1">
                 {task.labels.map((label) => (
@@ -186,13 +210,18 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground sm:text-xs">
             {isQuickPlaceholder ? (
-              task.estimatedMins != null && task.estimatedMins > 0 ? (
-                <span className="tabular-nums text-muted-foreground/75">
-                  {formatDuration(task.estimatedMins)} quick
-                </span>
-              ) : (
-                <span className="text-muted-foreground/60">Quick tasks</span>
-              )
+              <div className="flex min-w-0 items-center gap-2">
+                {task.estimatedMins != null && task.estimatedMins > 0 ? (
+                  <span className="shrink-0 tabular-nums text-muted-foreground/75">
+                    {formatDuration(task.estimatedMins)} quick total
+                  </span>
+                ) : (
+                  <span className="shrink-0 text-muted-foreground/60">Quick tasks</span>
+                )}
+                {focusedQuickTask && (
+                  <EstimateEditor task={focusedQuickTask} variant="flow" />
+                )}
+              </div>
             ) : (
               <EstimateEditor task={task} variant="flow" />
             )}
@@ -222,9 +251,9 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           </div>
 
           <FlowTaskCardActions
-            taskId={task.id}
+            taskId={actionTaskId ?? task.id}
             flowDate={date}
-            estimatedMins={task.estimatedMins}
+            estimatedMins={actionTask?.estimatedMins ?? task.estimatedMins}
             loggedSeconds={loggedSeconds}
             isActive={isActive}
             isRunning={isRunning}
@@ -236,6 +265,8 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
             onComplete={() => void handleComplete()}
             onSkip={() => skipTask(task.id, date)}
             onRemove={handleRemove}
+            timingDisabled={timingDisabled}
+            timingDisabledReason={timingDisabledReason}
           />
         </div>
 
@@ -256,27 +287,64 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   );
 }
 
-function QuickTaskPreview({ tasks }: { tasks: Task[] }) {
-  if (tasks.length === 0) return null;
-
-  const visible = tasks.slice(0, 3);
-  const remaining = tasks.length - visible.length;
+function QuickTaskSelector({
+  tasks,
+  selectedTaskId,
+  activeTaskId,
+  onSelect,
+}: {
+  tasks: Task[];
+  selectedTaskId: string | null;
+  activeTaskId: string | null;
+  onSelect: (taskId: string) => void;
+}) {
+  if (tasks.length === 0) {
+    return (
+      <p className="mt-1.5 text-xs text-muted-foreground/60 sm:text-[10px]">
+        No quick tasks left.
+      </p>
+    );
+  }
 
   return (
-    <div className="mt-1.5 flex flex-wrap gap-1">
-      {visible.map((task) => (
-        <span
+    <div className="mt-2 grid gap-1">
+      {tasks.map((task) => {
+        const selected = selectedTaskId === task.id;
+        const active = activeTaskId === task.id;
+        return (
+          <button
           key={task.id}
-          className="max-w-[180px] truncate rounded-sm border border-border/45 bg-background/45 px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]"
-        >
-          {task.title}
-        </span>
-      ))}
-      {remaining > 0 && (
-        <span className="rounded-sm border border-border/45 bg-background/45 px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]">
-          +{remaining}
-        </span>
-      )}
+            type="button"
+            data-testid="quick-focus-option"
+            data-task-id={task.id}
+            aria-pressed={selected}
+            onPointerDown={(event) => event.stopPropagation()}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSelect(task.id);
+            }}
+            className={cn(
+              "flex min-w-0 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-xs transition-colors sm:text-[10px]",
+              selected
+                ? "border-primary/35 bg-primary/10 text-foreground"
+                : "border-border/45 bg-background/45 text-muted-foreground hover:bg-accent hover:text-foreground"
+            )}
+          >
+            <span
+              className={cn(
+                "h-1.5 w-1.5 shrink-0 rounded-full",
+                active ? "bg-chart-1" : selected ? "bg-primary" : "bg-muted-foreground/35"
+              )}
+            />
+            <span className="min-w-0 flex-1 truncate">{task.title}</span>
+            {task.estimatedMins != null && task.estimatedMins > 0 && (
+              <span className="shrink-0 tabular-nums text-muted-foreground/70">
+                {formatDuration(task.estimatedMins)}
+              </span>
+            )}
+          </button>
+        );
+      })}
     </div>
   );
 }

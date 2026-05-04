@@ -20,6 +20,8 @@ interface FlowTaskCardActionsProps {
   onComplete: () => void;
   onSkip: () => void;
   onRemove: () => void;
+  timingDisabled?: boolean;
+  timingDisabledReason?: string;
 }
 
 export function FlowTaskCardActions({
@@ -37,18 +39,30 @@ export function FlowTaskCardActions({
   onComplete,
   onSkip,
   onRemove,
+  timingDisabled = false,
+  timingDisabledReason,
 }: FlowTaskCardActionsProps) {
+  const timingTitle = timingDisabled
+    ? timingDisabledReason
+    : isRunning
+      ? "Pause timer"
+      : isActive
+        ? "Resume timer"
+        : "Start timer";
+
   return (
     <div className="flex items-center gap-0.5 rounded-md bg-background/28 p-0.5">
       <button
         className={cn(
           "fd-icon-button",
-          "h-8 w-8 sm:h-7 sm:w-7",
+          "h-8 w-8 disabled:cursor-not-allowed disabled:opacity-45 sm:h-7 sm:w-7",
           isActive
             ? "text-primary hover:bg-primary/10"
             : "text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
         onClick={onPlayPause}
+        disabled={timingDisabled}
+        title={timingTitle}
         aria-label={isRunning ? "Pause timer" : isActive ? "Resume timer" : "Start timer"}
       >
         {isRunning ? <Pause className="h-3.5 w-3.5" /> : <Play className="h-3.5 w-3.5" />}
@@ -58,11 +72,15 @@ export function FlowTaskCardActions({
         flowDate={flowDate}
         estimatedMins={estimatedMins}
         loggedMins={Math.floor(loggedSeconds / 60)}
+        disabled={timingDisabled}
+        disabledReason={timingDisabledReason}
       />
       <ManualEntry
         taskId={taskId}
         flowDate={flowDate}
         onEntriesChanged={onEntriesChanged}
+        disabled={timingDisabled}
+        disabledReason={timingDisabledReason}
       />
       <button
         className={cn(
@@ -79,8 +97,10 @@ export function FlowTaskCardActions({
         <StickyNote className="h-3.5 w-3.5" />
       </button>
       <button
-        className="fd-icon-button h-8 w-8 hover:bg-chart-1/15 hover:text-foreground sm:h-7 sm:w-7"
+        className="fd-icon-button h-8 w-8 hover:bg-chart-1/15 hover:text-foreground disabled:cursor-not-allowed disabled:opacity-45 sm:h-7 sm:w-7"
         onClick={onComplete}
+        disabled={timingDisabled}
+        title={timingDisabled ? timingDisabledReason : "Complete task"}
         aria-label="Complete task"
       >
         <Check className="h-3.5 w-3.5" />

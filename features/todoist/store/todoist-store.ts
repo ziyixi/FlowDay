@@ -184,13 +184,15 @@ export function useTaskById(id: string): Task | undefined {
 export function useQuickTasksForDate(date: string): Task[] {
   const tasks = useTodoistStore((state) => state.tasks);
   const allCompletedTasks = useFlowStore((state) => state.completedTasks);
+  const completedOnDate = new Set(allCompletedTasks[date] ?? []);
   const completedLocalTaskIds = new Set(
     Object.values(allCompletedTasks).flat()
   );
   return getQuickTasksForDate(
-    tasks.filter(
-      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
-    ),
+    tasks.filter((task) => {
+      if (completedOnDate.has(task.id)) return false;
+      return task.todoistId || !completedLocalTaskIds.has(task.id);
+    }),
     date
   );
 }

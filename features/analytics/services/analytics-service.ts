@@ -19,6 +19,7 @@ import {
   mapEntrySecondsByTask,
   sumEntryDurationSeconds,
 } from "@/lib/utils/time-entries";
+import { isQuickTaskPlaceholderId } from "@/lib/utils/quick-task";
 import type {
   DailyAnalyticsData,
   WeeklyAnalyticsData,
@@ -125,13 +126,21 @@ function computeDailyAnalytics(date: string, timeZone?: string): DailyAnalyticsD
     ...new Set([
       ...flowEntries.map((row) => row.taskId),
       ...completedEntries.map((row) => row.taskId),
-    ]),
+    ].filter((taskId) => !isQuickTaskPlaceholderId(taskId))),
   ];
   const allTaskIds = [
-    ...new Set([...plannedTaskIds, ...timeEntryRows.map((entry) => entry.taskId)]),
+    ...new Set(
+      [...plannedTaskIds, ...timeEntryRows.map((entry) => entry.taskId)].filter(
+        (taskId) => !isQuickTaskPlaceholderId(taskId)
+      )
+    ),
   ];
   const taskMap = new Map(getTasksByIds(allTaskIds).map((task) => [task.id, task]));
-  const completedSet = new Set(completedEntries.map((row) => row.taskId));
+  const completedSet = new Set(
+    completedEntries
+      .map((row) => row.taskId)
+      .filter((taskId) => !isQuickTaskPlaceholderId(taskId))
+  );
 
   const secondsByTask = mapEntrySecondsByTask(timeEntryRows);
 
@@ -195,7 +204,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
       ...allFlowEntries.map((row) => row.taskId),
       ...allCompletedEntries.map((row) => row.taskId),
       ...allTimeEntries.map((entry) => entry.taskId),
-    ]),
+    ].filter((taskId) => !isQuickTaskPlaceholderId(taskId))),
   ];
   const taskMap = new Map(getTasksByIds(allTaskIds).map((task) => [task.id, task]));
 
@@ -206,8 +215,11 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
       ...allCompletedEntries
         .filter((row) => row.flowDate === dateStr)
         .map((row) => row.taskId),
-    ]);
-    const completed = allCompletedEntries.filter((row) => row.flowDate === dateStr);
+    ].filter((taskId) => !isQuickTaskPlaceholderId(taskId)));
+    const completed = allCompletedEntries.filter(
+      (row) =>
+        row.flowDate === dateStr && !isQuickTaskPlaceholderId(row.taskId)
+    );
     const loggedSecs = sumEntryDurationSeconds(
       allTimeEntries.filter((entry) => entry.flowDate === dateStr)
     );
@@ -226,6 +238,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
     { loggedSecs: number; completed: Set<string>; color: string | null }
   >();
   for (const entry of allTimeEntries) {
+    if (isQuickTaskPlaceholderId(entry.taskId)) continue;
     const task = taskMap.get(entry.taskId);
     const project = task?.projectName ?? "No Project";
     const color = task?.projectColor ?? null;
@@ -235,6 +248,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
     projectMap.get(project)!.loggedSecs += entryDurationSeconds(entry);
   }
   for (const entry of allCompletedEntries) {
+    if (isQuickTaskPlaceholderId(entry.taskId)) continue;
     const task = taskMap.get(entry.taskId);
     const project = task?.projectName ?? "No Project";
     const color = task?.projectColor ?? null;
@@ -254,10 +268,15 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
 
   const taskDates = new Map<string, Set<string>>();
   for (const entry of allFlowEntries) {
+    if (isQuickTaskPlaceholderId(entry.taskId)) continue;
     if (!taskDates.has(entry.taskId)) taskDates.set(entry.taskId, new Set());
     taskDates.get(entry.taskId)!.add(entry.flowDate);
   }
-  const completedTaskIds = new Set(allCompletedEntries.map((row) => row.taskId));
+  const completedTaskIds = new Set(
+    allCompletedEntries
+      .map((row) => row.taskId)
+      .filter((taskId) => !isQuickTaskPlaceholderId(taskId))
+  );
   const stuckTasks = Array.from(taskDates.entries())
     .filter(([taskId, dates]) => dates.size >= 2 && !completedTaskIds.has(taskId))
     .map(([taskId, dates]) => {
@@ -274,6 +293,7 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
   const seenTaskIds = new Set<string>();
   const estimationAccuracy = allCompletedEntries
     .filter((row) => {
+      if (isQuickTaskPlaceholderId(row.taskId)) return false;
       if (seenTaskIds.has(row.taskId)) return false;
       seenTaskIds.add(row.taskId);
       return true;
@@ -319,7 +339,11 @@ function computeWeeklyAnalytics(date: string, timeZone?: string): WeeklyAnalytic
     });
   }
 
-  const totalCompleted = new Set(allCompletedEntries.map((row) => row.taskId)).size;
+  const totalCompleted = new Set(
+    allCompletedEntries
+      .map((row) => row.taskId)
+      .filter((taskId) => !isQuickTaskPlaceholderId(taskId))
+  ).size;
   const totalLoggedMins = Math.round(
     sumEntryDurationSeconds(allTimeEntries) / 60
   );

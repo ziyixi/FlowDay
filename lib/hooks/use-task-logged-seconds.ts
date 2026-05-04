@@ -29,7 +29,7 @@ export function useTaskLoggedSeconds(taskId: string, revision: number): number {
     };
   }, [taskId, revision]);
 
-  return seconds;
+  return taskId ? seconds : 0;
 }
 
 export function useLoggedSecondsByTaskForDate(

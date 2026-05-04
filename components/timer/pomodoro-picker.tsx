@@ -13,6 +13,8 @@ interface PomodoroPickerProps {
   flowDate: string;
   estimatedMins?: number | null;
   loggedMins?: number | null;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export function PomodoroPicker({
@@ -20,6 +22,8 @@ export function PomodoroPicker({
   flowDate,
   estimatedMins,
   loggedMins,
+  disabled = false,
+  disabledReason,
 }: PomodoroPickerProps) {
   const [open, setOpen] = useState(false);
   const [customMins, setCustomMins] = useState("");
@@ -33,6 +37,7 @@ export function PomodoroPicker({
   const presets = buildPomodoroPresets(estimatedMins, loggedMins);
 
   const launch = (mins: number) => {
+    if (disabled) return;
     if (!Number.isFinite(mins) || mins <= 0) return;
     void openPopOut();
     void startPomodoro(taskId, flowDate, mins * 60);
@@ -48,8 +53,12 @@ export function PomodoroPicker({
 
   return (
     <Popover
-      open={open}
+      open={!disabled && open}
       onOpenChange={(next) => {
+        if (disabled) {
+          setOpen(false);
+          return;
+        }
         setOpen(next);
         if (!next) setCustomMins("");
       }}
@@ -57,13 +66,17 @@ export function PomodoroPicker({
       <PopoverTrigger
         render={<button />}
         onClick={(e) => e.stopPropagation()}
+        disabled={disabled}
         className={cn(
           "fd-icon-button h-8 w-8 sm:h-7 sm:w-7",
-          isActivePomodoro
+          disabled
+            ? "cursor-not-allowed opacity-45"
+            : isActivePomodoro
             ? "text-primary hover:bg-primary/10"
             : "text-muted-foreground hover:bg-accent hover:text-foreground"
         )}
-        title="Start Pomodoro"
+        title={disabled ? disabledReason : "Start Pomodoro"}
+        aria-label="Start Pomodoro"
       >
         <Hourglass className="h-3.5 w-3.5" />
       </PopoverTrigger>

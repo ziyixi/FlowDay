@@ -15,6 +15,7 @@ import {
   QUICK_TASK_PLACEHOLDER_ID,
 } from "@/lib/utils/quick-task";
 import { TaskCard } from "./task-card";
+import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { cn } from "@/lib/utils";
 import type { Task } from "@/lib/types/task";
 
@@ -85,7 +86,8 @@ function QuickTaskSection({
   return (
     <div className="mb-1">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
         className="flex w-full items-center gap-1 rounded-md px-1 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:text-xs"
       >
         <ChevronRight
@@ -99,15 +101,19 @@ function QuickTaskSection({
           {tasks.length}
         </span>
       </button>
+      {!placeholderInFlow && (
+        <div className="pb-1">
+          <QuickPlaceholderCard task={placeholder} />
+        </div>
+      )}
       <div
         className={cn(
           "grid transition-[grid-template-rows] duration-150",
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
       >
-        <div className="overflow-hidden">
+        <div className={cn("min-h-0 overflow-hidden", !open && "hidden")}>
           <div className="space-y-1.5 pb-1">
-            {!placeholderInFlow && <QuickPlaceholderCard task={placeholder} />}
             <div className="space-y-1">
               {tasks.map((task) => (
                 <QuickTaskRow key={task.id} task={task} />
@@ -168,11 +174,7 @@ function QuickTaskRow({ task }: { task: Task }) {
     >
       <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/35" />
       <p className="min-w-0 flex-1 truncate text-sm sm:text-xs">{task.title}</p>
-      {task.estimatedMins != null && task.estimatedMins > 0 && (
-        <span className="shrink-0 text-xs tabular-nums text-muted-foreground/55 sm:text-[10px]">
-          {formatDuration(task.estimatedMins)}
-        </span>
-      )}
+      <EstimateEditor task={task} variant="inline" />
     </div>
   );
 }
@@ -197,7 +199,8 @@ function TaskPoolSection({
   return (
     <div className="mb-1">
       <button
-        onClick={() => setOpen(!open)}
+        onClick={() => setOpen((current) => !current)}
+        aria-expanded={open}
         className="flex w-full items-center gap-1 rounded-md px-1 py-1.5 text-sm font-semibold text-muted-foreground transition-colors hover:bg-accent/60 hover:text-foreground sm:text-xs"
       >
         <ChevronRight
@@ -222,7 +225,7 @@ function TaskPoolSection({
           open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
         )}
       >
-        <div className="overflow-hidden">
+        <div className={cn("min-h-0 overflow-hidden", !open && "hidden")}>
           {tasks.length > 0 ? (
             <div className="space-y-1.5 pb-1">
               {variant === "pool"

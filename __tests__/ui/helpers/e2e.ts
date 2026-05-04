@@ -1,5 +1,6 @@
 import { expect, type APIRequestContext, type Locator, type Page } from "@playwright/test";
 import { buildMiscTaskId } from "@/lib/utils/misc-task";
+import { QUICK_TASK_PLACEHOLDER_ID } from "@/lib/utils/quick-task";
 
 function formatDate(date: Date): string {
   const year = date.getFullYear();
@@ -78,6 +79,7 @@ export type SeedName =
   | "sidebar-section-state"
   | "tooltip-rich-task"
   | "quick-task-group"
+  | "quick-task-analytics"
   | "local-completed-yesterday"
   | "settings-saved-key"
   | "analytics-multi-date";
@@ -403,6 +405,40 @@ function buildSeed(name: SeedName): SeedPayload {
             estimatedMins: 60,
             labels: ["writing"],
           }),
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "quick-task-analytics":
+      return {
+        tasks: [
+          localTask("quick-task-a", "Answer Slack ping", {
+            estimatedMins: 5,
+            labels: ["quick"],
+          }),
+          localTask("quick-task-b", "Approve invoice", {
+            estimatedMins: 10,
+            labels: ["quick"],
+          }),
+        ],
+        flows: {
+          [TODAY]: [QUICK_TASK_PLACEHOLDER_ID],
+        },
+        completedTasks: {
+          [TODAY]: ["quick-task-a"],
+        },
+        timeEntries: [
+          {
+            taskId: "quick-task-a",
+            flowDate: TODAY,
+            startTime: `${TODAY}T09:00:00.000Z`,
+            endTime: `${TODAY}T09:10:00.000Z`,
+            durationS: 600,
+            source: "timer",
+          },
         ],
         settings: {
           [`planning_completed:${TODAY}`]: true,

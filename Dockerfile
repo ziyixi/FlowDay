@@ -1,5 +1,6 @@
 # ---- Base ----
-FROM node:20-alpine AS base
+ARG NODE_IMAGE=node:24-alpine
+FROM ${NODE_IMAGE} AS base
 RUN apk add --no-cache libc6-compat python3 make g++
 WORKDIR /app
 
@@ -21,7 +22,7 @@ RUN npm run build
 RUN npm run docker:prune
 
 # ---- Runner ----
-FROM node:20-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 RUN apk add --no-cache libc6-compat su-exec
 WORKDIR /app
 

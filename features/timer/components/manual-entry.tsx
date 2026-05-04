@@ -18,10 +18,14 @@ export function ManualEntry({
   taskId,
   flowDate,
   onEntriesChanged,
+  disabled = false,
+  disabledReason,
 }: {
   taskId: string;
   flowDate: string;
   onEntriesChanged?: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   const [entries, setEntries] = useState<TimeEntry[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -42,6 +46,10 @@ export function ManualEntry({
   }, [taskId]);
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (disabled) {
+      setIsOpen(false);
+      return;
+    }
     if (nextOpen) void fetchEntries();
     setIsOpen(nextOpen);
   };
@@ -55,10 +63,12 @@ export function ManualEntry({
 
   return (
     <>
-      <Popover open={isOpen} onOpenChange={handleOpenChange}>
+      <Popover open={!disabled && isOpen} onOpenChange={handleOpenChange}>
         <PopoverTrigger
-          className="fd-icon-button relative h-8 w-8 sm:h-7 sm:w-7"
-          title="Time entries"
+          className="fd-icon-button relative h-8 w-8 disabled:cursor-not-allowed disabled:opacity-45 sm:h-7 sm:w-7"
+          title={disabled ? disabledReason : "Time entries"}
+          aria-label="Time entries"
+          disabled={disabled}
         >
           <Clock className="h-3.5 w-3.5" />
           {entries.length > 0 && (

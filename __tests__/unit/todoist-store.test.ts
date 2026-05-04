@@ -48,6 +48,7 @@ function resetFlowStore() {
     completedTasks: {},
     sortableGen: 0,
     sortableKeys: {},
+    quickFocusTaskIds: {},
     dayCapacityMins: 360,
     hydrated: false,
     planningCompletedDates: {},

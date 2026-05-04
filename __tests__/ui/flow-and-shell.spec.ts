@@ -416,14 +416,26 @@ test("[UI-050] Quick-labelled tasks collapse into a quiet arrangeable Quick bloc
   await seedAppState(request, "quick-task-group");
   await openApp(page);
 
-  await expect(
-    page.getByRole("button", { name: "Quick 2", exact: true })
-  ).toBeVisible();
+  const quickSection = page.getByRole("button", { name: "Quick 2", exact: true });
+  await expect(quickSection).toBeVisible();
   await expect(taskPoolCard(page, "Draft roadmap section")).toBeVisible();
   await expect(taskPoolCard(page, "Answer Slack ping")).toHaveCount(0);
-  await expect(
-    page.getByTestId("quick-task-row").filter({ hasText: "Answer Slack ping" })
-  ).toBeVisible();
+  const quickRow = page
+    .getByTestId("quick-task-row")
+    .filter({ hasText: "Answer Slack ping" });
+  await expect(quickRow).toBeVisible();
+
+  await quickSection.click();
+  await expect(quickSection).toHaveAttribute("aria-expanded", "false");
+  await expect(quickRow).toBeHidden();
+  await expect(taskPoolCard(page, "Quick")).toBeVisible();
+  await quickSection.click();
+  await expect(quickSection).toHaveAttribute("aria-expanded", "true");
+  await expect(quickRow).toBeVisible();
+
+  await quickRow.getByRole("button", { name: "5m" }).click();
+  await page.getByRole("button", { name: "30m" }).click();
+  await expect(quickRow.getByRole("button", { name: "30m" })).toBeVisible();
 
   await dragTaskToEmptyFlow(page, "Quick");
 
@@ -431,7 +443,37 @@ test("[UI-050] Quick-labelled tasks collapse into a quiet arrangeable Quick bloc
   await expect(quickCard).toBeVisible();
   await expect(quickCard.getByText("Answer Slack ping")).toBeVisible();
   await expect(quickCard.getByText("Approve invoice")).toBeVisible();
+  await expect(quickCard.getByText("40m quick total")).toBeVisible();
   await expect(taskPoolCard(page, "Quick")).toHaveCount(0);
+
+  await expect(quickCard.getByRole("button", { name: "Start timer" })).toBeDisabled();
+  await expect(quickCard.getByRole("button", { name: "Start Pomodoro" })).toBeDisabled();
+
+  await quickCard
+    .getByTestId("quick-focus-option")
+    .filter({ hasText: "Answer Slack ping" })
+    .click();
+  await expect(quickCard.getByRole("button", { name: "Start timer" })).toBeEnabled();
+
+  await quickCard.getByRole("button", { name: "Start Pomodoro" }).click();
+  await expect(page.getByTestId("pomodoro-preset").first()).toHaveAttribute(
+    "data-mins",
+    "30"
+  );
+});
+
+test("[UI-052] Quick task analytics use the focused real task instead of the Quick placeholder", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "quick-task-analytics");
+  await openApp(page);
+
+  await page.getByRole("button", { name: "Analytics" }).click();
+  const analyticsDialog = page.getByRole("dialog", { name: "Analytics" });
+  await expect(analyticsDialog.getByRole("cell", { name: "Answer Slack ping" })).toBeVisible();
+  await expect(analyticsDialog.getByText("Unknown")).toHaveCount(0);
+  await expect(analyticsDialog.getByRole("cell", { name: "Quick" })).toHaveCount(0);
 });
 
 test("[UI-051] Local tasks completed on a prior day stay out of overdue", async ({

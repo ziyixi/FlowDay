@@ -12,7 +12,7 @@ Todoist stays read-only. You can also use FlowDay without Todoist by adding loca
 
 ## Try It Locally
 
-You need Node.js 20+ and npm.
+You need Node.js 24 or newer, plus npm.
 
 ```bash
 npm install

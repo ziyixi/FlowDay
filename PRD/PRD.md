@@ -67,7 +67,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Zustand store (`todoist-store`) acts as reactive cache, hydrated from SQLite on load; `addLocalTask` and `updateTitle` actions for local task management
 - Color mapping: Todoist color names (e.g., `berry_red`) → hex values (20 colors supported)
 - Task labels shown in hover tooltip alongside description
-- Tasks labeled `quick` are separated from ordinary Today/Overdue task cards into a quieter Quick section. They remain visible as lightweight rows, while a single draggable `Quick` placeholder can be arranged in the day flow instead of giving each quick item its own full block.
+- Tasks labeled `quick` are separated from ordinary Today/Overdue task cards into a quieter Quick section. They remain visible as lightweight rows with editable individual estimates, while a single draggable `Quick` placeholder shows the summed estimate and can be arranged in the day flow instead of giving each quick item its own full block.
 
 ### 4.2 — Day Flow (Main Canvas) ✅ Implemented
 
@@ -77,7 +77,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Each task card shows: title, project name, labels, estimated duration (click-to-edit via `EstimateEditor` popover), actual time (when timer runs), priority color dot
 - Each card has action buttons: play/pause (timer), manual time entry (clock icon), complete (check), skip (move to bottom), remove (return to pool)
 - The top card is visually highlighted as "Next" with a primary-color left border and badge
-- The synthetic `Quick` placeholder is arrangeable and trackable like a flow item, but uses a quieter treatment and previews the underlying quick-labeled tasks so small items do not dominate the main plan.
+- The synthetic `Quick` placeholder is arrangeable like a flow item, but uses a quieter treatment and requires selecting a real quick task before timer, Pomodoro, completion, or manual time actions record work; statistics attribute that work to the selected quick task, not to the placeholder.
 - Drag-sortable within the flow using unique sortable IDs (`date::taskId::sortableKey`) for dnd-kit stability
 - Visual progress bar at the bottom: tasks completed vs. total, total estimated time vs. actual logged time
 - Completed tasks shown in a dimmed section with undo button, showing both estimated and actual logged time
@@ -306,7 +306,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 
 | Layer | Choice | Notes |
 |-------|--------|-------|
-| **Container** | **Docker (multi-stage)** | Node 20 Alpine, standalone Next.js output |
+| **Container** | **Docker (multi-stage)** | Node 24 Alpine, standalone Next.js output |
 | **Registry** | **GitHub Container Registry** | `ghcr.io`, pushed on main push and release |
 | **CI/CD** | **GitHub Actions** | Lint, typecheck, unit/integration/UI tests, README screenshots, UI goldens, build, then Docker push when runtime-relevant files changed |
 
@@ -697,7 +697,7 @@ CREATE TABLE active_timer_session (
 - **Unit tests**: utility logic, database query helpers, timer behavior, Zustand stores, Todoist API pagination, sync transforms, and documentation sync guards
 - **Integration tests**: route handlers for analytics, entries, export, flows, notes, settings, sync, tasks, deleted tasks, and timer persistence
 - **Playwright UI tests**: seeded browser coverage for the wizard, flow/shell journeys, timers, settings, export, analytics, and multi-day read-only behavior
-- **Docker**: multi-stage build (Node 20 Alpine) — deps → build → standalone runner, non-root `nextjs` user, `/app/db` directory with correct permissions
+- **Docker**: multi-stage build (Node 24 Alpine) — deps → build → standalone runner, non-root `nextjs` user, `/app/db` directory with correct permissions
 - **GitHub Actions CI/CD**: lint, typecheck, unit tests, integration tests, UI tests, screenshot goldens, build, then Docker build & push to GHCR on main push or release
 - Docker metadata: tags by branch, semver, and SHA; GHA build cache for fast rebuilds
 - `output: "standalone"` in next.config.ts for minimal Docker images

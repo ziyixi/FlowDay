@@ -5,12 +5,13 @@ import { createPortal } from "react-dom";
 import { Check, Pause, PictureInPicture2, Play, X } from "lucide-react";
 import { useTimerStore } from "@/features/timer/store";
 import { useFlowStore, useFlowTasksForDate } from "@/features/flow/store";
-import { useTaskById } from "@/features/todoist/store";
+import { useQuickTasksForDate, useTaskById } from "@/features/todoist/store";
 import { usePopOutStore } from "@/lib/stores/pop-out-store";
 import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { buildPomodoroPresets } from "@/lib/utils/pomodoro-presets";
 import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { isMiscTaskId, MISC_TASK_TITLE } from "@/lib/utils/misc-task";
+import { isQuickTaskPlaceholderId } from "@/lib/utils/quick-task";
 import { cn } from "@/lib/utils";
 
 const POP_OUT_AUTO_CLOSE_GRACE_MS = 500;
@@ -240,8 +241,15 @@ function PipTimerContent() {
   const task = useTaskById(activeTaskId ?? "");
 
   const flowDate = activeFlowDate ?? currentDate;
+  const quickFocusTaskId = useFlowStore((s) => s.quickFocusTaskIds[flowDate]);
+  const quickTasks = useQuickTasksForDate(flowDate);
   const flowTasks = useFlowTasksForDate(flowDate);
   const nextTask = flowTasks.find((t) => t.id !== activeTaskId);
+  const nextTaskIsQuick = nextTask ? isQuickTaskPlaceholderId(nextTask.id) : false;
+  const focusedNextQuickTask = nextTaskIsQuick
+    ? quickTasks.find((candidate) => candidate.id === quickFocusTaskId) ?? null
+    : null;
+  const startableNextTask = nextTaskIsQuick ? focusedNextQuickTask : nextTask;
 
   // A pomodoro just hit zero — surface a restart/complete panel so the user
   // doesn't land on a bare "Up next" screen for the task they were just working on.
@@ -274,18 +282,31 @@ function PipTimerContent() {
           Up next
         </div>
         <div className="text-center">
-          <div className="truncate text-sm font-medium" title={nextTask.title}>
-            {nextTask.title}
+          <div
+            className="truncate text-sm font-medium"
+            title={startableNextTask?.title ?? nextTask.title}
+          >
+            {startableNextTask?.title ?? nextTask.title}
           </div>
-          {nextTask.estimatedMins != null && (
+          {(startableNextTask?.estimatedMins ?? nextTask.estimatedMins) != null && (
             <div className="mt-0.5 text-xs text-muted-foreground">
-              ~{formatDuration(nextTask.estimatedMins)}
+              ~{formatDuration(
+                startableNextTask?.estimatedMins ?? nextTask.estimatedMins ?? 0
+              )}
+            </div>
+          )}
+          {nextTaskIsQuick && !startableNextTask && (
+            <div className="mt-0.5 text-xs text-muted-foreground">
+              Select a quick task in FlowDay
             </div>
           )}
         </div>
         <button
-          onClick={() => startTimer(nextTask.id, flowDate)}
-          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent"
+          onClick={() => {
+            if (startableNextTask) void startTimer(startableNextTask.id, flowDate);
+          }}
+          disabled={!startableNextTask}
+          className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-3 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-45"
         >
           <Play className="h-3 w-3" />
           Start
@@ -369,14 +390,16 @@ function PipTimerContent() {
           {nextTask && (
             <div
               className="inline-flex max-w-full items-center rounded-md bg-card/55 px-2 py-1 text-[11px] text-muted-foreground"
-              title={nextTask.title}
+              title={startableNextTask?.title ?? nextTask.title}
             >
               <span className="shrink-0 opacity-65">Next&nbsp;</span>
-              <span className="truncate">{nextTask.title}</span>
-              {nextTask.estimatedMins != null && (
+              <span className="truncate">{startableNextTask?.title ?? nextTask.title}</span>
+              {(startableNextTask?.estimatedMins ?? nextTask.estimatedMins) != null && (
                 <span className="shrink-0 opacity-65">
                   {" "}
-                  · {formatDuration(nextTask.estimatedMins)}
+                  · {formatDuration(
+                    startableNextTask?.estimatedMins ?? nextTask.estimatedMins ?? 0
+                  )}
                 </span>
               )}
             </div>

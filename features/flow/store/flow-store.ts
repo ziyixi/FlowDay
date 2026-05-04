@@ -24,6 +24,30 @@ function completedForDate(state: FlowState, date: string): string[] {
   return state.completedTasks[date] ?? [];
 }
 
+function clearQuickFocusForDate(
+  focusTaskIds: Record<string, string>,
+  date: string
+): Record<string, string> {
+  if (!(date in focusTaskIds)) return focusTaskIds;
+  const next = { ...focusTaskIds };
+  delete next[date];
+  return next;
+}
+
+function quickTaskCandidatesForDate(
+  tasks: Task[],
+  completedTasks: Record<string, string[]>,
+  date: string
+): Task[] {
+  const completedOnDate = new Set(completedTasks[date] ?? []);
+  const completedLocalTaskIds = new Set(Object.values(completedTasks).flat());
+
+  return tasks.filter((task) => {
+    if (completedOnDate.has(task.id)) return false;
+    return task.todoistId || !completedLocalTaskIds.has(task.id);
+  });
+}
+
 function recoverFlowState() {
   void useFlowStore.getState().hydrate();
 }
@@ -35,12 +59,20 @@ export const useFlowStore = create<FlowState>()((set) => ({
   completedTasks: {},
   sortableGen: 0,
   sortableKeys: {},
+  quickFocusTaskIds: {},
   dayCapacityMins: 360,
   hydrated: false,
   planningCompletedDates: {},
 
   setCurrentDate: (date) => set({ currentDate: date }),
   setViewMode: (mode) => set({ viewMode: mode }),
+  setQuickFocusTask: (date, taskId) =>
+    set((state) => ({
+      quickFocusTaskIds:
+        taskId == null
+          ? clearQuickFocusForDate(state.quickFocusTaskIds, date)
+          : { ...state.quickFocusTaskIds, [date]: taskId },
+    })),
   setDayCapacityMins: (mins) => set({ dayCapacityMins: mins }),
 
   setPlanningCompleted: (date) => {
@@ -75,6 +107,11 @@ export const useFlowStore = create<FlowState>()((set) => ({
       persistFlowMutation({ action: "setFlow", date, taskIds: ids }, recoverFlowState);
       return {
         flows: { ...state.flows, [date]: ids },
+        quickFocusTaskIds:
+          isQuickTaskPlaceholderId(taskId) ||
+          state.quickFocusTaskIds[date] === taskId
+            ? clearQuickFocusForDate(state.quickFocusTaskIds, date)
+            : state.quickFocusTaskIds,
       };
     }),
 
@@ -98,6 +135,11 @@ export const useFlowStore = create<FlowState>()((set) => ({
           ...state.completedTasks,
           [date]: [...completedForDate(state, date), taskId],
         },
+        quickFocusTaskIds:
+          isQuickTaskPlaceholderId(taskId) ||
+          state.quickFocusTaskIds[date] === taskId
+            ? clearQuickFocusForDate(state.quickFocusTaskIds, date)
+            : state.quickFocusTaskIds,
       };
     }),
 
@@ -223,17 +265,14 @@ export function useFlowTasksForDate(date: string): Task[] {
   const completedTasks = useFlowStore((state) => state.completedTasks);
   const tasks = useTodoistStore((state) => state.tasks);
   const ids = flows[date] ?? [];
-  const completedLocalTaskIds = new Set(Object.values(completedTasks).flat());
   const quickTasks = getQuickTasksForDate(
-    tasks.filter(
-      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
-    ),
+    quickTaskCandidatesForDate(tasks, completedTasks, date),
     date
   );
 
   return ids
     .map((id) =>
-      isQuickTaskPlaceholderId(id)
+      isQuickTaskPlaceholderId(id) && quickTasks.length > 0
         ? buildQuickTaskPlaceholder(quickTasks)
         : tasks.find((task) => task.id === id)
     )
@@ -244,11 +283,8 @@ export function useCompletedTasksForDate(date: string): Task[] {
   const completedTasks = useFlowStore((state) => state.completedTasks);
   const tasks = useTodoistStore((state) => state.tasks);
   const ids = completedTasks[date] ?? [];
-  const completedLocalTaskIds = new Set(Object.values(completedTasks).flat());
   const quickTasks = getQuickTasksForDate(
-    tasks.filter(
-      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
-    ),
+    quickTaskCandidatesForDate(tasks, completedTasks, date),
     date
   );
 
