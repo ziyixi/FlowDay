@@ -38,6 +38,8 @@ This document maps each Playwright UI case to the product area it protects.
 | UI-042 | Multi-day read-only columns keep tasks, notes, and done markers on the correct date | `multi-day-readonly` | desktop | The 3-day and 5-day views render each date's tasks, notes, and completed markers only in the owning column. | `flow-and-shell.spec.ts` |
 | UI-043 | Sidebar arranged and completed sections follow live flow changes | `sidebar-section-state` | desktop | Sidebar counts and rows update immediately as tasks move between arranged and completed, and completed rows keep logged-time context. | `flow-and-shell.spec.ts` |
 | UI-044 | Task pool tooltips render labels and markdown descriptions | `tooltip-rich-task` | desktop | Pool-card tooltips show labels plus markdown-formatted description content. | `flow-and-shell.spec.ts` |
+| UI-050 | Quick-labelled tasks collapse into a quiet arrangeable Quick block | `quick-task-group` | desktop | Tasks labeled `quick` stay out of ordinary task cards, remain visible in a subdued Quick section, and can be arranged through one placeholder flow block. | `flow-and-shell.spec.ts` |
+| UI-051 | Local tasks completed on a prior day stay out of overdue | `local-completed-yesterday` | desktop | FlowDay-local tasks completed on an earlier day do not reappear as overdue just because their original due date has passed. | `flow-and-shell.spec.ts` |
 | UI-048 | Collapsing and reopening the sidebar keeps the pool usable | `shell-empty` | desktop | Sidebar collapse state does not break quick add, search visibility, or drag-to-flow after reopening. | `flow-and-shell.spec.ts` |
 
 ## Timer And Pomodoro

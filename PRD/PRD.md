@@ -67,6 +67,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Zustand store (`todoist-store`) acts as reactive cache, hydrated from SQLite on load; `addLocalTask` and `updateTitle` actions for local task management
 - Color mapping: Todoist color names (e.g., `berry_red`) → hex values (20 colors supported)
 - Task labels shown in hover tooltip alongside description
+- Tasks labeled `quick` are separated from ordinary Today/Overdue task cards into a quieter Quick section. They remain visible as lightweight rows, while a single draggable `Quick` placeholder can be arranged in the day flow instead of giving each quick item its own full block.
 
 ### 4.2 — Day Flow (Main Canvas) ✅ Implemented
 
@@ -76,6 +77,7 @@ Solo knowledge workers (developers, designers, writers, consultants) who already
 - Each task card shows: title, project name, labels, estimated duration (click-to-edit via `EstimateEditor` popover), actual time (when timer runs), priority color dot
 - Each card has action buttons: play/pause (timer), manual time entry (clock icon), complete (check), skip (move to bottom), remove (return to pool)
 - The top card is visually highlighted as "Next" with a primary-color left border and badge
+- The synthetic `Quick` placeholder is arrangeable and trackable like a flow item, but uses a quieter treatment and previews the underlying quick-labeled tasks so small items do not dominate the main plan.
 - Drag-sortable within the flow using unique sortable IDs (`date::taskId::sortableKey`) for dnd-kit stability
 - Visual progress bar at the bottom: tasks completed vs. total, total estimated time vs. actual logged time
 - Completed tasks shown in a dimmed section with undo button, showing both estimated and actual logged time
@@ -703,6 +705,7 @@ CREATE TABLE active_timer_session (
 
 ### Session 13 — Quick Add, Export, Editable Titles & PWA ✅ Implemented
 - **Quick add:** Inline input in sidebar to create local tasks (`local-<uuid>` ID, today's due date, default priority). `POST /api/tasks` endpoint. `addLocalTask` action in todoist store.
+- **Local completion visibility:** Local tasks completed in FlowDay on a prior date stay out of future Overdue pools; undoing that completion makes the local task eligible again.
 - **Editable titles:** Local (non-Todoist) tasks show pencil icon on hover. Inline input with Enter/Escape/blur commit. `updateTitle` action + `PATCH /api/tasks` with `title` field. Works in both sidebar `TaskCard` and flow `FlowTaskCard` via `EditableTitle` / `EditableFlowTitle` components.
 - **Data export:** Export dialog in settings — select data type (time entries / flow history), date range, format (CSV/JSON). `GET /api/export?type=entries|flows&format=csv|json&start=&end=`. Download via anchor element.
 - **PWA support:** Web manifest (`app/pwa/manifest.webmanifest/route.ts`), app icons (SVG + PNG at 192/512/maskable), service worker source (`public/sw.js`) served through `app/pwa/sw/route.ts`, `apple-touch-icon`, and theme-color meta tags. Service worker uses network-first for navigation and API calls, stale-while-revalidate for static assets.
@@ -770,5 +773,5 @@ CREATE TABLE active_timer_session (
 
 ---
 
-*Last updated: May 3, 2026*
-*Version: 1.6 — Post-Session 14 (feature-boundary cleanup, UI polish, screenshot goldens, and production/test decoupling)*
+*Last updated: May 4, 2026*
+*Version: 1.7 — Quick-task grouping and local completed-task overdue cleanup*

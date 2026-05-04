@@ -2,17 +2,19 @@
 
 import { useCallback, useState } from "react";
 import { useSortable } from "@dnd-kit/react/sortable";
+import { Zap } from "lucide-react";
 import type { Task } from "@/lib/types/task";
 import { PRIORITY_CONFIG } from "@/lib/types/task";
-import { formatElapsed } from "@/lib/utils/time";
+import { formatDuration, formatElapsed } from "@/lib/utils/time";
 import { derivePomodoroLoggedSeconds } from "@/lib/utils/pomodoro-progress";
 import { useFlowStore } from "@/features/flow/store";
-import { useTodoistStore } from "@/features/todoist/store";
+import { useQuickTasksForDate, useTodoistStore } from "@/features/todoist/store";
 import { useTimerStore } from "@/features/timer/store";
 import { useTaskLoggedSeconds } from "@/lib/hooks/use-task-logged-seconds";
 import { EstimateEditor } from "@/components/shared/estimate-editor";
 import { EditableLocalTitle } from "@/components/shared/editable-local-title";
 import { cn } from "@/lib/utils";
+import { isQuickTaskPlaceholderId } from "@/lib/utils/quick-task";
 import { useTaskNote } from "../hooks/use-task-note";
 import { FlowTaskCardActions } from "./flow-task-card-actions";
 
@@ -46,6 +48,8 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
   const isActive = activeTaskId === task.id;
   const isRunning = isActive && timerStatus === "running";
   const isPaused = isActive && timerStatus === "paused";
+  const isQuickPlaceholder = isQuickTaskPlaceholderId(task.id);
+  const quickTasks = useQuickTasksForDate(date);
 
   const [localRevision, setLocalRevision] = useState(0);
   const onEntriesChanged = useCallback(() => {
@@ -120,35 +124,51 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
       <div
         className={cn(
           "fd-flow-card group rounded-md border px-4 py-3 transition-all",
-          isNext
-            ? "fd-flow-card-focus border-b-border border-l-4 border-r-border border-t-border"
-            : "border-border",
+          isQuickPlaceholder
+            ? "border-dashed border-border/70 bg-muted/35 shadow-none"
+            : isNext
+              ? "fd-flow-card-focus border-b-border border-l-4 border-r-border border-t-border"
+              : "border-border",
           isActive &&
             "fd-flow-card-focus border-l-4",
           isDropTarget && !isDragSource && "border-primary/40"
         )}
       >
         <div className="flex items-start gap-3">
-          <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", priorityColor)} />
+          {isQuickPlaceholder ? (
+            <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-sm border border-border/60 bg-background/50 text-muted-foreground">
+              <Zap className="h-3.5 w-3.5" />
+            </span>
+          ) : (
+            <span className={cn("mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full", priorityColor)} />
+          )}
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              {isNext && (
+              {isNext && !isQuickPlaceholder && (
                 <span className="fd-focus-pill shrink-0 rounded-sm px-1.5 py-0.5 text-xs font-semibold sm:text-[10px]">
                   Next
                 </span>
               )}
-              <EditableLocalTitle
-                title={task.title}
-                isLocal={!task.todoistId}
-                onCommit={(title) => updateTitle(task.id, title)}
-              />
+              {isQuickPlaceholder ? (
+                <p className="truncate text-sm font-semibold text-foreground/80">
+                  {task.title}
+                </p>
+              ) : (
+                <EditableLocalTitle
+                  title={task.title}
+                  isLocal={!task.todoistId}
+                  onCommit={(title) => updateTitle(task.id, title)}
+                />
+              )}
             </div>
             {task.projectName && (
               <p className="mt-0.5 truncate text-sm text-muted-foreground sm:text-xs">
                 {task.projectName}
               </p>
             )}
-            {task.labels.length > 0 && (
+            {isQuickPlaceholder ? (
+              <QuickTaskPreview tasks={quickTasks} />
+            ) : task.labels.length > 0 ? (
               <div className="mt-1 flex flex-wrap gap-1">
                 {task.labels.map((label) => (
                   <span
@@ -159,13 +179,23 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
                   </span>
                 ))}
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
         <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground sm:text-xs">
-            <EstimateEditor task={task} variant="flow" />
+            {isQuickPlaceholder ? (
+              task.estimatedMins != null && task.estimatedMins > 0 ? (
+                <span className="tabular-nums text-muted-foreground/75">
+                  {formatDuration(task.estimatedMins)} quick
+                </span>
+              ) : (
+                <span className="text-muted-foreground/60">Quick tasks</span>
+              )
+            ) : (
+              <EstimateEditor task={task} variant="flow" />
+            )}
             {shownSeconds > 0 ? (
               <div className="flex min-w-0 items-center gap-2">
                 <span
@@ -222,6 +252,31 @@ export function FlowTaskCard({ task, index, isNext, date }: FlowTaskCardProps) {
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function QuickTaskPreview({ tasks }: { tasks: Task[] }) {
+  if (tasks.length === 0) return null;
+
+  const visible = tasks.slice(0, 3);
+  const remaining = tasks.length - visible.length;
+
+  return (
+    <div className="mt-1.5 flex flex-wrap gap-1">
+      {visible.map((task) => (
+        <span
+          key={task.id}
+          className="max-w-[180px] truncate rounded-sm border border-border/45 bg-background/45 px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]"
+        >
+          {task.title}
+        </span>
+      ))}
+      {remaining > 0 && (
+        <span className="rounded-sm border border-border/45 bg-background/45 px-1.5 py-0.5 text-xs text-muted-foreground sm:text-[10px]">
+          +{remaining}
+        </span>
+      )}
     </div>
   );
 }

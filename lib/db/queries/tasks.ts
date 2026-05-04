@@ -12,6 +12,10 @@ import {
 import { getDb } from "../index";
 import { completedFlowTasks, flowTasks, tasks } from "../schema";
 import { buildMiscTask, isMiscTaskId } from "@/lib/utils/misc-task";
+import {
+  buildQuickTaskPlaceholder,
+  isQuickTaskPlaceholderId,
+} from "@/lib/utils/quick-task";
 import type { Task, TaskPriority } from "@/lib/types/task";
 import { mapTaskRow, type TaskRow, runDbTransaction } from "./shared";
 
@@ -218,5 +222,8 @@ export function getTasksByIds(ids: string[]): Task[] {
     .filter((id) => isMiscTaskId(id) && !persistedIds.has(id))
     .map((id) => buildMiscTask(id))
     .filter((task): task is Task => task != null);
-  return [...persisted, ...syntheticMisc];
+  const syntheticQuick = ids
+    .filter((id) => isQuickTaskPlaceholderId(id) && !persistedIds.has(id))
+    .map(() => buildQuickTaskPlaceholder());
+  return [...persisted, ...syntheticMisc, ...syntheticQuick];
 }

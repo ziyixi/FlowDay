@@ -77,6 +77,8 @@ export type SeedName =
   | "multi-day-readonly"
   | "sidebar-section-state"
   | "tooltip-rich-task"
+  | "quick-task-group"
+  | "local-completed-yesterday"
   | "settings-saved-key"
   | "analytics-multi-date";
 
@@ -380,6 +382,49 @@ function buildSeed(name: SeedName): SeedPayload {
             labels: ["urgent", "docs"],
           }),
         ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "quick-task-group":
+      return {
+        tasks: [
+          localTask("quick-task-a", "Answer Slack ping", {
+            estimatedMins: 5,
+            labels: ["quick"],
+          }),
+          localTask("quick-task-b", "Approve invoice", {
+            estimatedMins: 10,
+            labels: ["Quick"],
+          }),
+          localTask("normal-task", "Draft roadmap section", {
+            estimatedMins: 60,
+            labels: ["writing"],
+          }),
+        ],
+        settings: {
+          [`planning_completed:${TODAY}`]: true,
+          day_capacity_mins: 360,
+        },
+      };
+
+    case "local-completed-yesterday":
+      return {
+        tasks: [
+          localTask("local-done-yesterday", "Finished local yesterday", {
+            dueDate: YESTERDAY,
+            estimatedMins: 15,
+          }),
+          localTask("local-still-overdue", "Still overdue local", {
+            dueDate: YESTERDAY,
+            estimatedMins: 20,
+          }),
+        ],
+        completedTasks: {
+          [YESTERDAY]: ["local-done-yesterday"],
+        },
         settings: {
           [`planning_completed:${TODAY}`]: true,
           day_capacity_mins: 360,

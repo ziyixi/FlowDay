@@ -409,6 +409,43 @@ test("[UI-044] Task pool tooltips render labels and markdown descriptions", asyn
   await expect(page.getByText("npm test")).toBeVisible();
 });
 
+test("[UI-050] Quick-labelled tasks collapse into a quiet arrangeable Quick block", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "quick-task-group");
+  await openApp(page);
+
+  await expect(
+    page.getByRole("button", { name: "Quick 2", exact: true })
+  ).toBeVisible();
+  await expect(taskPoolCard(page, "Draft roadmap section")).toBeVisible();
+  await expect(taskPoolCard(page, "Answer Slack ping")).toHaveCount(0);
+  await expect(
+    page.getByTestId("quick-task-row").filter({ hasText: "Answer Slack ping" })
+  ).toBeVisible();
+
+  await dragTaskToEmptyFlow(page, "Quick");
+
+  const quickCard = flowCardById(page, "__flowday_quick__");
+  await expect(quickCard).toBeVisible();
+  await expect(quickCard.getByText("Answer Slack ping")).toBeVisible();
+  await expect(quickCard.getByText("Approve invoice")).toBeVisible();
+  await expect(taskPoolCard(page, "Quick")).toHaveCount(0);
+});
+
+test("[UI-051] Local tasks completed on a prior day stay out of overdue", async ({
+  page,
+  request,
+}) => {
+  await seedAppState(request, "local-completed-yesterday");
+  await openApp(page);
+
+  await expect(page.getByRole("button", { name: /Overdue\s*1/ })).toBeVisible();
+  await expect(taskPoolCard(page, "Still overdue local")).toBeVisible();
+  await expect(taskPoolCard(page, "Finished local yesterday")).toHaveCount(0);
+});
+
 test("[UI-045] Settings keep sync disabled until a key exists and preserve saved capacity", async ({
   page,
   request,

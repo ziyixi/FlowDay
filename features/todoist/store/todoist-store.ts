@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { useFlowStore } from "@/features/flow/store/flow-store";
 import { useTimerStore } from "@/features/timer/store/timer-store";
 import { buildMiscTask } from "@/lib/utils/misc-task";
+import {
+  buildQuickTaskPlaceholder,
+  getQuickTasksForDate,
+  isQuickTask,
+  isQuickTaskPlaceholderId,
+} from "@/lib/utils/quick-task";
 import { partitionTasksByDueDate } from "@/lib/utils/task-sections";
 import type { Task } from "@/lib/types/task";
 import type { TaskSections, TodoistState } from "./types";
@@ -141,27 +147,50 @@ export function useTaskSections(date?: string): TaskSections {
   const completedTaskIds = useFlowStore(
     (state) => state.completedTasks[targetDate] ?? EMPTY_IDS
   );
+  const allCompletedTasks = useFlowStore((state) => state.completedTasks);
 
   const query = searchQuery.toLowerCase().trim();
   const inFlow = new Set([...flowTaskIds, ...completedTaskIds]);
+  const completedLocalTaskIds = new Set(
+    Object.values(allCompletedTasks).flat()
+  );
 
   const filtered = tasks.filter((task) => {
     if (task.deletedAt) return false;
     if (task.isCompleted) return false;
+    if (!task.todoistId && completedLocalTaskIds.has(task.id)) return false;
     if (inFlow.has(task.id)) return false;
     if (!query) return true;
     return (
       task.title.toLowerCase().includes(query) ||
-      (task.projectName && task.projectName.toLowerCase().includes(query))
+      (task.projectName && task.projectName.toLowerCase().includes(query)) ||
+      task.labels.some((label) => label.toLowerCase().includes(query))
     );
   });
 
-  return partitionTasksByDueDate(filtered, targetDate);
+  const ordinaryTasks = filtered.filter((task) => !isQuickTask(task));
+  const quick = getQuickTasksForDate(filtered, targetDate);
+  return { ...partitionTasksByDueDate(ordinaryTasks, targetDate), quick };
 }
 
 export function useTaskById(id: string): Task | undefined {
   const task = useTodoistStore((state) =>
     state.tasks.find((candidate) => candidate.id === id)
   );
+  if (isQuickTaskPlaceholderId(id)) return buildQuickTaskPlaceholder();
   return task ?? buildMiscTask(id) ?? undefined;
+}
+
+export function useQuickTasksForDate(date: string): Task[] {
+  const tasks = useTodoistStore((state) => state.tasks);
+  const allCompletedTasks = useFlowStore((state) => state.completedTasks);
+  const completedLocalTaskIds = new Set(
+    Object.values(allCompletedTasks).flat()
+  );
+  return getQuickTasksForDate(
+    tasks.filter(
+      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
+    ),
+    date
+  );
 }

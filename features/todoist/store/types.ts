@@ -20,4 +20,5 @@ export interface TodoistState {
 export interface TaskSections {
   dueOnDate: Task[];
   overdue: Task[];
+  quick: Task[];
 }

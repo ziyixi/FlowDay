@@ -1,6 +1,11 @@
 import { create } from "zustand";
 import { useTodoistStore } from "@/features/todoist/store/todoist-store";
 import type { Task } from "@/lib/types/task";
+import {
+  buildQuickTaskPlaceholder,
+  getQuickTasksForDate,
+  isQuickTaskPlaceholderId,
+} from "@/lib/utils/quick-task";
 import { jsonRequestInit } from "@/lib/client/http";
 import type { FlowState } from "./types";
 import {
@@ -215,11 +220,23 @@ export function useCurrentCompletedTaskIds(): string[] {
 
 export function useFlowTasksForDate(date: string): Task[] {
   const flows = useFlowStore((state) => state.flows);
+  const completedTasks = useFlowStore((state) => state.completedTasks);
   const tasks = useTodoistStore((state) => state.tasks);
   const ids = flows[date] ?? [];
+  const completedLocalTaskIds = new Set(Object.values(completedTasks).flat());
+  const quickTasks = getQuickTasksForDate(
+    tasks.filter(
+      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
+    ),
+    date
+  );
 
   return ids
-    .map((id) => tasks.find((task) => task.id === id))
+    .map((id) =>
+      isQuickTaskPlaceholderId(id)
+        ? buildQuickTaskPlaceholder(quickTasks)
+        : tasks.find((task) => task.id === id)
+    )
     .filter((task): task is Task => task != null);
 }
 
@@ -227,8 +244,19 @@ export function useCompletedTasksForDate(date: string): Task[] {
   const completedTasks = useFlowStore((state) => state.completedTasks);
   const tasks = useTodoistStore((state) => state.tasks);
   const ids = completedTasks[date] ?? [];
+  const completedLocalTaskIds = new Set(Object.values(completedTasks).flat());
+  const quickTasks = getQuickTasksForDate(
+    tasks.filter(
+      (task) => task.todoistId || !completedLocalTaskIds.has(task.id)
+    ),
+    date
+  );
 
   return ids
-    .map((id) => tasks.find((task) => task.id === id))
+    .map((id) =>
+      isQuickTaskPlaceholderId(id)
+        ? buildQuickTaskPlaceholder(quickTasks)
+        : tasks.find((task) => task.id === id)
+    )
     .filter((task): task is Task => task != null);
 }
