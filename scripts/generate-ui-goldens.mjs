@@ -690,7 +690,10 @@ async function captureAll() {
       await page.locator("text=Deep work on feature branch").first().waitFor();
       await startCountupTimer(page, "timer-focus", 940);
       await mountFakePopOut(page);
-      await page.getByTitle("Pause").click();
+      await page
+        .getByTestId("fake-pop-out-root")
+        .getByRole("button", { name: "Pause" })
+        .click();
       await page.locator('[data-testid="fake-pop-out-root"] >> text=Paused').waitFor();
     });
 
